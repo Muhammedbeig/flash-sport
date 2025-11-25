@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 type GameWidgetProps = {
   leagueId?: string;
-  sport?: string; // Add sport prop
+  sport?: string;
 };
 
 export default function GameWidget({ leagueId, sport = "football" }: GameWidgetProps) {
@@ -15,8 +15,6 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
     setShowWidget(true);
   }, []);
 
-  // Construct the Widget HTML dynamically
-  // We only add data-league if it is provided (e.g. for Football)
   const widgetHtml = `
     <api-sports-widget 
       data-type="games" 
@@ -36,7 +34,6 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
           <FeedSkeleton />
         </div>
       )}
-
       <div dangerouslySetInnerHTML={{ __html: widgetHtml }} />
     </div>
   );
