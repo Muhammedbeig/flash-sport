@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+import { Suspense } from "react"; // IMPORT SUSPENSE
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* FIX 1: UPDATED SCRIPT VERSION TO 3.1.0  */}
         <script
           type="module"
           src="https://widgets.api-sports.io/3.1.0/widgets.js"
@@ -26,10 +26,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning={true}>
         
-        {/* FIX 2: GLOBAL CONFIGURATION 
-            - We added data-show-errors="true" to see why it fails 
-            - Ensure your API Key is correct here.
-        */}
+        {/* Global Configuration Widget */}
         <div
           dangerouslySetInnerHTML={{
             __html: `
@@ -43,12 +40,16 @@ export default function RootLayout({
               ></api-sports-widget>
             `,
           }}
-          style={{ display: "none" }} // We hide the config widget visually
+          style={{ display: "none" }}
         />
 
-        <AppShell>
-          {children}
-        </AppShell>
+        {/* THIS SUSPENSE BOUNDARY IS THE FIX FOR YOUR BUILD ERROR */}
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading FlashSport...</div>}>
+          <AppShell>
+            {children}
+          </AppShell>
+        </Suspense>
+
       </body>
     </html>
   );

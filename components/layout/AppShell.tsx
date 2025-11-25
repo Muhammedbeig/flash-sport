@@ -3,18 +3,18 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { SportIcon } from "@/components/ui/SportIcon"; // Uses the file we just updated
+import { SportIcon } from "@/components/ui/SportIcon";
 
 type AppShellProps = {
   children: ReactNode;
 };
 
-// These IDs must match the 'case' statements in SportIcon.tsx
+// Sports list matching the supported icons
 const SPORTS = [
   { name: "Football", id: "football" },
   { name: "Basketball", id: "basketball" },
   { name: "NBA", id: "nba" },
-  { name: "American Football", id: "nfl" }, // "nfl" triggers the egg-ball icon
+  { name: "American Football", id: "nfl" },
   { name: "Baseball", id: "baseball" },
   { name: "Hockey", id: "hockey" },
   { name: "Handball", id: "handball" },
@@ -54,7 +54,6 @@ export default function AppShell({ children }: AppShellProps) {
                     : "text-gray-700 hover:bg-gray-50"
                  }`}
                >
-                 {/* This component now renders the correct SVG based on sport.id */}
                  <SportIcon 
                     sport={sport.id} 
                     className={isActive ? "text-blue-600" : "text-gray-400"}
