@@ -1,0 +1,42 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,31713,e=>{"use strict";var t=e.i(43476),a=e.i(71645),s=e.i(18566);let r=(0,e.i(75254).default)("arrow-left",[["path",{d:"m12 19-7-7 7-7",key:"1l729n"}],["path",{d:"M19 12H5",key:"x3x0zl"}]]);var i=e.i(70273);function l({className:e="",...a}){return(0,t.jsx)("div",{className:`animate-pulse rounded-lg bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] ${e}`,style:{animation:"shimmer 1.5s ease-in-out infinite"},...a})}function d(){return(0,t.jsx)("div",{className:"w-full space-y-6",children:[1,2,3].map(e=>(0,t.jsxs)("div",{className:"bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden",children:[(0,t.jsxs)("div",{className:"flex items-center gap-3 p-3 border-b border-gray-100 bg-gray-50/50",children:[(0,t.jsx)(l,{className:"h-6 w-6 rounded-full"})," ",(0,t.jsxs)("div",{className:"space-y-1",children:[(0,t.jsx)(l,{className:"h-4 w-32"})," ",(0,t.jsx)(l,{className:"h-3 w-16"})," "]})]}),(0,t.jsx)("div",{className:"divide-y divide-gray-100",children:[1,2,3].map(e=>(0,t.jsxs)("div",{className:"p-4 hover:bg-gray-50 transition-colors flex items-center justify-between",children:[(0,t.jsxs)("div",{className:"flex flex-col items-center w-12 gap-1 mr-4 border-r border-gray-100 pr-4",children:[(0,t.jsx)(l,{className:"h-3 w-8"}),(0,t.jsx)(l,{className:"h-3 w-10"})]}),(0,t.jsxs)("div",{className:"flex-1 space-y-3",children:[(0,t.jsxs)("div",{className:"flex items-center justify-between",children:[(0,t.jsxs)("div",{className:"flex items-center gap-3",children:[(0,t.jsx)(l,{className:"h-5 w-5 rounded-full"}),(0,t.jsx)(l,{className:"h-4 w-24"})]}),(0,t.jsx)(l,{className:"h-4 w-4"})," "]}),(0,t.jsxs)("div",{className:"flex items-center justify-between",children:[(0,t.jsxs)("div",{className:"flex items-center gap-3",children:[(0,t.jsx)(l,{className:"h-5 w-5 rounded-full"}),(0,t.jsx)(l,{className:"h-4 w-24"})]}),(0,t.jsx)(l,{className:"h-4 w-4"})," "]})]})]},e))})]},e))})}function n({leagueId:e,sport:r="football"}){let[i,l]=(0,a.useState)(!1),n="favorites"===(0,s.useSearchParams)().get("view");(0,a.useEffect)(()=>{l(!0)},[]);let c="",o=`
+    data-theme="white"
+    data-show-errors="true"
+    data-favorite="true" 
+  `,m=`
+    data-target-game="#match-details-container"
+    data-target-team="#match-details-container"
+    data-target-player="#match-details-container"
+    data-target-standings="#match-details-container"
+  `,h=`
+    data-events="true"
+    data-lineups="true"
+    data-statistics="true"
+    data-player-statistics="true"
+  `;return c="f1"===r?`
+      <api-sports-widget 
+        data-type="races" 
+        data-sport="f1"
+        data-target-race="#match-details-container"
+        data-target-driver="#match-details-container"
+        ${o}
+      ></api-sports-widget>
+    `:"mma"===r?`
+      <api-sports-widget 
+        data-type="fights" 
+        data-sport="mma"
+        data-target-fight="#match-details-container"
+        data-target-fighter="#match-details-container"
+        ${o}
+      ></api-sports-widget>
+    `:`
+      <api-sports-widget 
+        data-type="games" 
+        data-sport="${r}"
+        ${e?`data-league="${e}"`:""} 
+        data-show-toolbar="true"
+        ${n?'data-tab="favorites"':""} 
+        ${m}
+        ${h}
+        ${o}
+      ></api-sports-widget>
+    `,(0,t.jsxs)("div",{className:"w-full min-h-[500px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative",children:[!i&&(0,t.jsx)("div",{className:"absolute inset-0 z-0",children:(0,t.jsx)(d,{})}),(0,t.jsx)("div",{dangerouslySetInnerHTML:{__html:c}})]})}function c(){let e=(0,s.useSearchParams)(),l=(0,s.useRouter)(),d=(0,s.usePathname)(),c=e.get("sport")||"football",o=e.get("league")||void 0,m=e.get("view"),h="match"===m,u="favorites"===m,[g,x]=(0,a.useState)(!1),f=(0,a.useRef)(null);(0,a.useEffect)(()=>{h?x(!0):(x(!1),f.current&&(f.current.innerHTML=""))},[h]);let w=()=>{let t=new URLSearchParams(e.toString());"match"!==t.get("view")&&(t.set("view","match"),window.history.pushState(null,"",`?${t.toString()}`),x(!0)),window.scrollTo(0,0)};return(0,a.useEffect)(()=>{let e=new MutationObserver(e=>{for(let t of e)"childList"===t.type&&f.current?.hasChildNodes()&&w()});return f.current&&e.observe(f.current,{childList:!0,subtree:!0}),()=>e.disconnect()},[e]),(0,a.useEffect)(()=>{let e=()=>{!new URLSearchParams(window.location.search).get("view")&&(x(!1),f.current&&(f.current.innerHTML=""))};return window.addEventListener("popstate",e),()=>window.removeEventListener("popstate",e)},[]),(0,t.jsxs)("div",{className:"max-w-5xl mx-auto relative min-h-[80vh]",children:[(0,t.jsxs)("div",{className:g?"hidden":"block",children:[(0,t.jsx)("div",{className:"mb-4 flex items-center justify-between",children:(0,t.jsx)("h2",{className:"text-xl font-bold text-slate-800 capitalize flex items-center gap-2",children:u?(0,t.jsxs)(t.Fragment,{children:[(0,t.jsx)(i.Star,{className:"text-yellow-500 fill-yellow-500",size:24}),"My Favorites"]}):(0,t.jsx)(t.Fragment,{children:o?"League Matches":`All ${c} Matches`})})}),(0,t.jsx)(n,{sport:c,leagueId:o},`${c}-${o}-${m}`)]}),(0,t.jsxs)("div",{className:g?"block animate-in fade-in slide-in-from-right-4 duration-300":"hidden",children:[(0,t.jsx)("div",{className:"mb-4 flex items-center gap-2",children:(0,t.jsxs)("button",{onClick:()=>{let t=new URLSearchParams(e.toString());t.delete("view"),l.push(`${d}?${t.toString()}`)},className:"flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-slate-700 font-medium transition-colors shadow-sm",children:[(0,t.jsx)(r,{size:18}),"Back to ",u?"Favorites":"Feed"]})}),(0,t.jsx)("div",{id:"match-details-container",ref:f,className:"w-full bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] overflow-hidden"})]})]})}function o(){return(0,t.jsx)(a.Suspense,{fallback:(0,t.jsx)("div",{className:"p-10 text-center text-gray-500",children:"Loading FlashSport..."}),children:(0,t.jsx)(c,{})})}e.s(["default",()=>o],31713)}]);
