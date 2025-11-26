@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
-import { Suspense } from "react"; // IMPORT SUSPENSE
+import { Suspense } from "react";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import WidgetThemeConfig from "@/components/WidgetThemeConfig";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,43 +15,51 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning className="light">
       <head>
         <script
           type="module"
           src="https://widgets.api-sports.io/3.1.0/widgets.js"
         ></script>
-      </head>
-      <body className={inter.className} suppressHydrationWarning={true}>
-        
-        {/* Global Configuration Widget */}
-        <div
+        {/* Prevent flash of unstyled content */}
+        <script
           dangerouslySetInnerHTML={{
             __html: `
-              <api-sports-widget 
-                data-type="config" 
-                data-key="be86d04ad385764f2c39ce3b4c832510" 
-                data-sport="football" 
-                data-theme="white" 
-                data-show-logos="true"
-                data-show-errors="true" 
-              ></api-sports-widget>
+              (function() {
+                try {
+                  const theme = localStorage.getItem('theme') || 
+                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  document.documentElement.classList.remove('light', 'dark');
+                  document.documentElement.classList.add(theme);
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {}
+              })();
             `,
           }}
-          style={{ display: "none" }}
         />
+      </head>
 
-        {/* THIS SUSPENSE BOUNDARY IS THE FIX FOR YOUR BUILD ERROR */}
-        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading FlashSport...</div>}>
-          <AppShell>
-            {children}
-          </AppShell>
-        </Suspense>
+      <body
+        className={`${inter.className} bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+      >
+        <ThemeProvider>
+          {/* Sync theme for widgets */}
+          <WidgetThemeConfig />
 
+          <Suspense
+            fallback={
+              <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                Loading FlashSport...
+              </div>
+            }
+          >
+            <AppShell>{children}</AppShell>
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );
