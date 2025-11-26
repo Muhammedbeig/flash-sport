@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, Star } from "lucide-react";
 import GameWidget from "@/components/widgets/GameWidget";
+import Footer from "@/components/layout/Footer";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -89,63 +90,72 @@ function HomeContent() {
 
   // --- RENDER ---
   return (
-    <div className="max-w-5xl mx-auto relative min-h-[80vh]">
+    <div className="flex flex-col min-h-screen">
       
-      {/* === VIEW 1: THE FEED (List of Matches) === */}
-      {/* Hidden when viewing a specific match details */}
-      <div className={isMatchView ? "hidden" : "block"}>
+      <div className="max-w-5xl mx-auto relative flex-1 w-full min-h-[80vh]">
         
-        {/* Feed Header */}
-        <div className="mb-4 flex items-center justify-between">
-           <h2 className="text-xl font-bold text-slate-800 capitalize flex items-center gap-2">
-             {isFavoritesMode ? (
-               <>
-                 <Star className="text-yellow-500 fill-yellow-500" size={24} />
-                 My Favorites
-               </>
-             ) : (
-               <>
-                 {leagueId ? "League Matches" : `All ${sport} Matches`}
-               </>
-             )}
-           </h2>
+        {/* === VIEW 1: THE FEED (List of Matches) === */}
+        {/* Hidden when viewing a specific match details */}
+        <div className={isMatchView ? "hidden" : "block"}>
+          
+          {/* Feed Header */}
+          <div className="mb-4 flex items-center justify-between">
+             <h2 className="text-xl font-bold text-slate-800 capitalize flex items-center gap-2">
+               {isFavoritesMode ? (
+                 <>
+                   <Star className="text-yellow-500 fill-yellow-500" size={24} />
+                   My Favorites
+                 </>
+               ) : (
+                 <>
+                   {leagueId ? "League Matches" : `All ${sport} Matches`}
+                 </>
+               )}
+             </h2>
+          </div>
+
+          {/* The Main Widget */}
+          <GameWidget 
+            // Key forces reload when switching sports or views (essential for Favorites)
+            key={`${sport}-${leagueId}-${viewParam}`} 
+            sport={sport} 
+            leagueId={leagueId} 
+          />
         </div>
 
-        {/* The Main Widget */}
-        <GameWidget 
-          // Key forces reload when switching sports or views (essential for Favorites)
-          key={`${sport}-${leagueId}-${viewParam}`} 
-          sport={sport} 
-          leagueId={leagueId} 
-        />
+        {/* === VIEW 2: MATCH DETAILS (Full Page) === */}
+        {/* Visible only when 'view=match' */}
+        <div className={isMatchView ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
+          
+          {/* Back Navigation */}
+          <div className="mb-4 flex items-center gap-2">
+            <button 
+              onClick={handleBack}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-slate-700 font-medium transition-colors shadow-sm"
+            >
+              <ArrowLeft size={18} />
+              Back to {isFavoritesMode ? "Favorites" : "Feed"}
+            </button>
+          </div>
+
+          {/* TARGET CONTAINER 
+             The API-Sports Widget injects the Match Details / Team Profile here.
+          */}
+          <div 
+            id="match-details-container" 
+            ref={matchContainerRef}
+            className="w-full bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] overflow-hidden"
+          >
+            {/* Content injected by widget script */}
+          </div>
+
+        </div>
+
       </div>
 
-      {/* === VIEW 2: MATCH DETAILS (Full Page) === */}
-      {/* Visible only when 'view=match' */}
-      <div className={isMatchView ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
-        
-        {/* Back Navigation */}
-        <div className="mb-4 flex items-center gap-2">
-          <button 
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-slate-700 font-medium transition-colors shadow-sm"
-          >
-            <ArrowLeft size={18} />
-            Back to {isFavoritesMode ? "Favorites" : "Feed"}
-          </button>
-        </div>
-
-        {/* TARGET CONTAINER 
-           The API-Sports Widget injects the Match Details / Team Profile here.
-        */}
-        <div 
-          id="match-details-container" 
-          ref={matchContainerRef}
-          className="w-full bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] overflow-hidden"
-        >
-          {/* Content injected by widget script */}
-        </div>
-
+      {/* === FOOTER === */}
+      <div className="mt-12">
+        <Footer />
       </div>
 
     </div>
