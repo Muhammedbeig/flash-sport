@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
-// Read the variable from the command line, or default to empty
-const repoName = process.env.REPO_NAME || ""; 
+// Read the variable from the command line (injected by cross-env in package.json)
+const repoName = process.env.NEXT_PUBLIC_REPO_NAME || ""; 
 
 const nextConfig: NextConfig = {
   output: "export",

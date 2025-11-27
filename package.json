@@ -3,15 +3,13 @@
   "homepage": "https://helloajmal007-commits.github.io/livesocer.com",
   "version": "0.1.0",
   "private": true,
-"scripts": {
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    
-    "deploy:flash": "cross-env REPO_NAME=flash-sport next build && gh-pages -d out -t -r https://github.com/Muhammedbeig/flash-sport.git",
-    
-    "deploy:live": "cross-env REPO_NAME=livesocer.com next build && gh-pages -d out -t -r https://github.com/helloajmal007-commits/livesocer.com.git"
+    "deploy:flash": "cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && gh-pages -d out -t -r https://github.com/Muhammedbeig/flash-sport.git",
+    "deploy:live": "cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && gh-pages -d out -t -r https://github.com/helloajmal007-commits/livesocer.com.git"
   },
   "dependencies": {
     "clsx": "^2.1.1",

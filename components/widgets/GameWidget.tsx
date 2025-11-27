@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// Corrected import path
 import FeedSkeleton from "@/components/feed/FeedSkeleton"; 
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -26,7 +25,7 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
     return () => clearTimeout(timer);
   }, []);
 
-  // === INTERCEPTOR: Opens match in NEW TAB ===
+  // === INTERCEPTOR: Opens match in NEW TAB with Dynamic Path ===
   useEffect(() => {
     if (!isMounted) return;
 
@@ -44,8 +43,16 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
             const finalId = gameId || raceId || fightId;
 
             if (finalId) {
-              // Open in new tab using query params
-              window.open(`/match?id=${finalId}&sport=${sport}`, '_blank'); 
+              // === DYNAMIC URL FIX ===
+              // 1. Get the Repo Name from the environment (exposed by package.json script)
+              const repoName = process.env.NEXT_PUBLIC_REPO_NAME;
+              
+              // 2. If it exists, add a slash (e.g., "/flash-sport"). If not, empty string.
+              const basePath = repoName ? `/${repoName}` : "";
+
+              // 3. Construct the URL combining base path + page path
+              window.open(`${basePath}/match?id=${finalId}&sport=${sport}`, '_blank'); 
+              
               targetNode.innerHTML = ""; 
             }
           }
@@ -61,14 +68,12 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
     return () => observer.disconnect();
   }, [isMounted, sport]);
 
-  // Widget Configuration
   const commonConfig = `
     data-theme="${widgetTheme}"
     data-show-errors="false"
     data-refresh="60"
   `;
 
-  // Determine Tab
   let tabConfig = '';
   if (isFavoritesView) {
     tabConfig = 'data-tab="favorites"';
@@ -78,7 +83,6 @@ export default function GameWidget({ leagueId, sport = "football" }: GameWidgetP
 
   const leagueConfig = leagueId ? `data-league="${leagueId}"` : '';
   
-  // Point targeting to hidden interceptor
   const targetConfig = `
     data-target-game="#widget-interceptor"
     data-target-race="#widget-interceptor"
