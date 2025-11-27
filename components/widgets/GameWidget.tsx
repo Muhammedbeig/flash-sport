@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedSkeleton from "@/components/feed/FeedSkeleton";
+// Corrected import path
+import FeedSkeleton from "@/components/feed/FeedSkeleton"; 
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -13,102 +14,103 @@ type GameWidgetProps = {
 export default function GameWidget({ leagueId, sport = "football" }: GameWidgetProps) {
   const searchParams = useSearchParams();
   const isFavoritesView = searchParams.get("view") === "favorites";
+  const currentTab = searchParams.get("tab"); 
   
   const { theme } = useTheme();
-  // Map internal theme to widget theme values
   const widgetTheme = theme === "dark" ? "dark" : "white";
 
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Small delay to let the skeleton show while widget script processes
     const timer = setTimeout(() => setIsMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Configuration strings
+  // === INTERCEPTOR: Opens match in NEW TAB ===
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length > 0) {
+          const targetNode = mutation.target as HTMLElement;
+          const injectedWidget = targetNode.querySelector("api-sports-widget");
+          
+          if (injectedWidget) {
+            const gameId = injectedWidget.getAttribute("data-game-id");
+            const raceId = injectedWidget.getAttribute("data-race-id");
+            const fightId = injectedWidget.getAttribute("data-fight-id");
+            
+            const finalId = gameId || raceId || fightId;
+
+            if (finalId) {
+              // Open in new tab using query params
+              window.open(`/match?id=${finalId}&sport=${sport}`, '_blank'); 
+              targetNode.innerHTML = ""; 
+            }
+          }
+        }
+      });
+    });
+
+    const interceptorDiv = document.getElementById("widget-interceptor");
+    if (interceptorDiv) {
+      observer.observe(interceptorDiv, { childList: true, subtree: true });
+    }
+
+    return () => observer.disconnect();
+  }, [isMounted, sport]);
+
+  // Widget Configuration
   const commonConfig = `
     data-theme="${widgetTheme}"
     data-show-errors="false"
-    data-favorite="true"
     data-refresh="60"
   `;
 
-  // Targeting options
-  const targetConfig = `
-    data-target-game="#match-details-container"
-    data-target-match="#match-details-container"
-    data-target-team="#match-details-container"
-    data-target-player="#match-details-container"
-    data-target-standings="#match-details-container"
-    data-target-race="#match-details-container"
-    data-target-driver="#match-details-container"
-    data-target-fight="#match-details-container"
-    data-target-fighter="#match-details-container"
-  `;
+  // Determine Tab
+  let tabConfig = '';
+  if (isFavoritesView) {
+    tabConfig = 'data-tab="favorites"';
+  } else if (currentTab) {
+    tabConfig = `data-tab="${currentTab}"`;
+  }
 
-  // Tab configurations
-  const detailsConfig = `
-    data-events="true"
-    data-lineups="true"
-    data-statistics="true"
-    data-player-statistics="true"
-    data-standings="true"
-  `;
-
-  const favoritesConfig = isFavoritesView ? 'data-tab="favorites"' : '';
   const leagueConfig = leagueId ? `data-league="${leagueId}"` : '';
-
-  // Construct the HTML string based on sport
-  const getWidgetHtml = () => {
-    if (sport === "f1") {
-      return `
-        <api-sports-widget 
-          data-type="races" 
-          data-sport="f1"
-          ${commonConfig}
-          ${targetConfig}
-        ></api-sports-widget>`;
-    } 
-    
-    if (sport === "mma") {
-      return `
-        <api-sports-widget 
-          data-type="fights" 
-          data-sport="mma"
-          ${commonConfig}
-          ${targetConfig}
-        ></api-sports-widget>`;
-    }
-
-    // Default (Football, Basketball, etc)
-    return `
-      <api-sports-widget 
-        data-type="games" 
-        data-sport="${sport}" 
-        ${leagueConfig}
-        ${commonConfig}
-        ${targetConfig}
-        ${detailsConfig}
-        ${favoritesConfig}
-        data-show-toolbar="true"
-      ></api-sports-widget>`;
-  };
+  
+  // Point targeting to hidden interceptor
+  const targetConfig = `
+    data-target-game="#widget-interceptor"
+    data-target-race="#widget-interceptor"
+    data-target-fight="#widget-interceptor"
+  `;
 
   return (
     <div className="w-full min-h-[500px] theme-bg rounded-xl border-0 relative transition-colors duration-200">
       
-      {/* Skeleton Loader */}
       {!isMounted && (
         <div className="absolute inset-0 z-10 theme-bg">
           <FeedSkeleton />
         </div>
       )}
 
-      {/* Actual Widget Container */}
+      {/* HIDDEN INTERCEPTOR DIV */}
+      <div id="widget-interceptor" className="hidden" />
+
+      {/* Main Feed Widget */}
       <div
-        className={isMounted ? "opacity-100 transition-opacity duration-500" : "opacity-0"}
-        dangerouslySetInnerHTML={{ __html: getWidgetHtml() }}
+        className={isMounted ? "opacity-100 block animate-in fade-in" : "opacity-0"}
+        dangerouslySetInnerHTML={{ __html: `
+          <api-sports-widget 
+            data-type="games" 
+            data-sport="${sport}" 
+            ${leagueConfig}
+            ${commonConfig}
+            ${targetConfig}
+            ${tabConfig}
+            data-show-toolbar="true"
+          ></api-sports-widget>
+        ` }}
       />
     </div>
   );

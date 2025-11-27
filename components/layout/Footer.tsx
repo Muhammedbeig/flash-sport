@@ -1,51 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { Smartphone, Twitter, Facebook, Instagram, Youtube } from "lucide-react";
+import { Smartphone, Twitter, Facebook, Instagram, Youtube, Globe } from "lucide-react";
 
 const FOOTER_CONTENT = {
   about: {
-    text: `FlashSport provides real-time sports scores, fixtures, results, standings, 
-    and statistics covering more than 30 sports worldwide. Stay updated with the 
-    fastest live score updates and deep insights into your favorite sports and leagues.`,
+    title: "About FlashSport",
+    text: `FlashSport provides the fastest real-time sports scores, fixtures, results, standings, 
+    and statistics covering more than 30 sports worldwide. Stay updated with live score updates 
+    and deep insights into your favorite leagues like the Premier League, NBA, and Champions League.`,
   },
   appLinks: [
-    { name: "Google Play" },
-    { name: "App Store" },
+    { name: "Google Play", url: "#" },
+    { name: "App Store", url: "#" },
   ],
   columns: [
     {
       title: "Football",
       links: [
-        { label: "Livescore", url: "/?sport=football" },
+        { label: "Football Livescore", url: "/?sport=football" },
         { label: "Premier League", url: "/?sport=football&league=39" },
-        { label: "LaLiga", url: "/?sport=football&league=140" },
-        { label: "Serie A", url: "/?sport=football&league=135" },
-        { label: "Bundesliga", url: "/?sport=football&league=78" },
-        { label: "Ligue 1", url: "/?sport=football&league=61" },
+        { label: "LaLiga Fixtures", url: "/?sport=football&league=140" },
+        { label: "Serie A Results", url: "/?sport=football&league=135" },
+        { label: "Bundesliga Table", url: "/?sport=football&league=78" },
+        { label: "Ligue 1 Stats", url: "/?sport=football&league=61" },
       ],
     },
     {
       title: "Trending",
       links: [
-        { label: "FIFA World Cup", url: "/?sport=football&league=1" },
+        { label: "World Cup 2026", url: "/?sport=football&league=1" },
         { label: "Champions League", url: "/?sport=football&league=2" },
         { label: "Europa League", url: "/?sport=football&league=3" },
         { label: "Euro 2024", url: "/?sport=football&league=4" },
-        { label: "Copa America", url: "#" },
+        { label: "Copa Libertadores", url: "/?sport=football&league=13" },
       ],
     },
     {
-      title: "Basketball",
+      title: "Basketball & Tennis",
       links: [
-        { label: "NBA Score", url: "/?sport=nba" },
-        { label: "Basketball LiveScore", url: "/?sport=basketball" },
-        { label: "NBA Standings", url: "/?sport=nba" },
-        { label: "NBA Teams", url: "/?sport=nba" },
+        { label: "NBA Scores", url: "/?sport=nba" },
+        { label: "Basketball Live", url: "/?sport=basketball" },
+        { label: "EuroLeague", url: "#" },
+        { label: "Tennis ATP", url: "/?sport=tennis" },
+        { label: "WTA Live", url: "/?sport=tennis" },
       ],
     },
     {
-      title: "Useful Links",
+      title: "Community",
       links: [
         { label: "Contact Us", url: "#" },
         { label: "Advertise", url: "#" },
@@ -56,7 +58,7 @@ const FOOTER_CONTENT = {
     },
   ],
   localized: [
-    { label: "Basketball LiveScore", url: "#" },
+    { label: "Soccer LiveScore", url: "#" },
     { label: "Bola Basket LiveScore", url: "#" },
     { label: "Баскетбол LiveScore", url: "#" },
     { label: "LiveScore de basquete", url: "#" },
@@ -67,98 +69,103 @@ const FOOTER_CONTENT = {
 
 export default function Footer() {
   return (
-    <footer className="theme-bg theme-border border-t pt-12 pb-8 text-secondary text-sm font-sans mt-auto">
+    <footer className="w-full theme-bg theme-border border-t pt-16 pb-8 text-sm font-sans relative z-10">
       <div className="container mx-auto px-6 max-w-7xl">
 
         {/* ============================
-            TOP AREA
+            TOP AREA: Brand & Apps
         ============================ */}
-        <div className="flex flex-col lg:flex-row justify-between gap-8 mb-12 theme-border border-b pb-10">
+        <div className="flex flex-col lg:flex-row justify-between gap-10 mb-12 theme-border border-b pb-12">
           
-          {/* ABOUT */}
-          <div className="lg:w-2/3">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+          {/* BRANDING */}
+          <div className="lg:w-2/3 space-y-4">
+            <Link href="/" className="flex items-center gap-3 w-fit group">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
                 F
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-primary">
+              <span className="text-2xl font-bold tracking-tight text-primary">
                 FlashSport
-              </h2>
-            </div>
+              </span>
+            </Link>
 
-            <p className="leading-relaxed text-secondary text-xs md:text-sm text-justify max-w-3xl">
+            <p className="leading-relaxed text-secondary text-xs md:text-sm max-w-2xl">
               {FOOTER_CONTENT.about.text}
             </p>
           </div>
 
-          {/* APP DOWNLOAD */}
-          <div className="lg:w-1/3 flex flex-col gap-3 items-start lg:items-end">
-            <span className="text-primary font-bold mb-1 text-xs uppercase tracking-wide">
-              Download App
+          {/* APP DOWNLOAD CTA */}
+          <div className="lg:w-1/3 flex flex-col items-start lg:items-end gap-4">
+            <span className="text-primary font-bold text-xs uppercase tracking-wider">
+              Get the Mobile App
             </span>
 
-            {FOOTER_CONTENT.appLinks.map((app) => (
-              <button
-                key={app.name}
-                className="flex items-center gap-3 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg w-48 transition-colors shadow-sm"
-              >
-                <Smartphone size={20} />
-                <div className="text-left">
-                  <div className="text-[9px] uppercase text-slate-400 leading-none">
-                    Get it on
+            <div className="flex flex-row gap-3">
+              {FOOTER_CONTENT.appLinks.map((app) => (
+                <a
+                  key={app.name}
+                  href={app.url}
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg transition-all shadow-sm group"
+                >
+                  <Smartphone size={22} className="text-slate-400 group-hover:text-white transition-colors" />
+                  <div className="text-left">
+                    <div className="text-[10px] uppercase text-slate-400 leading-none mb-0.5">
+                      Download on
+                    </div>
+                    <div className="font-bold text-sm leading-tight">{app.name}</div>
                   </div>
-                  <div className="font-bold text-sm leading-tight">{app.name}</div>
-                </div>
-              </button>
-            ))}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ============================
-            LINK COLUMNS
+            MAIN LINKS GRID
         ============================ */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-6 mb-12">
           {FOOTER_CONTENT.columns.map((col, index) => (
-            <div key={index}>
+            <nav key={index} aria-label={`${col.title} navigation`}>
               <h3 className="text-primary font-bold mb-4 uppercase tracking-wide text-xs">
                 {col.title}
               </h3>
 
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {col.links.map((link, i) => (
                   <li key={i}>
                     <Link
                       href={link.url}
-                      className="text-secondary hover:text-blue-600 transition-colors hover:underline decoration-blue-200 underline-offset-4 text-xs md:text-sm"
+                      className="text-secondary hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs md:text-sm hover:underline decoration-blue-600/30 underline-offset-4"
                     >
                       {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 
         {/* ============================
-            LOCALIZED LINKS
+            LOCALIZED / SEO LINKS
         ============================ */}
         <div className="theme-border border-t pt-8 mb-8">
-          <h3 className="text-primary font-bold mb-4 text-sm">
-            Visit localized versions
-          </h3>
+          <div className="flex items-center gap-2 mb-4 text-primary font-bold text-sm">
+            <Globe size={16} />
+            <h3>International Versions</h3>
+          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <nav aria-label="International versions" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {FOOTER_CONTENT.localized.map((loc, i) => (
-              <Link
+              <a
                 key={i}
                 href={loc.url}
-                className="text-secondary hover:text-blue-600 transition-colors text-xs"
+                className="text-secondary hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs"
               >
                 {loc.label}
-              </Link>
+              </a>
             ))}
-          </div>
+          </nav>
         </div>
 
         {/* ============================
@@ -167,29 +174,35 @@ export default function Footer() {
         <div className="theme-border border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs">
           
           {/* COPYRIGHT */}
-          <div className="text-secondary">
-            Copyright © 2025 FlashSport | All Rights Reserved
+          <div className="text-secondary order-2 md:order-1">
+            &copy; {new Date().getFullYear()} FlashSport Inc. All Rights Reserved.
           </div>
 
           {/* SOCIAL ICONS */}
-          <div className="flex items-center gap-4">
-            {[Twitter, Facebook, Instagram, Youtube].map((Icon, i) => (
+          <div className="flex items-center gap-3 order-1 md:order-2">
+            {[
+              { Icon: Twitter, label: "Twitter" },
+              { Icon: Facebook, label: "Facebook" },
+              { Icon: Instagram, label: "Instagram" },
+              { Icon: Youtube, label: "YouTube" }
+            ].map(({ Icon, label }, i) => (
               <a
                 key={i}
                 href="#"
-                className="p-2 theme-bg theme-border border rounded-full hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all text-secondary"
+                aria-label={label}
+                className="p-2.5 theme-bg theme-border border rounded-full hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 transition-all text-secondary"
               >
                 <Icon size={16} />
               </a>
             ))}
           </div>
 
-          {/* LEGAL LINKS */}
-          <div className="flex gap-6 text-secondary font-medium">
-            <Link href="#" className="hover:text-blue-600">Privacy</Link>
-            <Link href="#" className="hover:text-blue-600">Terms</Link>
-            <Link href="#" className="hover:text-blue-600">Contact</Link>
-          </div>
+          {/* LEGAL */}
+          <nav aria-label="Legal navigation" className="flex gap-6 text-secondary font-medium order-3">
+            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Privacy</Link>
+            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Terms</Link>
+            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cookies</Link>
+          </nav>
         </div>
 
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton"; // Ensure this path is correct
 import { useTheme } from "@/components/providers/ThemeProvider";
 
 export default function MatchWidget({ matchId, sport = "football" }: { matchId: string, sport?: string }) {
@@ -15,13 +15,14 @@ export default function MatchWidget({ matchId, sport = "football" }: { matchId: 
     return () => clearTimeout(timer);
   }, [matchId, theme]);
 
-  // Determine widget type based on sport
+  // Determine widget type
   const getType = () => {
     if (sport === "f1") return "race";
     if (sport === "mma") return "fight";
     return "game";
   };
   
+  // Set ID Attribute based on sport
   const getIdAttr = () => {
     if (sport === "f1") return `data-race-id="${matchId}"`;
     if (sport === "mma") return `data-fight-id="${matchId}"`;
@@ -30,7 +31,6 @@ export default function MatchWidget({ matchId, sport = "football" }: { matchId: 
 
   return (
     <div className="w-full theme-bg flex flex-col text-primary">
-      {/* Loading skeleton */}
       {!loaded && (
         <div className="p-4 space-y-4">
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -38,7 +38,6 @@ export default function MatchWidget({ matchId, sport = "football" }: { matchId: 
         </div>
       )}
 
-      [cite_start]{/* Actual match widget [cite: 332, 521, 626] */}
       <div
         className={loaded ? "block animate-in fade-in" : "hidden"}
         dangerouslySetInnerHTML={{

@@ -4,66 +4,53 @@
    THEME VARIABLES
    ========================================================= */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* LIGHT MODE */
+  --background: 255 255 255;
+  --foreground: 30 41 59;
+  
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #475569;
+
+  /* Widget Colors (Light) */
+  --widget-bg: #ffffff;
+  --widget-text: #1e293b;
+  --widget-border: #e2e8f0;
+  --widget-hover: #f0f7ff;
+  --widget-active: #10b981;
+
+  /* Skeleton (Light) */
+  --skeleton: #e2e8f0;
 }
 
-/* -------------------------
-   LIGHT MODE (Default)
-   ------------------------- */
-:root,
-:root.light {
-  --background: #ffffff;
-  --foreground: #1e293b;
+.dark {
+  /* DARK MODE */
+  --background: 15 23 42;
+  --foreground: 241 245 249;
 
-  --color-text-primary: #1e293b;     /* slate-800 */
-  --color-text-secondary: #475569;   /* slate-600 */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
 
-  color-scheme: light;
-}
+  /* Widget Colors (Dark) */
+  --widget-bg: #0f172a;
+  --widget-text: #f1f5f9;
+  --widget-border: #1e293b;
+  --widget-hover: #1e293b;
+  --widget-active: #10b981;
 
-/* -------------------------
-   DARK MODE
-   ------------------------- */
-:root.dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-
-  --color-text-primary: #f1f5f9;     /* slate-100 */
-  --color-text-secondary: #cbd5e1;   /* slate-300 */
-
-  color-scheme: dark;
+  /* Skeleton (Dark) */
+  --skeleton: #1e293b;
 }
 
 /* =========================================================
-   BASE ELEMENTS
+   BASE STYLES
    ========================================================= */
 
-html {
-  background-color: var(--background);
-  transition: background-color 0.25s ease;
-}
-
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
-}
-
-* {
-  scroll-behavior: smooth;
-}
-
-#__next,
-main {
-  background-color: var(--background);
-  transition: background-color 0.25s ease;
 }
 
 /* =========================================================
@@ -71,121 +58,110 @@ main {
    ========================================================= */
 
 .theme-bg {
-  background-color: var(--background) !important;
-  color: var(--foreground) !important;
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
 }
 
 .theme-border {
-  border-color: color-mix(in srgb, var(--foreground) 15%, transparent) !important;
+  border-color: var(--widget-border);
+}
+
+.theme-hover {
+  transition: background-color 0.2s ease;
+}
+.theme-hover:hover {
+  background-color: var(--widget-hover) !important;
+}
+
+.bg-skeleton {
+  background-color: var(--skeleton);
 }
 
 .text-primary {
-  color: var(--color-text-primary) !important;
+  color: var(--color-text-primary);
 }
 
 .text-secondary {
-  color: var(--color-text-secondary) !important;
+  color: var(--color-text-secondary);
 }
 
 /* =========================================================
-   SAFE FLASHCORE HOVER (NO CLICK BLOCKING)
+   SIDEBAR LIMITER (Critical for "View All" functionality)
    ========================================================= */
 
-.theme-hover {
-  transition: background-color 0.2s ease !important;
+/* 1. Hide items 16+ in the sidebar widget */
+.sidebar-countries-widget .asw-leagues-list > div:nth-child(n+16),
+.sidebar-countries-widget .asw-countries-list > div:nth-child(n+16) {
+  display: none !important;
 }
 
-/* Light mode hover */
-:root.light .theme-hover:hover {
-  background-color: #f0f7ff !important; /* Flashscore light-blue */
+/* 2. Handle widget overflow */
+.sidebar-countries-widget api-sports-widget {
+  display: block;
+  overflow: hidden;
 }
 
-/* Dark mode hover */
-:root.dark .theme-hover:hover {
-  background-color: #1e293b !important; /* slate-800 */
+/* 3. Hide internal scrollbars */
+.sidebar-countries-widget .asw-leagues-list,
+.sidebar-countries-widget .asw-countries-list {
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 /* =========================================================
-   WIDGET OVERRIDES FOR LIGHT MODE
+   API-SPORTS WIDGET OVERRIDES
    ========================================================= */
 
-/* Keep widget fully controllable when not inside shadow DOM */
-:root.light api-sports-widget *,
-:root.light .asw-container,
-:root.light .asw-content {
-  background-color: #ffffff !important;
-  color: #1e293b !important;
-  border-color: #e2e8f0 !important;
+/* Force Widget to match Theme Colors */
+api-sports-widget, 
+.asw-container, 
+.asw-content,
+.asw-header, 
+.asw-tabs {
+  background-color: var(--widget-bg) !important;
+  color: var(--widget-text) !important;
+  border-color: var(--widget-border) !important;
+  font-family: inherit !important;
 }
 
-/* Header bar */
-:root.light api-sports-widget .asw-header {
-  background-color: #ffffff !important;
+/* Dropdowns */
+api-sports-widget select,
+api-sports-widget option {
+  background-color: var(--widget-bg) !important;
+  color: var(--widget-text) !important;
+  border-color: var(--widget-border) !important;
 }
 
-/* Tabs */
-:root.light api-sports-widget .asw-tabs {
-  background-color: #ffffff !important;
+/* Active Tab Styling */
+.asw-tab-active {
+  background-color: transparent !important;
+  color: var(--widget-active) !important;
+  font-weight: 800 !important;
+  border-bottom: 3px solid var(--widget-active) !important;
 }
 
-:root.light api-sports-widget .asw-tabs > div {
-  background-color: #ffffff !important;
-  color: #1e293b !important;
-}
-
-/* Active tab — Flashscore green */
-:root.light api-sports-widget .asw-tab-active {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  border-bottom-color: #10b981 !important;
-}
-
-/* Inactive tabs */
-:root.light api-sports-widget .asw-tab {
-  color: #475569 !important;
-}
-
-/* Remove unwanted gradients */
-:root.light api-sports-widget .asw-tabs::before,
-:root.light api-sports-widget .asw-header::before {
+/* Remove default gradients */
+.asw-tabs::before,
+.asw-header::before {
   background: none !important;
-}
-
-/* Dropdowns inside widget */
-:root.light api-sports-widget select,
-:root.light api-sports-widget option {
-  background-color: #ffffff !important;
-  color: #1e293b !important;
-  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
 }
 
 /* =========================================================
-   OPTIONAL: Animations
+   LAYOUT & ANIMATIONS
    ========================================================= */
+
+/* Footer Fix */
+footer {
+  position: relative;
+  z-index: 10;
+}
 
 .fade-in {
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-/* =========================================================
-   SCROLLBAR STYLING
-   ========================================================= */
-
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--foreground) 30%, transparent);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
 }
