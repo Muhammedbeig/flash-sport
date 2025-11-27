@@ -1,51 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { Facebook, Twitter, Instagram, Youtube, Smartphone } from "lucide-react";
+import { Smartphone, Twitter, Facebook, Instagram, Youtube } from "lucide-react";
 
 const FOOTER_CONTENT = {
   about: {
-    title: "About FlashSport",
-    text: "FlashSport provides you with live scores, results, tables, statistics, fixtures, standings, and previous results by quarters, halftime, or final result. We offer scores service from more than 200 basketball and football competitions from around the world. Follow live results, stats, and team rosters on FlashSport."
+    text: `FlashSport provides real-time sports scores, fixtures, results, standings, 
+    and statistics covering more than 30 sports worldwide. Stay updated with the 
+    fastest live score updates and deep insights into your favorite sports and leagues.`,
   },
   appLinks: [
-    { name: "Google Play", url: "#" },
-    { name: "App Store", url: "#" },
-    { name: "AppGallery", url: "#" }
+    { name: "Google Play" },
+    { name: "App Store" },
   ],
   columns: [
     {
-      title: "Top Leagues",
-      links: [
-        { label: "Premier League", url: "/?sport=football&league=39" },
-        { label: "Champions League", url: "/?sport=football&league=2" },
-        { label: "NBA Schedule", url: "/?sport=nba" },
-        { label: "La Liga Standings", url: "/?sport=football&league=140" },
-        { label: "Serie A Fixtures", url: "/?sport=football&league=135" },
-        { label: "Bundesliga Results", url: "/?sport=football&league=78" },
-      ]
-    },
-    {
       title: "Football",
       links: [
-        { label: "Transfer News", url: "/news" },
-        { label: "Live Scores", url: "/?view=live" },
-        { label: "Prediction", url: "#" },
-        { label: "Head to Head", url: "#" },
+        { label: "Livescore", url: "/?sport=football" },
+        { label: "Premier League", url: "/?sport=football&league=39" },
+        { label: "LaLiga", url: "/?sport=football&league=140" },
+        { label: "Serie A", url: "/?sport=football&league=135" },
+        { label: "Bundesliga", url: "/?sport=football&league=78" },
+        { label: "Ligue 1", url: "/?sport=football&league=61" },
+      ],
+    },
+    {
+      title: "Trending",
+      links: [
         { label: "FIFA World Cup", url: "/?sport=football&league=1" },
-        { label: "EPL Standings 2024-25", url: "/?sport=football&league=39" },
-      ]
+        { label: "Champions League", url: "/?sport=football&league=2" },
+        { label: "Europa League", url: "/?sport=football&league=3" },
+        { label: "Euro 2024", url: "/?sport=football&league=4" },
+        { label: "Copa America", url: "#" },
+      ],
     },
     {
       title: "Basketball",
       links: [
-        { label: "NBA Player Stats", url: "/?sport=nba" },
-        { label: "Basketball Live Score", url: "/?sport=basketball" },
-        { label: "NBA Schedule", url: "/?sport=nba" },
+        { label: "NBA Score", url: "/?sport=nba" },
+        { label: "Basketball LiveScore", url: "/?sport=basketball" },
         { label: "NBA Standings", url: "/?sport=nba" },
         { label: "NBA Teams", url: "/?sport=nba" },
-        { label: "CBA Schedule", url: "#" },
-      ]
+      ],
     },
     {
       title: "Useful Links",
@@ -54,10 +51,9 @@ const FOOTER_CONTENT = {
         { label: "Advertise", url: "#" },
         { label: "Privacy Policy", url: "#" },
         { label: "Terms of Service", url: "#" },
-        { label: "Recommended Sites", url: "#" },
         { label: "FAQ", url: "#" },
-      ]
-    }
+      ],
+    },
   ],
   localized: [
     { label: "Basketball LiveScore", url: "#" },
@@ -66,7 +62,7 @@ const FOOTER_CONTENT = {
     { label: "LiveScore de basquete", url: "#" },
     { label: "Košarka LiveScore", url: "#" },
     { label: "농구 라이브 스코어", url: "#" },
-  ]
+  ],
 };
 
 export default function Footer() {
@@ -74,10 +70,12 @@ export default function Footer() {
     <footer className="theme-bg theme-border border-t pt-12 pb-8 text-secondary text-sm font-sans mt-auto">
       <div className="container mx-auto px-6 max-w-7xl">
 
-        {/* TOP AREA */}
+        {/* ============================
+            TOP AREA
+        ============================ */}
         <div className="flex flex-col lg:flex-row justify-between gap-8 mb-12 theme-border border-b pb-10">
           
-          {/* ABOUT SECTION */}
+          {/* ABOUT */}
           <div className="lg:w-2/3">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
@@ -93,7 +91,7 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* DOWNLOAD BUTTONS */}
+          {/* APP DOWNLOAD */}
           <div className="lg:w-1/3 flex flex-col gap-3 items-start lg:items-end">
             <span className="text-primary font-bold mb-1 text-xs uppercase tracking-wide">
               Download App
@@ -116,7 +114,9 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* LINK COLUMNS */}
+        {/* ============================
+            LINK COLUMNS
+        ============================ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {FOOTER_CONTENT.columns.map((col, index) => (
             <div key={index}>
@@ -140,7 +140,9 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* LOCALIZED LINKS */}
+        {/* ============================
+            LOCALIZED LINKS
+        ============================ */}
         <div className="theme-border border-t pt-8 mb-8">
           <h3 className="text-primary font-bold mb-4 text-sm">
             Visit localized versions
@@ -159,7 +161,9 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* BOTTOM BAR */}
+        {/* ============================
+            BOTTOM BAR
+        ============================ */}
         <div className="theme-border border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs">
           
           {/* COPYRIGHT */}

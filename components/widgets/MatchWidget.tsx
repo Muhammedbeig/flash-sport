@@ -2,20 +2,35 @@
 
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
-export default function MatchWidget({ matchId }: { matchId: string }) {
+export default function MatchWidget({ matchId, sport = "football" }: { matchId: string, sport?: string }) {
   const [loaded, setLoaded] = useState(false);
+  const { theme } = useTheme();
+  const widgetTheme = theme === "dark" ? "dark" : "white";
 
   useEffect(() => {
     setLoaded(false);
-    const timer = setTimeout(() => setLoaded(true), 1000);
+    const timer = setTimeout(() => setLoaded(true), 800);
     return () => clearTimeout(timer);
-  }, [matchId]);
+  }, [matchId, theme]);
+
+  // Determine widget type based on sport
+  const getType = () => {
+    if (sport === "f1") return "race";
+    if (sport === "mma") return "fight";
+    return "game";
+  };
+  
+  const getIdAttr = () => {
+    if (sport === "f1") return `data-race-id="${matchId}"`;
+    if (sport === "mma") return `data-fight-id="${matchId}"`;
+    return `data-game-id="${matchId}"`;
+  };
 
   return (
-    <div className="w-full h-full theme-bg flex flex-col text-primary">
-
-      {/* SKELETON LOADING */}
+    <div className="w-full theme-bg flex flex-col text-primary">
+      {/* Loading skeleton */}
       {!loaded && (
         <div className="p-4 space-y-4">
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -23,16 +38,20 @@ export default function MatchWidget({ matchId }: { matchId: string }) {
         </div>
       )}
 
-      {/* API SPORTS WIDGET */}
+      [cite_start]{/* Actual match widget [cite: 332, 521, 626] */}
       <div
-        className={loaded ? "block h-full" : "hidden"}
+        className={loaded ? "block animate-in fade-in" : "hidden"}
         dangerouslySetInnerHTML={{
           __html: `
-            <api-sports-widget 
-              data-type="game"
-              data-id="${matchId}"
+            <api-sports-widget
+              data-type="${getType()}"
+              ${getIdAttr()}
+              data-sport="${sport}"
+              data-theme="${widgetTheme}"
               data-show-toolbar="false"
-              data-theme="white"
+              data-events="true"
+              data-statistics="true"
+              data-lineups="true"
             ></api-sports-widget>
           `,
         }}
