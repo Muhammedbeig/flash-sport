@@ -18,13 +18,13 @@ export default function MobileNav() {
     {
       label: "Matches",
       icon: Clock,
-      href: "/", // Resets to home as requested
+      href: "/", // Resets to home
       isActive: isHome,
     },
     {
       label: "Search",
       icon: Search,
-      href: "#", // Placeholder for now
+      href: "#", // Placeholder
       isActive: false,
     },
     {
@@ -42,7 +42,9 @@ export default function MobileNav() {
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t theme-border h-16 pb-safe">
+    // FIX: Replaced explicit 'bg-white dark:bg-slate-900' with 'theme-bg'
+    // This ensures it uses the exact same variables as the Header and Sidebar.
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 theme-bg border-t theme-border h-16 pb-safe transition-colors duration-200">
       <div className="grid grid-cols-4 h-full">
         {navItems.map((item) => (
           <Link
@@ -52,7 +54,8 @@ export default function MobileNav() {
               "flex flex-col items-center justify-center gap-1 transition-colors relative",
               item.isActive 
                 ? "text-blue-600 dark:text-blue-500" 
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                // FIX: Use 'text-secondary' for inactive state to match global theme variables
+                : "text-secondary hover:text-primary"
             )}
           >
             {/* Active Indicator Line */}

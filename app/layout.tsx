@@ -1,4 +1,4 @@
-import "@/app/globals.css";
+import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider"; 
 import HtmlThemeSync from "@/components/HtmlThemeSync";
 import WidgetThemeConfig from "@/components/WidgetThemeConfig";
@@ -16,16 +16,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-
       <body>
-        {/* API-SPORTS Widget Script */}
+        
+        {/* Load script normally. The Sidebar's "renderTrigger" trick will catch this script. */}
         <script
           type="module"
           src="https://widgets.api-sports.io/3.1.0/widgets.js"
-          async
         />
 
-        {/* Global Config */}
+        {/* Global Configuration */}
         {API_KEY && (
           <div
             dangerouslySetInnerHTML={{

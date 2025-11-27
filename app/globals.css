@@ -12,14 +12,14 @@
   --color-text-primary: #1e293b;
   --color-text-secondary: #475569;
 
-  /* Widget Colors (Light) */
+  /* Widget Colors */
   --widget-bg: #ffffff;
   --widget-text: #1e293b;
   --widget-border: #e2e8f0;
   --widget-hover: #f0f7ff;
   --widget-active: #10b981;
 
-  /* Skeleton (Light) */
+  /* Skeleton */
   --skeleton: #e2e8f0;
 }
 
@@ -31,14 +31,14 @@
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #cbd5e1;
 
-  /* Widget Colors (Dark) */
+  /* Widget Colors */
   --widget-bg: #0f172a;
   --widget-text: #f1f5f9;
   --widget-border: #1e293b;
   --widget-hover: #1e293b;
   --widget-active: #10b981;
 
-  /* Skeleton (Dark) */
+  /* Skeleton */
   --skeleton: #1e293b;
 }
 
@@ -86,29 +86,6 @@ body {
 }
 
 /* =========================================================
-   SIDEBAR LIMITER (Critical for "View All" functionality)
-   ========================================================= */
-
-/* 1. Hide items 16+ in the sidebar widget */
-.sidebar-countries-widget .asw-leagues-list > div:nth-child(n+16),
-.sidebar-countries-widget .asw-countries-list > div:nth-child(n+16) {
-  display: none !important;
-}
-
-/* 2. Handle widget overflow */
-.sidebar-countries-widget api-sports-widget {
-  display: block;
-  overflow: hidden;
-}
-
-/* 3. Hide internal scrollbars */
-.sidebar-countries-widget .asw-leagues-list,
-.sidebar-countries-widget .asw-countries-list {
-  max-height: none !important;
-  overflow: visible !important;
-}
-
-/* =========================================================
    API-SPORTS WIDGET OVERRIDES
    ========================================================= */
 
@@ -151,7 +128,6 @@ api-sports-widget option {
    LAYOUT & ANIMATIONS
    ========================================================= */
 
-/* Footer Fix */
 footer {
   position: relative;
   z-index: 10;
