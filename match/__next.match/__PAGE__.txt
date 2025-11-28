@@ -1,5 +1,5 @@
 1:"$Sreact.fragment"
 2:I[97367,["/flash-sport/_next/static/chunks/ff1a16fafef87110.js","/flash-sport/_next/static/chunks/247eb132b7f7b574.js"],"OutletBoundary"]
 3:"$Sreact.suspense"
-0:{"buildId":"G9PleFJxgX5vg8DbtAjdq","rsc":["$","$1","c",{"children":[["$","div",null,{"className":"px-4 py-8 text-center text-secondary","children":"Invalid or missing match ID."}],[["$","script","script-0",{"src":"/flash-sport/_next/static/chunks/ad424bb8a467925a.js","async":true}]],["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"5CngQ0haE_PaeX0ARy49v","rsc":["$","$1","c",{"children":[["$","div",null,{"className":"px-4 py-8 text-center text-secondary","children":"Invalid or missing match ID."}],[["$","script","script-0",{"src":"/flash-sport/_next/static/chunks/ad424bb8a467925a.js","async":true}]],["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"loading":null,"isPartial":false}
 4:null
