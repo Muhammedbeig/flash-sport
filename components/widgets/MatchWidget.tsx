@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp, User } from "lucide-react";
@@ -14,73 +14,20 @@ const SPORT_HOSTS: Record<string, string> = {
   rugby: "v1.rugby.api-sports.io",
   nba: "v1.basketball.api-sports.io",
   nfl: "v1.american-football.api-sports.io",
-  volleyball: "v1.volleyball.api-sports.io",
-  handball: "v1.handball.api-sports.io",
+  f1: "v1.formula-1.api-sports.io",
+  mma: "v1.mma.api-sports.io",
 };
 
 // === TYPES ===
-type Team = {
-  id: number;
-  name: string;
-  logo: string;
-  winner?: boolean;
-};
-
-type Score = {
-  home: number | null;
-  away: number | null;
-};
-
-type Status = {
-  long: string;
-  short: string;
-  elapsed?: number;
-};
-
-type Venue = {
-  name: string;
-  city: string;
-};
-
-type League = {
-  id: number;
-  name: string;
-  country: string; // always string after normalization
-  logo: string;
-  season: number;
-};
-
-type MatchData = {
-  fixture: {
-    id: number;
-    date: string;
-    status: Status;
-    venue: Venue;
-  };
-  league: League;
-  teams: {
-    home: Team;
-    away: Team;
-  };
-  goals: Score;
-  score: {
-    halftime: Score;
-    fulltime: Score;
-    extratime: Score;
-    penalty: Score;
-  };
-};
-
 type Player = {
   id: number;
   name: string;
   number: number;
   pos: string;
-  grid?: string;
-  photo: string;
+  grid: string | null;
 };
 
-type TeamLineup = {
+type Lineup = {
   team: { id: number; name: string; logo: string };
   coach: { id: number; name: string; photo: string };
   formation: string;
@@ -88,318 +35,79 @@ type TeamLineup = {
   substitutes: { player: Player }[];
 };
 
-// === HELPERS ===
-function normalizeLeague(rawLeague: any): League {
-  if (!rawLeague) {
-    return {
-      id: 0,
-      name: "",
-      country: "",
-      logo: "",
-      season: new Date().getFullYear(),
-    };
-  }
-
-  let country = "";
-  if (rawLeague.country && typeof rawLeague.country === "object") {
-    // NFL-style: { name, code, flag }
-    country = rawLeague.country.name ?? "";
-  } else {
-    country = rawLeague.country ?? "";
-  }
-
-  return {
-    id: rawLeague.id ?? 0,
-    name: rawLeague.name ?? "",
-    country,
-    logo: rawLeague.logo ?? "",
-    season: rawLeague.season ?? new Date().getFullYear(),
-  };
-}
-
-// Expandable wrapper (for Stats / Timeline / Lineups blocks)
+// === HELPER: Expandable Wrapper ===
 function ExpandableWidget({
   title,
   children,
 }: {
   title: string;
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="theme-bg rounded-xl overflow-hidden shadow-sm border theme-border flex flex-col">
-      <button
-        type="button"
-        onClick={() => setIsExpanded((v) => !v)}
-        className="flex items-center justify-between w-full p-3 border-b theme-border bg-background/90"
-      >
-        <span className="text-xs font-bold text-secondary uppercase tracking-wider">
-          {title}
-        </span>
-        {isExpanded ? (
-          <ChevronUp size={14} className="text-secondary" />
-        ) : (
-          <ChevronDown size={14} className="text-secondary" />
-        )}
-      </button>
+      <div className="p-4 border-b theme-border font-bold text-sm text-secondary uppercase tracking-wider">
+        {title}
+      </div>
 
       <div
-        className={`transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[3000px]" : "max-h-0 overflow-hidden"
+        className={`transition-all duration-500 ease-in-out relative ${
+          isExpanded ? "max-h-[3000px]" : "max-h-[400px] overflow-hidden"
         }`}
       >
-        {isExpanded && <div className="p-3 sm:p-4">{children}</div>}
-      </div>
-    </div>
-  );
-}
+        {children}
 
-// === HEADER (uses league.country — fixed via normalization) ===
-function MatchHeader({ data }: { data: MatchData }) {
-  const { fixture, league, teams, goals } = data;
-
-  const utcDate = new Date(fixture.date);
-  const localDate = utcDate.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-  const localTime = utcDate.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const status = fixture.status.short;
-  const isLive = !["FT", "NS", "TBD", "PST"].includes(status);
-
-  return (
-    <div className="theme-bg rounded-xl border theme-border shadow-sm overflow-hidden mb-4">
-      {/* League + Status */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b theme-border bg-background/90">
-        <div className="flex items-center gap-3">
-          {league.logo && (
-            <img
-              src={league.logo}
-              alt={league.name}
-              className="w-7 h-7 rounded-md bg-muted/40 object-contain"
-            />
-          )}
-          <div className="flex flex-col">
-            <span className="text-[11px] font-semibold text-secondary uppercase tracking-wider">
-              {league.country}
-            </span>
-            <span className="text-xs font-semibold text-foreground">
-              {league.name} • {league.season}
-            </span>
-          </div>
-        </div>
-        <div className="text-right">
+        {/* Gradient Fade using Theme Variable to avoid "Blackish" look */}
+        {!isExpanded && (
           <div
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-              isLive
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : "bg-muted text-secondary"
-            }`}
-          >
-            {isLive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse mr-1" />
-            )}
-            {fixture.status.long}
-          </div>
-          <div className="text-[11px] text-secondary mt-1">
-            {localDate} • {localTime}
-          </div>
-        </div>
+            className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
+            style={{
+              background: `linear-gradient(to top, rgb(var(--background)), transparent)`,
+            }}
+          />
+        )}
       </div>
 
-      {/* Teams + Score */}
-      <div className="px-4 py-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          {/* Home */}
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center overflow-hidden">
-              {teams.home.logo ? (
-                <img
-                  src={teams.home.logo}
-                  alt={teams.home.name}
-                  className="w-8 h-8 object-contain"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">
-                  <span className="text-xs text-white">
-                    {teams.home.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-secondary uppercase tracking-wider">
-                Home
-              </span>
-              <span className="text-sm font-semibold text-foreground">
-                {teams.home.name}
-              </span>
-            </div>
-          </div>
-
-          {/* Score */}
-          <div className="flex flex-col items-center justify-center px-3">
-            <div className="flex items-center gap-2 text-2xl font-bold">
-              <span>{goals.home ?? "-"}</span>
-              <span className="text-secondary text-base">-</span>
-              <span>{goals.away ?? "-"}</span>
-            </div>
-            <div className="text-[11px] text-secondary mt-1">
-              HT {data.score.halftime.home ?? "-"}-{data.score.halftime.away ?? "-"}
-            </div>
-          </div>
-
-          {/* Away */}
-          <div className="flex items-center gap-3 flex-1 justify-end">
-            <div className="flex flex-col text-right">
-              <span className="text-[11px] font-semibold text-secondary uppercase tracking-wider">
-                Away
-              </span>
-              <span className="text-sm font-semibold text-foreground">
-                {teams.away.name}
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center overflow-hidden">
-              {teams.away.logo ? (
-                <img
-                  src={teams.away.logo}
-                  alt={teams.away.name}
-                  className="w-8 h-8 object-contain"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">
-                  <span className="text-xs text-white">
-                    {teams.away.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Venue */}
-        <div className="flex items-center justify-between text-[11px] text-secondary pt-1">
-          <div>
-            <span className="font-semibold">Venue: </span>
-            <span>
-              {fixture.venue.name}
-              {fixture.venue.city ? ` • ${fixture.venue.city}` : ""}
-            </span>
-          </div>
-        </div>
-      </div>
+      <button
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="flex items-center justify-center gap-1 py-2 text-xs font-medium text-primary border-t theme-border hover:bg-primary/5"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp size={14} />
+            Show less
+          </>
+        ) : (
+          <>
+            <ChevronDown size={14} />
+            Show more
+          </>
+        )}
+      </button>
     </div>
   );
 }
 
-// === STATS WIDGET ===
-function MatchStatsWidget({
-  matchId,
-  league,
-  widgetTheme,
-}: {
-  matchId: number;
-  league: League;
-  widgetTheme: string;
-}) {
-  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-  if (!apiKey) return null;
-
-  const themeColor = widgetTheme === "dark" ? "dark" : "light";
-
-  return (
-    <ExpandableWidget title="Match Stats & Insights">
-      <div className="rounded-lg overflow-hidden border theme-border">
-        <div
-          className="widget-container bg-background/80"
-          dangerouslySetInnerHTML={{
-            __html: `<api-sports-widget 
-              data-type="fixture"
-              data-id="${matchId}"
-              data-theme="${themeColor}"
-              data-refresh="120"
-              data-show-errors="false"
-              data-locale="en"
-              data-text-color="true"
-              data-background-color="true"
-              data-border-radius="14"
-              data-toolbar="false"
-              data-host="v3.football.api-sports.io"
-              data-league="${league.id}"
-              data-season="${league.season}"
-              data-key="${apiKey}"
-            ></api-sports-widget>`,
-          }}
-        />
-      </div>
-    </ExpandableWidget>
-  );
-}
-
-// === TIMELINE WIDGET ===
-function MatchTimelineWidget({
-  matchId,
-  widgetTheme,
-  leagueId,
-  season,
-}: {
-  matchId: number;
-  widgetTheme: string;
-  leagueId: number;
-  season: number;
-}) {
-  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-  if (!apiKey) return null;
-
-  const themeColor = widgetTheme === "dark" ? "dark" : "light";
-
-  return (
-    <ExpandableWidget title="Match Timeline">
-      <div className="rounded-lg overflow-hidden border theme-border">
-        <div
-          className="widget-container bg-background/80"
-          dangerouslySetInnerHTML={{
-            __html: `<api-sports-widget 
-              data-type="timeline" 
-              data-id="${matchId}"
-              data-theme="${themeColor}"
-              data-locale="en"
-              data-border-radius="14"
-              data-toolbar="false"
-              data-league="${leagueId}"
-              data-season="${season}"
-              data-key="${apiKey}"
-            ></api-sports-widget>`,
-          }}
-        />
-      </div>
-    </ExpandableWidget>
-  );
-}
-
-// === LINEUPS (custom for football, widget fallback for others) ===
+// === LINEUPS COMPONENT: Hybrid Lineups ===
 function MatchLineups({
   matchId,
   sport,
   widgetTheme,
 }: {
-  matchId: number;
+  matchId: string | number;
   sport: string;
   widgetTheme: string;
 }) {
+  const [lineups, setLineups] = useState<Lineup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lineups, setLineups] = useState<TeamLineup[] | null>(null);
   const [useWidgetFallback, setUseWidgetFallback] = useState(false);
+  const { theme } = useTheme();
+  const matchIdStr = String(matchId);
 
   useEffect(() => {
     async function fetchLineups() {
-      // For non-football sports, just use widget
+      // 1. Only Football supports the custom lineup structure well
       if (sport !== "football") {
         setUseWidgetFallback(true);
         setLoading(false);
@@ -407,383 +115,438 @@ function MatchLineups({
       }
 
       try {
-        setLoading(true);
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        if (!apiKey) {
-          setUseWidgetFallback(true);
-          setLoading(false);
-          return;
-        }
 
-        const host = SPORT_HOSTS.football;
-        const url = `https://${host}/fixtures/lineups?fixture=${matchId}`;
-        const headers = {
-          "x-rapidapi-host": host,
-          "x-rapidapi-key": apiKey,
-        };
+        let url = "";
+        let headers: Record<string, string> = {};
+
+        // 2. Use CDN if available, otherwise direct API
+        if (cdnUrl) {
+          url = `${cdnUrl}/fixtures/lineups?fixture=${matchIdStr}`;
+        } else {
+          if (!apiKey) throw new Error("No API Key");
+          const host = SPORT_HOSTS.football;
+          url = `https://${host}/fixtures/lineups?fixture=${matchIdStr}`;
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey };
+        }
 
         const res = await fetch(url, { headers });
         const json = await res.json();
 
+        // 3. Check Data: If response has data, use Custom UI. If empty, use Widget Fallback.
         if (json.response && json.response.length > 0) {
           setLineups(json.response);
         } else {
           setUseWidgetFallback(true);
         }
-      } catch (err) {
-        console.warn("Lineup fetch failed, falling back to widget", err);
+      } catch (e) {
+        console.warn("Lineup fetch failed, falling back to widget", e);
         setUseWidgetFallback(true);
       } finally {
         setLoading(false);
       }
     }
-
     fetchLineups();
   }, [matchId, sport]);
 
   const openPlayer = (playerId: number) => {
     const repoName = process.env.NEXT_PUBLIC_REPO_NAME;
     const basePath = repoName ? `/${repoName}` : "";
-    window.open(`${basePath}/player?id=${playerId}&sport=${sport}`, "_blank");
+    window.open(
+      `${basePath}/player?id=${playerId}&sport=${sport}`,
+      "_blank",
+    );
   };
 
-  if (loading) {
-    return (
-      <Skeleton className="h-64 w-full rounded-xl mt-4 bg-skeleton" />
-    );
-  }
-
-  // Fallback: official widget (for other sports or missing data)
-  if (useWidgetFallback || !lineups) {
+  // WIDGET FALLBACK: if not football or no data, use native widget.
+  if (useWidgetFallback) {
+    const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
     const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-    if (!apiKey) return null;
-
-    const themeColor = widgetTheme === "dark" ? "dark" : "light";
+    const cdnConfig = cdnUrl ? `data-url-football="${cdnUrl}"` : "";
+    const keyConfig = !cdnUrl && apiKey ? `data-key="${apiKey}"` : "";
 
     return (
-      <ExpandableWidget title="Lineups & Players">
-        <div className="rounded-lg overflow-hidden border theme-border">
+      <div className="theme-bg rounded-xl overflow-hidden shadow-sm border theme-border">
+        <div className="p-4 border-b theme-border font-bold text-sm text-secondary uppercase tracking-wider">
+          Lineups
+        </div>
+        <div className="p-4">
           <div
-            className="widget-container bg-background/80"
             dangerouslySetInnerHTML={{
-              __html: `<api-sports-widget 
-                data-type="lineups"
-                data-id="${matchId}"
-                data-theme="${themeColor}"
-                data-locale="en"
-                data-toolbar="false"
-                data-border-radius="14"
-                data-text-color="true"
-                data-background-color="true"
-                data-key="${apiKey}"
-                data-target-player="modal"
-              ></api-sports-widget>`,
+              __html: `
+                <api-sports-widget
+                  data-type="game"
+                  data-game-id="${matchIdStr}"
+                  data-sport="${sport}"
+                  data-theme="${widgetTheme}"
+                  data-game-tab="lineups"
+                  data-show-toolbar="false"
+                  data-show-errors="false"
+                  ${cdnConfig}
+                  ${keyConfig}
+                ></api-sports-widget>
+              `,
             }}
           />
         </div>
-      </ExpandableWidget>
+      </div>
     );
   }
 
-  // Custom football lineups: every player is clickable and opens /player in a new tab
+  if (loading) {
+    return (
+      <div className="theme-bg rounded-xl shadow-sm border theme-border p-4 space-y-3">
+        <div className="flex justify-between items-center mb-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
+
+  if (!lineups.length) return null;
+
   return (
-    <ExpandableWidget title="Lineups & Players">
-      <div className="grid gap-4 md:grid-cols-2">
-        {lineups.map((teamLineup) => (
-          <div
-            key={teamLineup.team.id}
-            className="rounded-xl border theme-border bg-background/60 overflow-hidden"
-          >
-            {/* Team header */}
-            <div className="flex items-center gap-3 px-3 py-3 border-b theme-border bg-background/90">
-              {teamLineup.team.logo ? (
+    <div className="theme-bg rounded-xl shadow-sm border theme-border overflow-hidden">
+      {/* Header */}
+      <div className="px-4 pt-4">
+        <h2 className="text-sm font-bold text-secondary uppercase tracking-wide">
+          Lineups
+        </h2>
+
+        {/* Note about clickability */}
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Tap on any player row to open full details in a new tab.
+        </p>
+      </div>
+
+      {/* Content */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+        {lineups.map((teamLineup) => {
+          const coachBg =
+            theme === "dark" ? "bg-slate-900/60" : "bg-slate-50";
+          const headerBg =
+            theme === "dark" ? "bg-slate-900/80" : "bg-blue-50";
+
+          return (
+            <div
+              key={teamLineup.team.id}
+              className="flex flex-col gap-3 border theme-border rounded-xl p-3"
+            >
+              {/* Team Header */}
+              <div
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg ${headerBg}`}
+              >
                 <img
                   src={teamLineup.team.logo}
                   alt={teamLineup.team.name}
-                  className="w-8 h-8 rounded-lg bg-muted object-contain"
+                  className="w-10 h-10 object-contain"
                 />
-              ) : (
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <User className="w-4 h-4 text-secondary" />
+                <div>
+                  <h3 className="font-bold text-primary">
+                    {teamLineup.team.name}
+                  </h3>
+                  <span
+                    className={`text-xs text-secondary font-mono inline-block px-1.5 py-0.5 rounded ${coachBg}`}
+                  >
+                    {teamLineup.formation}
+                  </span>
+                </div>
+              </div>
+
+              {/* Coach */}
+              {teamLineup.coach?.id && (
+                <div
+                  className={`mb-6 flex items-center gap-3 p-3 rounded-lg border theme-border ${coachBg}`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0 text-secondary">
+                    {teamLineup.coach.photo ? (
+                      <img
+                        src={teamLineup.coach.photo}
+                        alt={teamLineup.coach.name}
+                      />
+                    ) : (
+                      <User size={16} />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Coach
+                    </div>
+                    <div className="text-sm font-medium text-secondary">
+                      {teamLineup.coach.name}
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-secondary uppercase tracking-wider">
-                  {teamLineup.team.name}
-                </span>
-                <span className="text-[11px] text-secondary/80">
-                  {teamLineup.formation
-                    ? `Formation: ${teamLineup.formation}`
-                    : "Formation: N/A"}
-                </span>
-              </div>
-            </div>
 
-            {/* Coach */}
-            {teamLineup.coach && (
-              <div className="flex items-center gap-3 px-3 py-2 border-b theme-border bg-muted/30">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                  {teamLineup.coach.photo ? (
-                    <img
-                      src={teamLineup.coach.photo}
-                      alt={teamLineup.coach.name}
-                      className="w-7 h-7 object-cover"
-                    />
-                  ) : (
-                    <User className="w-4 h-4 text-secondary" />
-                  )}
+              {/* Start XI */}
+              <div>
+                <div className="text-[11px] font-semibold uppercase text-muted-foreground mb-2 tracking-wide">
+                  Starting XI
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-semibold text-secondary uppercase tracking-wide">
-                    Coach
-                  </span>
-                  <span className="text-xs text-foreground">
-                    {teamLineup.coach.name || "Unknown"}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Starting XI */}
-            <div className="px-3 py-2">
-              <div className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-2">
-                Starting XI
-              </div>
-              <div className="space-y-1.5">
-                {teamLineup.startXI?.map(({ player }) => (
-                  <button
-                    key={player.id}
-                    onClick={() => openPlayer(player.id)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-muted/80 text-left transition-colors group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                        {player.photo ? (
-                          <img
-                            src={player.photo}
-                            alt={player.name}
-                            className="w-7 h-7 object-cover"
-                          />
-                        ) : (
-                          <User className="w-4 h-4 text-secondary" />
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1 text-xs">
-                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold w-6 text-center">
-                            {player.number || "-"}
-                          </span>
-                          <span className="font-medium text-foreground group-hover:text-primary truncate max-w-[130px]">
-                            {player.name}
-                          </span>
+                <div className="space-y-1.5">
+                  {teamLineup.startXI.map(({ player }) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => openPlayer(player.id)}
+                      className="w-full text-left group flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
+                    >
+                      <span className="w-6 text-[11px] font-bold text-primary">
+                        {player.number}
+                      </span>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-secondary group-hover:text-primary">
+                          {player.name}
                         </div>
-                        <div className="text-[10px] text-secondary/80">
-                          {player.pos} {player.grid ? `• ${player.grid}` : ""}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Substitutes */}
-            <div className="px-3 py-2 border-t theme-border bg-muted/20 max-h-52 overflow-y-auto custom-scroll">
-              <div className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-2">
-                Substitutes
-              </div>
-              <div className="space-y-1.5">
-                {teamLineup.substitutes?.map(({ player }) => (
-                  <button
-                    key={player.id}
-                    onClick={() => openPlayer(player.id)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-muted/60 text-left transition-colors group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                        {player.photo ? (
-                          <img
-                            src={player.photo}
-                            alt={player.name}
-                            className="w-6 h-6 object-cover"
-                          />
-                        ) : (
-                          <User className="w-3 h-3 text-secondary" />
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1 text-[11px]">
-                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold w-6 text-center">
-                            {player.number || "-"}
-                          </span>
-                          <span className="font-medium text-foreground group-hover:text-primary truncate max-w-[130px]">
-                            {player.name}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-secondary/80">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                           {player.pos}
+                          {player.grid ? ` • ${player.grid}` : ""}
                         </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Substitutes */}
+              {teamLineup.substitutes?.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-[11px] font-semibold uppercase text-muted-foreground mb-2 tracking-wide">
+                    Substitutes
+                  </div>
+                  <div className="space-y-1">
+                    {teamLineup.substitutes.map(({ player }) => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => openPlayer(player.id)}
+                        className="w-full text-left group flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
+                      >
+                        <span className="w-6 text-[11px] font-semibold text-secondary">
+                          {player.number}
+                        </span>
+                        <div className="flex-1">
+                          <div className="text-xs font-medium text-secondary group-hover:text-primary">
+                            {player.name}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {player.pos}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-    </ExpandableWidget>
+    </div>
   );
 }
 
 // === MAIN MATCH WIDGET ===
 export default function MatchWidget({
   matchId,
-  sport,
+  sport = "football",
 }: {
-  matchId: number;
-  sport: string;
+  matchId: string | number;
+  sport?: string;
 }) {
-  const [loading, setLoading] = useState(true);
-  const [matchData, setMatchData] = useState<MatchData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [meta, setMeta] = useState<{
+    leagueId?: string;
+    season?: string;
+    h2h?: string;
+  }>({});
   const { theme } = useTheme();
-  const widgetTheme = theme === "dark" ? "dark" : "light";
+  const matchIdStr = String(matchId);
 
+  // FIX: Using Custom Themes defined in globals.css
+  const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
+
+  // 1. Fetch Metadata (League/Season for Standings, Teams for H2H)
   useEffect(() => {
-    async function fetchMatchDetails() {
+    async function init() {
+      // Metadata fetching is prioritized for Football to power the H2H/Standings
+      if (sport !== "football") {
+        setLoaded(true);
+        return;
+      }
+
+      const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
+      const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+
       try {
-        setLoading(true);
-        const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        if (!apiKey) {
-          setLoading(false);
-          return;
-        }
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        const host = SPORT_HOSTS[sport] || SPORT_HOSTS.football;
-        const isFootball = sport === "football" || sport === "rugby";
-
-        let url: string;
-        if (isFootball) {
-          url = `https://${SPORT_HOSTS.football}/fixtures?id=${matchId}`;
+        if (cdnUrl) {
+          url = `${cdnUrl}/fixtures?id=${matchIdStr}`;
         } else {
-          url = `https://${host}/games?id=${matchId}`;
+          if (!apiKey) {
+            setLoaded(true);
+            return;
+          }
+          const host = SPORT_HOSTS.football;
+          url = `https://${host}/fixtures?id=${matchIdStr}`;
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey };
         }
-
-        const headers = {
-          "x-rapidapi-host": host,
-          "x-rapidapi-key": apiKey,
-        };
 
         const res = await fetch(url, { headers });
         const json = await res.json();
+        const data = json.response?.[0];
 
-        if (!json.response || json.response.length === 0) {
-          setMatchData(null);
-          setLoading(false);
-          return;
-        }
-
-        const item = json.response[0];
-
-        if (isFootball) {
-          const fixture = item.fixture;
-          const league = normalizeLeague(item.league);
-          const teams = item.teams;
-          const goals = item.goals;
-          const score = item.score;
-
-          setMatchData({
-            fixture: {
-              id: fixture.id,
-              date: fixture.date,
-              status: fixture.status,
-              venue: fixture.venue,
-            },
-            league,
-            teams,
-            goals,
-            score,
-          });
-        } else {
-          const game = item.game || item;
-          const league = normalizeLeague(item.league || {});
-          const teams = item.teams || {};
-          const scores = item.scores || item.goals || {};
-
-          let homeScore: any = scores.home ?? null;
-          let awayScore: any = scores.away ?? null;
-
-          if (homeScore && typeof homeScore === "object") {
-            homeScore = homeScore.total ?? homeScore.score ?? null;
-          }
-          if (awayScore && typeof awayScore === "object") {
-            awayScore = awayScore.total ?? awayScore.score ?? null;
-          }
-
-          setMatchData({
-            fixture: {
-              id: game.id,
-              date: game.date,
-              status: game.status,
-              venue: {
-                name: game.stage || "N/A",
-                city: game.city || "",
-              },
-            },
-            league,
-            teams,
-            goals: {
-              home: homeScore,
-              away: awayScore,
-            },
-            score: {
-              halftime: { home: null, away: null },
-              fulltime: { home: homeScore, away: awayScore },
-              extratime: { home: null, away: null },
-              penalty: { home: null, away: null },
-            },
+        if (data) {
+          const homeId = data.teams?.home?.id;
+          const awayId = data.teams?.away?.id;
+          setMeta({
+            leagueId: data.league?.id,
+            season: data.league?.season,
+            h2h: homeId && awayId ? `${homeId}-${awayId}` : undefined,
           });
         }
       } catch (err) {
-        console.error("Match details fetch error:", err);
-        setMatchData(null);
+        console.error(err);
       } finally {
-        setLoading(false);
+        setLoaded(true);
       }
     }
 
-    fetchMatchDetails();
+    init();
   }, [matchId, sport]);
 
-  if (loading || !matchData) {
+  // 2. Load Scripts
+  useEffect(() => {
+    // Ensure the script isn't loaded multiple times
+    if (document.querySelector('script[src*="widgets.api-sports.io"]')) return;
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = "https://widgets.api-sports.io/3.1.0/widgets.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      // We usually don't remove it to keep widgets working,
+      // but if you ever needed cleanup you could do it here.
+    };
+  }, []);
+
+  // Helper: get the right ID attribute based on sport
+  const getIdAttribute = () => {
+    if (sport === "football") return `data-game-id="${matchIdStr}"`;
+    if (sport === "basketball" || sport === "nba")
+      return `data-game-id="${matchIdStr}"`;
+    if (sport === "baseball") return `data-game-id="${matchIdStr}"`;
+    if (sport === "hockey") return `data-game-id="${matchIdStr}"`;
+    if (sport === "rugby") return `data-game-id="${matchIdStr}"`;
+    if (sport === "nfl") return `data-game-id="${matchIdStr}"`;
+    if (sport === "f1") return `data-race-id="${matchIdStr}"`;
+    if (sport === "mma") return `data-fight-id="${matchIdStr}"`;
+    return `data-game-id="${matchIdStr}"`;
+  };
+
+  // CDN Logic for widgets
+  const cdnUrlFootball = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
+  const cdnUrlOther = process.env.NEXT_PUBLIC_CDN_OTHER_URL;
+  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+
+  const cdnAttr = (() => {
+    if (sport === "football" && cdnUrlFootball)
+      return `data-url-football="${cdnUrlFootball}"`;
+    if (sport !== "football" && cdnUrlOther)
+      return `data-url-${sport}="${cdnUrlOther}"`;
+    return "";
+  })();
+
+  const keyAttr = !cdnAttr && apiKey ? `data-key="${apiKey}"` : "";
+
+  if (!loaded) {
     return (
-      <div className="mt-6 space-y-4">
-        <Skeleton className="h-40 w-full rounded-xl bg-skeleton" />
-        <Skeleton className="h-64 w-full rounded-xl bg-skeleton" />
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  const { league } = matchData;
-
   return (
-    <div className="space-y-4 mt-4">
-      {/* 1. HEADER */}
-      <MatchHeader data={matchData} />
+    <div key={matchIdStr} className="flex flex-col gap-8 animate-in fade-in duration-300">
+      {/* 1. MAIN MATCH WIDGET (top tabs: Match / Report / Odds / etc. controlled by widget itself) */}
+      <div className="theme-bg rounded-xl overflow-hidden shadow-sm border theme-border">
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `
+              <api-sports-widget
+                data-type="game"
+                ${getIdAttribute()}
+                data-sport="${sport}"
+                data-theme="${widgetTheme}"
+                data-show-toolbar="true"
+                data-show-errors="false"
+                ${cdnAttr}
+                ${keyAttr}
+              ></api-sports-widget>
+            `,
+          }}
+        />
+      </div>
 
-      {/* 2. STATS & TIMELINE */}
+      {/* 2. EXTRA: STANDINGS & H2H TABS FOR FOOTBALL ONLY (reuse your existing "match" style tabs) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <MatchStatsWidget
-          matchId={matchId}
-          league={league}
-          widgetTheme={widgetTheme}
-        />
-        <MatchTimelineWidget
-          matchId={matchId}
-          leagueId={league.id}
-          season={league.season}
-          widgetTheme={widgetTheme}
-        />
+        {/* H2H */}
+        {meta.h2h && (
+          <ExpandableWidget title="Head-to-Head">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <api-sports-widget
+                    data-type="h2h"
+                    data-h2h="${meta.h2h}"
+                    data-sport="football"
+                    data-theme="${widgetTheme}"
+                    data-show-toolbar="false"
+                    data-show-errors="false"
+                    ${cdnUrlFootball ? `data-url-football="${cdnUrlFootball}"` : ""}
+                    ${!cdnUrlFootball && apiKey ? `data-key="${apiKey}"` : ""}
+                  ></api-sports-widget>
+                `,
+              }}
+            />
+          </ExpandableWidget>
+        )}
+
+        {/* Standings */}
+        {meta.leagueId && meta.season && (
+          <ExpandableWidget title="Standings">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <api-sports-widget
+                    data-type="standings"
+                    data-league="${meta.leagueId}"
+                    data-season="${meta.season}"
+                    data-sport="football"
+                    data-theme="${widgetTheme}"
+                    data-show-toolbar="false"
+                    data-show-errors="false"
+                    ${cdnUrlFootball ? `data-url-football="${cdnUrlFootball}"` : ""}
+                    ${!cdnUrlFootball && apiKey ? `data-key="${apiKey}"` : ""}
+                  ></api-sports-widget>
+                `,
+              }}
+            />
+          </ExpandableWidget>
+        )}
       </div>
 
       {/* 3. LINEUPS */}
