@@ -1,2 +1,2 @@
-:HL["/flash-sport/_next/static/chunks/bf680c607a60a833.css","style"]
-0:{"buildId":"AwIE8CT5-rVW58bugloah","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
+:HL["/flash-sport/_next/static/chunks/109ea31f6e72a9c0.css","style"]
+0:{"buildId":"G9PleFJxgX5vg8DbtAjdq","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
