@@ -222,8 +222,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <div className="lg:hidden">
         {/* top bar */}
         <div
-          className={`flex items-center justify-between px-4 h-14 border-b ${
-            isDark ? "theme-bg theme-border" : "bg-[#0f80da] border-blue-700"
+          className={`flex items-center justify-between px-4 h-14 ${
+            isDark ? "theme-bg" : "bg-[#0f80da]"
           }`}
         >
           <button
@@ -264,8 +264,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
         {/* MOBILE SPORTS ROW */}
         <div
-          className={`flex items-stretch justify-between px-2 h-11 border-b ${
-            isDark ? "theme-bg theme-border" : "bg-[#0f80da] border-blue-800"
+          className={`flex items-stretch justify-between px-2 h-11 ${
+            isDark ? "theme-bg" : "bg-[#0f80da]"
           }`}
         >
           <div className="flex flex-1 gap-1">
