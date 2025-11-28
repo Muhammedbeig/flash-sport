@@ -1,26 +1,13 @@
-"use client";
+import MatchWidget from "@/components/widgets/MatchWidget";
 
-import { useSearchParams } from "next/navigation";
-import MatchWidget from "@/components/widgets/MatchWidget"; 
-import { Suspense } from "react";
+type MatchContentProps = {
+  matchId: number;
+  sport: string;
+};
 
-function MatchContent() {
-  const searchParams = useSearchParams();
-  
-  // Get ID and Sport from query string: /match?id=123&sport=football
-  const matchId = searchParams.get("id");
-  const sport = searchParams.get("sport") || "football";
-
-  if (!matchId) {
-    return (
-      <div className="p-8 text-center text-secondary">
-        <h2 className="text-xl font-bold">No Match Selected</h2>
-      </div>
-    );
-  }
-
+function MatchContent({ matchId, sport }: MatchContentProps) {
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+    <div className="px-2 sm:px-4 lg:px-0 py-4">
       {/* Container for the match details widget */}
       <div className="theme-bg rounded-xl shadow-sm border theme-border overflow-hidden min-h-[600px]">
         <MatchWidget matchId={matchId} sport={sport} />
@@ -29,11 +16,25 @@ function MatchContent() {
   );
 }
 
-export default function MatchPage() {
-  return (
-    // Suspense is required for useSearchParams in static exports
-    <Suspense fallback={<div className="p-10 text-center">Loading match details...</div>}>
-      <MatchContent />
-    </Suspense>
-  );
+export default function MatchPage({
+  searchParams,
+}: {
+  searchParams: { id?: string; sport?: string };
+}) {
+  const rawId = searchParams.id;
+  const sport = searchParams.sport || "football";
+
+  // Convert id string -> number
+  const matchId = rawId ? Number(rawId) : NaN;
+
+  // If id is missing or invalid, show a simple message (prevents runtime errors)
+  if (!rawId || Number.isNaN(matchId)) {
+    return (
+      <div className="px-4 py-8 text-center text-secondary">
+        Invalid or missing match ID.
+      </div>
+    );
+  }
+
+  return <MatchContent matchId={matchId} sport={sport} />;
 }
