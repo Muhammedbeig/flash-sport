@@ -1,40 +1,43 @@
-import MatchWidget from "@/components/widgets/MatchWidget";
+"use client";
 
-type MatchContentProps = {
-  matchId: number;
-  sport: string;
-};
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import MatchWidget from "@/components/widgets/MatchWidget"; 
 
-function MatchContent({ matchId, sport }: MatchContentProps) {
+function MatchContent() {
+  const searchParams = useSearchParams();
+
+  // /match?id=1487974&sport=football
+  const matchId = searchParams.get("id");
+  const sport = searchParams.get("sport") || "football";
+
+  // Only show this if there is truly no id in the URL
+  if (!matchId) {
+    return (
+      <div className="p-8 text-center text-secondary">
+        <h2 className="text-xl font-bold">No Match Selected</h2>
+        <p className="mt-2 text-sm">
+          Please open this page from a match link or provide an &quot;id&quot; query parameter.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="px-2 sm:px-4 lg:px-0 py-4">
-      {/* Container for the match details widget */}
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
       <div className="theme-bg rounded-xl shadow-sm border theme-border overflow-hidden min-h-[600px]">
+        {/* MatchWidget expects matchId as a string, so pass it directly */}
         <MatchWidget matchId={matchId} sport={sport} />
       </div>
     </div>
   );
 }
 
-export default function MatchPage({
-  searchParams,
-}: {
-  searchParams: { id?: string; sport?: string };
-}) {
-  const rawId = searchParams.id;
-  const sport = searchParams.sport || "football";
-
-  // Convert id string -> number
-  const matchId = rawId ? Number(rawId) : NaN;
-
-  // If id is missing or invalid, show a simple message (prevents runtime errors)
-  if (!rawId || Number.isNaN(matchId)) {
-    return (
-      <div className="px-4 py-8 text-center text-secondary">
-        Invalid or missing match ID.
-      </div>
-    );
-  }
-
-  return <MatchContent matchId={matchId} sport={sport} />;
+export default function MatchPage() {
+  // Suspense is required when using useSearchParams in app router/static export
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Loading match details...</div>}>
+      <MatchContent />
+    </Suspense>
+  );
 }
