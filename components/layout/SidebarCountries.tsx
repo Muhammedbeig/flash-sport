@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, ChevronRight, Globe } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "@/components/providers/ThemeProvider"; // Importing theme context
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 const SPORT_HOSTS: Record<string, string> = {
   football: "v3.football.api-sports.io",
@@ -24,7 +24,6 @@ export default function SidebarCountries({ currentSport, onLinkClick }: { curren
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   
-  // Force the component to know the current theme state
   const { theme } = useTheme(); 
   
   const VISIBLE_COUNT = 15;
@@ -43,22 +42,39 @@ export default function SidebarCountries({ currentSport, onLinkClick }: { curren
         });
         const json = await response.json();
         
-        if (!json.response) return;
+        if (!json.response || !Array.isArray(json.response)) return;
 
         const grouped: Record<string, CountryData> = {};
+        
         json.response.forEach((item: any) => {
-          const cName = item.country.name;
-          if (cName === "World") return;
+          // === SAFETY CHECKS ===
+          // 1. Ensure country exists
+          const cName = item.country?.name;
+          if (!cName || cName === "World") return;
+
+          // 2. Ensure league object exists before accessing ID
+          if (!item.league || !item.league.id) return;
+
           if (!grouped[cName]) {
-            grouped[cName] = { name: cName, code: item.country.code, flag: item.country.flag, leagues: [] };
+            grouped[cName] = { 
+              name: cName, 
+              code: item.country.code, 
+              flag: item.country.flag, 
+              leagues: [] 
+            };
           }
-          grouped[cName].leagues.push({ id: item.league.id, name: item.league.name, logo: item.league.logo });
+          
+          grouped[cName].leagues.push({ 
+            id: item.league.id, 
+            name: item.league.name, 
+            logo: item.league.logo 
+          });
         });
 
         const sorted = Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
         setData(sorted);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching sidebar leagues:", err);
       } finally {
         setLoading(false);
       }
@@ -77,10 +93,10 @@ export default function SidebarCountries({ currentSport, onLinkClick }: { curren
       {visibleCountries.map((country) => {
         const isExpanded = expandedCountry === country.name;
         
-        // Define exact style strings based on JS theme state to avoid CSS conflicts
+        // Define exact style strings based on JS theme state
         const activeClass = theme === 'dark' 
           ? "bg-slate-800 text-blue-400" 
-          : "bg-blue-50 text-blue-700"; // Light mode active: Light Blue BG
+          : "bg-blue-50 text-blue-700";
 
         const inactiveClass = theme === 'dark'
           ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200"

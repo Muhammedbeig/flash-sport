@@ -21,13 +21,15 @@ export default function AppShell({ children }: AppShellProps) {
       <Header onMenuClick={() => setMobileMenuOpen(true)} />
 
       {/* MAIN CONTENT WRAPPER */}
-      {/* flex-1 pushes the footer down if content is short */}
       <div className="flex-1 flex flex-col w-full max-w-7xl mx-auto theme-bg relative">
         
         <div className="flex flex-1 items-start">
+          
           {/* SIDEBAR (DESKTOP) */}
-          {/* Sticky sidebar */}
-          <Sidebar className="hidden lg:block w-64 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto pb-4" />
+          {/* REMOVED: sticky top-16 h-[calc(100vh-64px)] overflow-y-auto 
+             ADDED: min-h-screen (to ensure border goes down if content is short)
+          */}
+          <Sidebar className="hidden lg:block w-64 min-h-screen pb-4" />
 
           {/* MAIN FEED */}
           <main className="flex-1 min-w-0 w-full p-0 md:p-6 theme-bg">
@@ -39,7 +41,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       </div>
 
-      {/* FOOTER - Outside the flex container */}
+      {/* FOOTER */}
       <div className="w-full theme-bg theme-border border-t relative z-20 mt-auto">
          <Footer />
       </div>
