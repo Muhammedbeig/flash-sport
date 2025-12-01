@@ -47,7 +47,7 @@ export default function SidebarCountries({
         
         if (!apiKey) return;
 
-        // Wrap fetch in a try/catch to prevent Sidebar crash
+        // Keep the robust error handling
         const response = await fetch(`https://${host}/leagues`, {
           method: "GET",
           headers: {
@@ -55,12 +55,11 @@ export default function SidebarCountries({
             "x-rapidapi-key": apiKey,
           },
         }).catch((err) => {
-          throw new Error(`Network Error: ${err.message}`);
+          console.warn("Sidebar Fetch Failed:", err);
+          return null; 
         });
 
-        if (!response.ok) {
-           // Silently fail if API blocks request
-           console.warn(`Sidebar API Error: ${response.status}`);
+        if (!response || !response.ok) {
            return;
         }
 
@@ -92,8 +91,7 @@ export default function SidebarCountries({
 
         setData(Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name)));
       } catch (err) {
-        console.error("SidebarCountries fetch error (Recovered):", err);
-        // Do not set data to empty if it fails, just stop loading
+        console.error("Sidebar Error:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -107,15 +105,28 @@ export default function SidebarCountries({
 
   if (loading) return <div className="p-4 text-xs text-secondary text-center animate-pulse">Loading...</div>;
 
-  // Render list or empty state safely
   const visibleCountries = showAll ? data : data.slice(0, VISIBLE_COUNT);
 
   return (
     <div className="space-y-1">
       {visibleCountries.map((country) => {
         const isExpanded = expandedCountry === country.name;
-        const activeClass = theme === "dark" ? "bg-slate-800 text-blue-400" : "bg-blue-50 text-blue-700";
-        const inactiveClass = theme === "dark" ? "text-secondary hover:bg-slate-800/50" : "text-secondary hover:bg-slate-100";
+
+        // RESTORED: Original Design Classes
+        const activeClass =
+          theme === "dark"
+            ? "bg-slate-800 text-blue-400"
+            : "bg-blue-50 text-blue-700";
+
+        const inactiveClass =
+          theme === "dark"
+            ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200"
+            : "text-secondary hover:bg-slate-100 hover:text-primary";
+
+        const dropdownBg =
+          theme === "dark"
+            ? "bg-black/20 border-slate-800"
+            : "bg-white border-blue-50";
 
         return (
           <div key={country.name} className="border-b theme-border last:border-0">
@@ -127,17 +138,24 @@ export default function SidebarCountries({
                 {country.flag ? <img src={country.flag} alt={country.name} className="w-4 h-4 object-contain shrink-0" /> : <Globe size={16} className="shrink-0" />}
                 <span className="truncate">{country.name}</span>
               </div>
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {isExpanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
             </button>
 
             {isExpanded && (
-              <div className="border-t animate-in slide-in-from-top-1 bg-black/5 dark:bg-black/20">
+              <div className={`${dropdownBg} border-t animate-in slide-in-from-top-1`}>
                 {country.leagues.map((league) => (
                   <Link
                     key={league.id}
                     href={`/?sport=${currentSport}&league=${league.id}`}
                     onClick={onLinkClick}
-                    className="block px-8 py-2.5 text-xs text-secondary hover:text-primary transition-colors"
+                    className={`
+                      block px-8 py-2.5 text-xs transition-colors border-l-2 border-transparent
+                      ${
+                        theme === "dark"
+                          ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800 hover:border-blue-400"
+                          : "text-slate-500 hover:text-blue-700 hover:bg-white hover:border-blue-500"
+                      }
+                    `}
                   >
                     {league.name}
                   </Link>
@@ -149,7 +167,7 @@ export default function SidebarCountries({
       })}
       
       {data.length > VISIBLE_COUNT && (
-        <button onClick={() => setShowAll(!showAll)} className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider border-t theme-border mt-2 text-primary hover:bg-muted transition-colors">
+        <button onClick={() => setShowAll(!showAll)} className={`w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider border-t theme-border mt-2 transition-colors ${theme === 'dark' ? "text-blue-400 hover:bg-slate-800" : "text-blue-600 hover:bg-blue-50"}`}>
           {showAll ? <>View Less <ChevronUp size={14} /></> : <>View All ({data.length}) <ChevronDown size={14} /></>}
         </button>
       )}
