@@ -1,43 +1,61 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import MatchWidget from "@/components/match/MatchWidget"; 
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import MatchWidget from "@/components/match/MatchWidget";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-function MatchContent() {
+// 1. The inner component that reads the URL params
+function MatchDetailsContent() {
   const searchParams = useSearchParams();
-
-  // /match?id=1487974&sport=football
-  const matchId = searchParams.get("id");
+  const id = searchParams.get("id");
   const sport = searchParams.get("sport") || "football";
 
-  // Only show this if there is truly no id in the URL
-  if (!matchId) {
+  if (!id) {
     return (
-      <div className="p-8 text-center text-secondary">
-        <h2 className="text-xl font-bold">No Match Selected</h2>
-        <p className="mt-2 text-sm">
-          Please open this page from a match link or provide an &quot;id&quot; query parameter.
-        </p>
+      <div className="p-10 text-center text-secondary">
+        Invalid Match ID provided.
       </div>
     );
   }
 
-  return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <div className="theme-bg rounded-xl shadow-sm border theme-border overflow-hidden min-h-[600px]">
-        {/* MatchWidget expects matchId as a string, so pass it directly */}
-        <MatchWidget matchId={matchId} sport={sport} />
-      </div>
-    </div>
-  );
+  return <MatchWidget matchId={id} sport={sport} />;
 }
 
+// 2. The main page component with Suspense
 export default function MatchPage() {
-  // Suspense is required when using useSearchParams in app router/static export
   return (
-    <Suspense fallback={<div className="p-10 text-center">Loading match details...</div>}>
-      <MatchContent />
-    </Suspense>
+    <div className="min-h-screen theme-bg p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Back Button */}
+        <div>
+          <Link 
+            href={`/`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-secondary hover:text-primary transition-colors hover:translate-x-[-2px] duration-200"
+          >
+            <ArrowLeft size={16} />
+            Back to Feed
+          </Link>
+        </div>
+
+        {/* CRITICAL: Suspense prevents the "White Screen" crash 
+           by handling the async reading of searchParams 
+        */}
+        <Suspense 
+          fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <Skeleton className="h-96 w-full rounded-xl" />
+            </div>
+          }
+        >
+          <MatchDetailsContent />
+        </Suspense>
+
+      </div>
+    </div>
   );
 }
