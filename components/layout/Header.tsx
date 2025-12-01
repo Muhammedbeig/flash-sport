@@ -41,12 +41,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   // --- LOGIC FOR SPLITTING LISTS ---
 
-  // Desktop: Show first 6, hide the rest
   const desktopVisible = ALL_SPORTS.slice(0, 6);
   const desktopHidden = ALL_SPORTS.slice(6);
   const isDesktopHiddenActive = desktopHidden.some((s) => s.id === currentSport);
 
-  // Mobile: Show Top 3, hide the rest
   const mobileHidden = ALL_SPORTS.filter(
     (s) => !MOBILE_TOP_SPORTS.some((m) => m.id === s.id)
   );
@@ -63,7 +61,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
     ? "bg-[#0f80da] text-white"
     : "bg-white text-[#0f80da]";
 
-  // 1. DESKTOP Nav Style (Text with border bottom)
   const getDesktopNavItemClass = (isActive: boolean) => {
     if (isDark) {
       return isActive
@@ -75,7 +72,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
       : "text-white/90 hover:bg-white/10"; 
   };
 
-  // 2. MOBILE Nav Style (Pills)
   const getMobileNavItemClass = (isActive: boolean) => {
     if (isDark) {
       return isActive
@@ -87,7 +83,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
       : "text-white/80 hover:text-white hover:bg-white/20";
   };
 
-  // Icon Filter
   const getIconStyle = (isActive: boolean, isMobile = false): CSSProperties => {
     if (isActive) {
       return { filter: "none" };
@@ -104,9 +99,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     <header
       className={`${headerClass} sticky top-0 z-30 shadow-sm transition-colors duration-200`}
     >
-      {/* =======================
-          DESKTOP HEADER
-      ======================== */}
+      {/* DESKTOP HEADER */}
       <div className="hidden lg:flex h-16 px-6 justify-between w-full max-w-7xl mx-auto">
         {/* LEFT: logo */}
         <div className="flex items-center h-full mr-6">
@@ -127,7 +120,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           />
         </div>
 
-        {/* MIDDLE: Nav (Restored) */}
+        {/* MIDDLE: Nav */}
         <nav className="flex items-end h-full flex-1 gap-1">
           {desktopVisible.map((sport) => {
             const isActive = currentSport === sport.id;
@@ -153,7 +146,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
             );
           })}
 
-          {/* DESKTOP MORE BUTTON */}
           {desktopHidden.length > 0 && (
             <div
               className="relative h-full"
@@ -213,7 +205,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           )}
         </nav>
 
-        {/* RIGHT: Theme ONLY (No Menu Button on Desktop) */}
+        {/* RIGHT: Theme ONLY */}
         <div className="flex items-center h-full gap-2 pl-4">
           <button
             onClick={toggleTheme}
@@ -228,17 +220,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      {/* =======================
-          MOBILE HEADER
-      ======================== */}
+      {/* MOBILE HEADER */}
       <div className="lg:hidden flex flex-col w-full">
-        {/* Top Row: Logo + Controls */}
+        {/* Top Row */}
         <div
           className={`flex items-center justify-between px-4 h-14 w-full ${
             isDark ? "theme-bg" : "bg-[#0f80da]"
           }`}
         >
-          {/* LEFT: Logo */}
           <Link href="/" className="flex items-center gap-2">
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-sm ${logoBgClass}`}
@@ -252,7 +241,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </span>
           </Link>
 
-          {/* RIGHT: Theme + Menu */}
           <div className="flex items-center gap-1">
             <button
               onClick={toggleTheme}
@@ -277,14 +265,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {/* Bottom Row: SPORTS LIST (Top 3 + More) */}
+        {/* Bottom Row: SPORTS LIST */}
         <div
           className={`flex items-center px-3 h-12 gap-2 w-full ${
             isDark ? "theme-bg border-t theme-border" : "bg-[#0f80da]"
           }`}
         >
-          {/* 1. Visible Mobile Sports */}
-          <div className="flex flex-1 gap-2 h-8">
+          {/* Visible Sports */}
+          <div className="flex flex-1 gap-2 h-8 min-w-0">
             {MOBILE_TOP_SPORTS.map((sport) => {
               const isActive = currentSport === sport.id;
               return (
@@ -302,13 +290,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-sm" style={getIconStyle(isActive, true)}>
                     {sport.icon}
                   </span>
-                  <span>{sport.name}</span>
+                  <span className="truncate">{sport.name}</span>
                 </Link>
               );
             })}
           </div>
 
-          {/* 2. Mobile MORE Button */}
+          {/* More Button (Fixed Width) */}
           {mobileHidden.length > 0 && (
             <div className="relative h-8 shrink-0">
               <button
@@ -330,7 +318,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 />
               </button>
 
-              {/* Mobile Dropdown Content */}
               {mobileMoreOpen && (
                 <div 
                   className="absolute right-0 top-full mt-2 w-48 theme-bg theme-border border rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
