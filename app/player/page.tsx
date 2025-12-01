@@ -2,25 +2,35 @@
 
 import { Suspense } from "react";
 import PlayerProfile from "@/components/player/PlayerProfile";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function PlayerPage() {
   return (
     <div className="min-h-screen theme-bg p-4 md:p-6">
-      <div className="max-w-4xl mx-auto mb-6">
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors"
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Suspense Boundary is CRITICAL for Static Exports */}
+        <Suspense 
+          fallback={
+            <div className="space-y-4">
+              <div className="flex gap-6 items-center">
+                <Skeleton className="w-32 h-32 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-1/4" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-6">
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+              </div>
+            </div>
+          }
         >
-          <ArrowLeft size={16} />
-          Back to Matches
-        </Link>
+          <PlayerProfile />
+        </Suspense>
+
       </div>
-      
-      <Suspense fallback={<div className="text-center p-10">Loading Profile...</div>}>
-        <PlayerProfile />
-      </Suspense>
     </div>
   );
 }
