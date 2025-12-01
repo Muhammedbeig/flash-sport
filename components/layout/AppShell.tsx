@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, Suspense } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
@@ -11,25 +11,33 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+// Fallback for navigation parts (invisible or simple loader)
+function NavFallback() {
+  return <div className="animate-pulse bg-slate-200 dark:bg-slate-800 h-full w-full opacity-50" />;
+}
+
 export default function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen theme-bg transition-colors duration-200">
 
-      {/* HEADER */}
-      <Header onMenuClick={() => setMobileMenuOpen(true)} />
+      {/* HEADER (Uses searchParams, needs Suspense) */}
+      <Suspense fallback={<div className="h-16 border-b theme-border theme-bg" />}>
+        <Header onMenuClick={() => setMobileMenuOpen(true)} />
+      </Suspense>
 
       {/* MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex flex-col w-full max-w-7xl mx-auto theme-bg relative">
         
         <div className="flex flex-1 items-start">
           
-          {/* SIDEBAR (DESKTOP) */}
-          {/* REMOVED: sticky top-16 h-[calc(100vh-64px)] overflow-y-auto 
-             ADDED: min-h-screen (to ensure border goes down if content is short)
-          */}
-          <Sidebar className="hidden lg:block w-64 min-h-screen pb-4" />
+          {/* SIDEBAR (DESKTOP) (Uses searchParams, needs Suspense) */}
+          <aside className="hidden lg:block w-64 min-h-screen pb-4 theme-border border-r">
+             <Suspense fallback={<NavFallback />}>
+                <Sidebar className="h-full" />
+             </Suspense>
+          </aside>
 
           {/* MAIN FEED */}
           <main className="flex-1 min-w-0 w-full p-0 md:p-6 theme-bg">
@@ -46,8 +54,10 @@ export default function AppShell({ children }: AppShellProps) {
          <Footer />
       </div>
 
-      {/* MOBILE NAV */}
-      <MobileNav />
+      {/* MOBILE NAV (Uses searchParams, needs Suspense) */}
+      <Suspense fallback={null}>
+        <MobileNav />
+      </Suspense>
 
       {/* MOBILE MENU DRAWER */}
       <div
@@ -79,10 +89,13 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
 
           <div className="h-full">
-            <Sidebar 
-              className="w-full h-auto static border-none shadow-none pb-20" 
-              onLinkClick={() => setMobileMenuOpen(false)}
-            />
+            {/* SIDEBAR INSIDE MOBILE DRAWER (Uses searchParams, needs Suspense) */}
+            <Suspense fallback={<div className="p-4 text-sm text-secondary">Loading menu...</div>}>
+              <Sidebar 
+                className="w-full h-auto static border-none shadow-none pb-20" 
+                onLinkClick={() => setMobileMenuOpen(false)}
+              />
+            </Suspense>
           </div>
         </aside>
       </div>
