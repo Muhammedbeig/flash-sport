@@ -7,10 +7,10 @@ import { ChevronDown, Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import type { CSSProperties } from "react";
 
-const DESKTOP_SPORTS = [
+// Full list (No NBA)
+const ALL_SPORTS = [
   { name: "Football", id: "football", icon: "⚽" },
   { name: "Basketball", id: "basketball", icon: "🏀" },
-  { name: "NBA", id: "nba", icon: "🏀" },
   { name: "NFL", id: "nfl", icon: "🏈" },
   { name: "Baseball", id: "baseball", icon: "⚾" },
   { name: "Hockey", id: "hockey", icon: "🏒" },
@@ -18,10 +18,11 @@ const DESKTOP_SPORTS = [
   { name: "Volleyball", id: "volleyball", icon: "🏐" },
 ];
 
+// Mobile Top 3
 const MOBILE_TOP_SPORTS = [
   { name: "Football", id: "football", icon: "⚽" },
   { name: "Basketball", id: "basketball", icon: "🏀" },
-  { name: "Hockey", id: "hockey", icon: "🏒" },
+  { name: "NFL", id: "nfl", icon: "🏈" },
 ];
 
 type HeaderProps = {
@@ -32,22 +33,27 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const searchParams = useSearchParams();
   const currentSport = searchParams.get("sport") || "football";
 
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
-  const visibleSports = DESKTOP_SPORTS.slice(0, 6);
-  const hiddenSports = DESKTOP_SPORTS.slice(6);
-  const isHiddenActive = hiddenSports.some((s) => s.id === currentSport);
+  // --- LOGIC FOR SPLITTING LISTS ---
 
-  // For mobile "More": everything that's not in MOBILE_TOP_SPORTS
-  const mobileHiddenSports = DESKTOP_SPORTS.filter(
-    (s) => !MOBILE_TOP_SPORTS.some((m) => m.id === s.id),
+  // Desktop: Show first 6, hide the rest
+  const desktopVisible = ALL_SPORTS.slice(0, 6);
+  const desktopHidden = ALL_SPORTS.slice(6);
+  const isDesktopHiddenActive = desktopHidden.some((s) => s.id === currentSport);
+
+  // Mobile: Show Top 3, hide the rest
+  const mobileHidden = ALL_SPORTS.filter(
+    (s) => !MOBILE_TOP_SPORTS.some((m) => m.id === s.id)
   );
+  const isMobileHiddenActive = mobileHidden.some((s) => s.id === currentSport);
 
-  // Header background
+  // --- STYLES ---
+
   const headerClass = isDark
     ? "theme-bg theme-border border-b"
     : "bg-[#0f80da] border-none";
@@ -57,24 +63,36 @@ export default function Header({ onMenuClick }: HeaderProps) {
     ? "bg-[#0f80da] text-white"
     : "bg-white text-[#0f80da]";
 
-  // Desktop/mobile tab style
-  const getNavItemClass = (isActive: boolean) => {
+  // 1. DESKTOP Nav Style (Text with border bottom)
+  const getDesktopNavItemClass = (isActive: boolean) => {
     if (isDark) {
       return isActive
         ? "text-blue-400 border-b-[3px] border-blue-400 bg-slate-900/60"
         : "text-slate-200 border-b-[3px] border-transparent hover:bg-slate-800/70";
     }
     return isActive
-      ? "bg-[#f1f5f9] text-[#0f80da]"
-      : "text-white/90 hover:bg-white/10";
+      ? "bg-[#f1f5f9] text-[#0f80da]" 
+      : "text-white/90 hover:bg-white/10"; 
   };
 
-  // Icon style: active = full color, inactive = outlined
-  const getIconStyle = (isActive: boolean): CSSProperties => {
+  // 2. MOBILE Nav Style (Pills)
+  const getMobileNavItemClass = (isActive: boolean) => {
+    if (isDark) {
+      return isActive
+        ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-500"
+        : "text-secondary hover:text-primary hover:bg-slate-800 bg-slate-900/50 border border-slate-800";
+    }
+    return isActive
+      ? "bg-white text-[#0f80da] shadow-md font-bold"
+      : "text-white/80 hover:text-white hover:bg-white/20";
+  };
+
+  // Icon Filter
+  const getIconStyle = (isActive: boolean, isMobile = false): CSSProperties => {
     if (isActive) {
       return { filter: "none" };
     }
-    const strokeColor = isDark ? "#e2e8f0" : "#ffffff";
+    const strokeColor = !isDark && isMobile ? "#ffffff" : (isDark ? "#e2e8f0" : "#ffffff");
     return {
       color: "transparent",
       WebkitTextStroke: `1px ${strokeColor}`,
@@ -86,7 +104,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
     <header
       className={`${headerClass} sticky top-0 z-30 shadow-sm transition-colors duration-200`}
     >
-      {/* DESKTOP HEADER */}
+      {/* =======================
+          DESKTOP HEADER
+      ======================== */}
       <div className="hidden lg:flex h-16 px-6 justify-between w-full max-w-7xl mx-auto">
         {/* LEFT: logo */}
         <div className="flex items-center h-full mr-6">
@@ -107,9 +127,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
           />
         </div>
 
-        {/* MIDDLE: nav */}
+        {/* MIDDLE: Nav (Restored) */}
         <nav className="flex items-end h-full flex-1 gap-1">
-          {visibleSports.map((sport) => {
+          {desktopVisible.map((sport) => {
             const isActive = currentSport === sport.id;
             return (
               <Link
@@ -119,7 +139,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   relative flex items-center justify-center gap-2
                   h-full px-5 text-sm font-bold uppercase tracking-wide
                   transition-all duration-150
-                  ${getNavItemClass(isActive)}
+                  ${getDesktopNavItemClass(isActive)}
                 `}
               >
                 <span
@@ -133,12 +153,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
             );
           })}
 
-          {/* MORE for desktop */}
-          {hiddenSports.length > 0 && (
+          {/* DESKTOP MORE BUTTON */}
+          {desktopHidden.length > 0 && (
             <div
               className="relative h-full"
-              onMouseEnter={() => setIsMoreOpen(true)}
-              onMouseLeave={() => setIsMoreOpen(false)}
+              onMouseEnter={() => setDesktopMoreOpen(true)}
+              onMouseLeave={() => setDesktopMoreOpen(false)}
             >
               <button
                 type="button"
@@ -146,21 +166,21 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   flex items-center justify-center gap-1
                   h-full px-4 text-sm font-bold uppercase tracking-wide
                   transition-all duration-150
-                  ${getNavItemClass(isMoreOpen || isHiddenActive)}
+                  ${getDesktopNavItemClass(desktopMoreOpen || isDesktopHiddenActive)}
                 `}
               >
                 <span>More</span>
                 <ChevronDown
                   size={16}
                   className={`transition-transform ${
-                    isMoreOpen ? "rotate-180" : ""
+                    desktopMoreOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
-              {isMoreOpen && (
+              {desktopMoreOpen && (
                 <div className="absolute top-full right-0 w-56 pt-0">
                   <div className="theme-bg theme-border border rounded-b-xl shadow-xl overflow-hidden py-2">
-                    {hiddenSports.map((sport) => {
+                    {desktopHidden.map((sport) => {
                       const isItemActive = currentSport === sport.id;
                       const itemClass = isDark
                         ? isItemActive
@@ -193,7 +213,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           )}
         </nav>
 
-        {/* RIGHT: theme + menu */}
+        {/* RIGHT: Theme ONLY (No Menu Button on Desktop) */}
         <div className="flex items-center h-full gap-2 pl-4">
           <button
             onClick={toggleTheme}
@@ -205,38 +225,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button
-            onClick={onMenuClick}
-            className={`p-2.5 rounded-full transition-colors ${
-              isDark
-                ? "text-secondary hover:bg-slate-800"
-                : "text-white/80 hover:bg-white/20 hover:text-white"
-            }`}
-          >
-            <Menu size={22} />
-          </button>
         </div>
       </div>
 
-      {/* MOBILE HEADER */}
-      <div className="lg:hidden">
-        {/* top bar */}
+      {/* =======================
+          MOBILE HEADER
+      ======================== */}
+      <div className="lg:hidden flex flex-col w-full">
+        {/* Top Row: Logo + Controls */}
         <div
-          className={`flex items-center justify-between px-4 h-14 ${
+          className={`flex items-center justify-between px-4 h-14 w-full ${
             isDark ? "theme-bg" : "bg-[#0f80da]"
           }`}
         >
-          <button
-            onClick={onMenuClick}
-            className={`p-2 rounded-md ${
-              isDark
-                ? "text-secondary hover:bg-slate-800"
-                : "text-white hover:bg-white/10"
-            }`}
-          >
-            <Menu size={24} />
-          </button>
-
+          {/* LEFT: Logo */}
           <Link href="/" className="flex items-center gap-2">
             <div
               className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-sm ${logoBgClass}`}
@@ -250,25 +252,39 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </span>
           </Link>
 
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-md ${
-              isDark
-                ? "text-secondary hover:bg-slate-800"
-                : "text-white hover:bg-white/10"
-            }`}
-          >
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          {/* RIGHT: Theme + Menu */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-md ${
+                isDark
+                  ? "text-secondary hover:bg-slate-800"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <button
+              onClick={onMenuClick}
+              className={`p-2 rounded-md ${
+                isDark
+                  ? "text-secondary hover:bg-slate-800"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              <Menu size={24} />
+            </button>
+          </div>
         </div>
 
-        {/* MOBILE SPORTS ROW */}
+        {/* Bottom Row: SPORTS LIST (Top 3 + More) */}
         <div
-          className={`flex items-stretch justify-between px-2 h-11 ${
-            isDark ? "theme-bg" : "bg-[#0f80da]"
+          className={`flex items-center px-3 h-12 gap-2 w-full ${
+            isDark ? "theme-bg border-t theme-border" : "bg-[#0f80da]"
           }`}
         >
-          <div className="flex flex-1 gap-1">
+          {/* 1. Visible Mobile Sports */}
+          <div className="flex flex-1 gap-2 h-8">
             {MOBILE_TOP_SPORTS.map((sport) => {
               const isActive = currentSport === sport.id;
               return (
@@ -277,12 +293,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   href={`/?sport=${sport.id}`}
                   onClick={() => setMobileMoreOpen(false)}
                   className={`
-                    flex-1 flex items-center justify-center gap-1
-                    h-full text-[11px] font-semibold uppercase tracking-wide
-                    ${getNavItemClass(isActive)}
+                    flex-1 flex items-center justify-center gap-2
+                    px-1 rounded-md text-[11px] font-bold uppercase tracking-wide
+                    transition-all duration-200
+                    ${getMobileNavItemClass(isActive)}
                   `}
                 >
-                  <span className="text-sm" style={getIconStyle(isActive)}>
+                  <span className="text-sm" style={getIconStyle(isActive, true)}>
                     {sport.icon}
                   </span>
                   <span>{sport.name}</span>
@@ -291,44 +308,63 @@ export default function Header({ onMenuClick }: HeaderProps) {
             })}
           </div>
 
-          {mobileHiddenSports.length > 0 && (
-            <div className="relative ml-1 h-full">
+          {/* 2. Mobile MORE Button */}
+          {mobileHidden.length > 0 && (
+            <div className="relative h-8 shrink-0">
               <button
                 type="button"
                 onClick={() => setMobileMoreOpen((open) => !open)}
                 className={`
                   flex items-center justify-center gap-1
-                  h-full px-3 rounded-md text-[11px] font-semibold uppercase tracking-wide
-                  ${getNavItemClass(mobileMoreOpen || isHiddenActive)}
+                  h-full px-3 rounded-md text-[11px] font-bold uppercase tracking-wide
+                  transition-all duration-200
+                  ${getMobileNavItemClass(mobileMoreOpen || isMobileHiddenActive)}
                 `}
               >
                 <span>More</span>
                 <ChevronDown
                   size={14}
-                  className={`transition-transform ${
+                  className={`transition-transform duration-200 ${
                     mobileMoreOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
+              {/* Mobile Dropdown Content */}
               {mobileMoreOpen && (
-                <div className="absolute right-0 mt-1 w-44 theme-bg theme-border border rounded-lg shadow-lg overflow-hidden z-40">
-                  {mobileHiddenSports.map((sport) => (
-                    <Link
-                      key={sport.id}
-                      href={`/?sport=${sport.id}`}
-                      onClick={() => setMobileMoreOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs text-secondary hover:text-primary hover:bg-muted"
-                    >
-                      <span
-                        className="text-base w-6 text-center"
-                        style={getIconStyle(currentSport === sport.id)}
+                <div 
+                  className="absolute right-0 top-full mt-2 w-48 theme-bg theme-border border rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
+                >
+                  {mobileHidden.map((sport) => {
+                    const isItemActive = currentSport === sport.id;
+                    const itemClass = isDark
+                      ? isItemActive
+                        ? "bg-blue-600 text-white"
+                        : "text-secondary hover:bg-slate-800 hover:text-primary"
+                      : isItemActive
+                        ? "bg-blue-50 text-[#0f80da]"
+                        : "text-secondary hover:bg-slate-50 hover:text-primary";
+
+                    return (
+                      <Link
+                        key={sport.id}
+                        href={`/?sport=${sport.id}`}
+                        onClick={() => setMobileMoreOpen(false)}
+                        className={`
+                          flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wide border-b theme-border last:border-0 transition-colors
+                          ${itemClass}
+                        `}
                       >
-                        {sport.icon}
-                      </span>
-                      <span>{sport.name}</span>
-                    </Link>
-                  ))}
+                        <span
+                          className="text-base w-6 text-center"
+                          style={getIconStyle(isItemActive)}
+                        >
+                          {sport.icon}
+                        </span>
+                        <span>{sport.name}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

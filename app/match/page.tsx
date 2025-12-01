@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import MatchWidget from "@/components/widgets/MatchWidget"; 
+import MatchWidget from "@/components/match/MatchWidget"; 
 
 function MatchContent() {
   const searchParams = useSearchParams();
