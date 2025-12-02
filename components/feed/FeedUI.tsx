@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "next/link"; // Restored Link
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -123,6 +123,8 @@ export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps)
                     key={game.id}
                     href={`/match?id=${game.id}&sport=${sport}`}
                     target="_blank"
+                    // FIX: This stops Next.js from trying to fetch non-existent static files for dynamic IDs.
+                    prefetch={false} 
                     className={`${matchRowBase} ${matchRowInactive}`}
                   >
                     <div className={`w-12 text-center text-xs font-bold ${statusColor} shrink-0`}>{displayStatus}</div>
