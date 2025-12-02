@@ -5,8 +5,8 @@ import { Smartphone, Twitter, Facebook, Instagram, Youtube, Globe } from "lucide
 
 const FOOTER_CONTENT = {
   about: {
-    title: "About FlashSport",
-    text: `FlashSport provides the fastest real-time sports scores, fixtures, results, standings, 
+    title: "About LiveSocer",
+    text: `LiveSocer provides the fastest real-time sports scores, fixtures, results, standings, 
     and statistics covering more than 30 sports worldwide. Stay updated with live score updates 
     and deep insights into your favorite leagues like the Premier League, NBA, and Champions League.`,
   },
@@ -49,11 +49,9 @@ const FOOTER_CONTENT = {
     {
       title: "Community",
       links: [
-        { label: "Contact Us", url: "#" },
-        { label: "Advertise", url: "#" },
-        { label: "Privacy Policy", url: "#" },
-        { label: "Terms of Service", url: "#" },
-        { label: "FAQ", url: "#" },
+        { label: "Contact Us", url: "/contact" },
+        { label: "Privacy Policy", url: "/privacy-policy" }, // Points to your new page
+        { label: "Terms of Service", url: "/terms-of-service" },
       ],
     },
   ],
@@ -81,10 +79,10 @@ export default function Footer() {
           <div className="lg:w-2/3 space-y-4">
             <Link href="/" className="flex items-center gap-3 w-fit group">
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
-                F
+                L
               </div>
               <span className="text-2xl font-bold tracking-tight text-primary">
-                FlashSport
+                LiveSocer
               </span>
             </Link>
 
@@ -175,7 +173,7 @@ export default function Footer() {
           
           {/* COPYRIGHT */}
           <div className="text-secondary order-2 md:order-1">
-            &copy; {new Date().getFullYear()} FlashSport Inc. All Rights Reserved.
+            &copy; {new Date().getFullYear()} LiveSocer Inc. All Rights Reserved.
           </div>
 
           {/* SOCIAL ICONS */}
@@ -199,9 +197,14 @@ export default function Footer() {
 
           {/* LEGAL */}
           <nav aria-label="Legal navigation" className="flex gap-6 text-secondary font-medium order-3">
-            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cookies</Link>
+            <Link 
+              href="/privacy-policy" 
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Privacy
+            </Link>
+            <Link href="/terms-of-service" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Terms</Link>
+            <Link href="/contact" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Contact</Link>
           </nav>
         </div>
 

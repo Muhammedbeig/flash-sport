@@ -4,6 +4,7 @@ import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import GameWidget from "@/components/widgets/GameWidget";
+import { SEO_CONTENT } from "@/lib/seo-config";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -62,6 +63,13 @@ function HomeContent() {
 
   return (
     <div className="flex flex-col theme-bg min-h-screen">
+      
+      {/* === SEO H1 (Hidden Visually) === 
+          This provides the main context for search engines without cluttering the UI.
+      */}
+      <h1 className="sr-only">
+        {SEO_CONTENT.home.headings.h1}
+      </h1>
       
       {/* === SCENARIO A: MATCH DETAILS PAGE === */}
       {isMatchMode && (
