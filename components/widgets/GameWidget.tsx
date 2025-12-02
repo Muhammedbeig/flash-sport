@@ -11,17 +11,17 @@ type GameWidgetProps = {
 export default function GameWidget({ sport = "football", leagueId }: GameWidgetProps) {
   const { theme } = useTheme();
   
-  // CRITICAL: Any sport listed here will use your new Custom Feeds.
-  // Any sport NOT listed here will fallback to the standard generic widget.
+
+  // It will now fall through to the standard widget below.
   const CUSTOM_FEED_SPORTS = [
     "football",
-    "basketball",
-    "nfl",
-    "baseball",
-    "hockey",
-    "rugby",
-    "volleyball",
-    "handball",
+   // "basketball",
+   // "nfl",
+   // "baseball",
+   // "hockey",
+   // "rugby",
+   // "volleyball",
+   // "handball",
   ];
 
   // 1. If supported, render your Custom Feed (The new separate files)
@@ -33,7 +33,8 @@ export default function GameWidget({ sport = "football", leagueId }: GameWidgetP
     );
   }
 
-  // 2. Fallback for F1, MMA, etc.
+  // 2. Fallback for Volleyball, F1, MMA, etc.
+  // This renders the official widget which handles its own data fetching.
   const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
   const leagueAttr = leagueId ? `data-league="${leagueId}"` : "";
 

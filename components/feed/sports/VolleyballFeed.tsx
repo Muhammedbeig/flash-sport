@@ -1,52 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
-import { normalizeGame, NormalizedGame } from "../utils";
+import { useEffect, useRef } from "react";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 export default function VolleyballFeed({ leagueId }: { leagueId?: string }) {
-  const [games, setGames] = useState<NormalizedGame[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const now = new Date();
-        const localDate = now.toLocaleDateString("en-CA");
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
-        if (!apiKey) { setLoading(false); return; }
-
-        const params = new URLSearchParams();
-        params.set("date", localDate);
-        params.set("timezone", userTimezone);
-        if (leagueId) params.set("league", leagueId);
-
-        const url = `https://v1.volleyball.api-sports.io/games?${params.toString()}`;
-        
-        const res = await fetch(url, {
-          headers: {
-            "x-rapidapi-host": "v1.volleyball.api-sports.io",
-            "x-rapidapi-key": apiKey,
-          },
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
-        setGames(rawList.map(normalizeGame).filter((g: any) => g !== null));
-      } catch (e) {
-        console.error(`Volleyball feed error:`, e);
-        setGames([]);
-      } finally {
-        setLoading(false);
-      }
+    // 1. Clean up previous script to force a re-run
+    const scriptId = "api-sports-script-force";
+    const existingScript = document.getElementById(scriptId);
+    if (existingScript) {
+      existingScript.remove();
     }
-    fetchData();
-  }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="volleyball" leagueId={leagueId} />;
+    // 2. Create and inject the script anew
+    // This forces the API-Sports loader to scan the DOM and render the widget immediately.
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = "https://widgets.api-sports.io/3.1.0/widgets.js";
+    script.type = "module";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup to prevent memory leaks
+      const s = document.getElementById(scriptId);
+      if (s) s.remove();
+    };
+  }, [leagueId]); // Re-run if league changes
+
+  // 3. Configure Widget Attributes
+  const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
+  const leagueAttr = leagueId ? `data-league="${leagueId}"` : "";
+  
+  // If no league is selected (Home), the widget automatically shows "Today's" matches or a list.
+  // We explicitly pass the Key here to ensure it works even if the global config missed it.
+  const html = `
+    <api-sports-widget
+      data-type="games"
+      data-sport="volleyball"
+      data-key="${apiKey}"
+      data-theme="${widgetTheme}"
+      data-show-toolbar="true"
+      data-refresh="60"
+      ${leagueAttr}
+    ></api-sports-widget>
+  `;
+
+  return (
+    <div 
+      ref={containerRef}
+      className="w-full min-h-[600px] theme-bg rounded-xl border theme-border p-4"
+    >
+      <div dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
 }
