@@ -1,24 +1,21 @@
 import type { NextConfig } from "next";
 
-// Read the variable from the command line or .env file
-// If you are deploying to a custom domain (e.g. livesocer.com), keep this empty.
-const repoName = process.env.NEXT_PUBLIC_REPO_NAME || ""; 
-
 const nextConfig: NextConfig = {
-  // Enables the static export output for hosting on platforms like GitHub Pages
+  // 1. Required for GitHub Pages
   output: "export",
-  
-  // Disables the Image Optimization API since static exports don't have a server
+
+  // 2. Disable Image Optimization (Required for static export)
   images: {
     unoptimized: true,
   },
 
-  // Ensures paths resolve to directories (e.g. /about/index.html) 
-  // preventing 404s on reload in many static hosts
-  trailingSlash: true,
+  // 3. CRITICAL for subdirectory hosting
+  // Since your URL is muhammedbeig.github.io/flash-sport/
+  // The basePath must be exactly "/flash-sport"
+  basePath: "/flash-sport",
 
-  // Sets the base path if a repo name is present (for non-custom domain GitHub Pages)
-  basePath: repoName ? `/${repoName}` : "",
+  // 4. Helps prevent 404s on refresh
+  trailingSlash: true,
 };
 
 export default nextConfig;
