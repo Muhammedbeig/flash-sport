@@ -3,44 +3,41 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import MatchWidget from "@/components/match/MatchWidget";
-import { Skeleton } from "@/components/ui/Skeleton";
 
-// 1. The Content Component (Reads URL params)
-function MatchPageContent() {
+// --- Logic Component ---
+function MatchContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const sport = searchParams.get("sport") || "football";
 
   if (!id) {
     return (
-      <div className="p-10 text-center text-secondary">
-        Invalid match ID. Please close this tab and try again.
+      <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4">
+        <h2 className="text-xl font-bold text-primary">Match Not Found</h2>
+        <button 
+          onClick={() => window.close()} 
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Close Tab
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-2 md:px-0">
+    <div className="max-w-5xl mx-auto py-6 px-2 md:px-0 animate-in fade-in duration-500">
       <MatchWidget matchId={id} sport={sport} />
     </div>
   );
 }
 
-// 2. The Page Component (Wraps in Suspense to prevent White Screen)
+// --- Main Page ---
 export default function MatchPage() {
   return (
+    // Restored 'theme-bg' to match your global CSS variables
     <div className="w-full min-h-screen theme-bg">
-      <Suspense 
-        fallback={
-          <div className="max-w-5xl mx-auto py-6 px-4 space-y-4">
-             {/* This Skeleton shows IMMEDIATELY while data loads */}
-            <Skeleton className="w-full h-10 rounded-lg" />
-            <Skeleton className="w-full h-[200px] rounded-xl" />
-            <Skeleton className="w-full h-[400px] rounded-xl" />
-          </div>
-        }
-      >
-        <MatchPageContent />
+      <Suspense fallback={null}>
+        <MatchContent />
       </Suspense>
     </div>
   );

@@ -1,31 +1,15 @@
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Loader2 } from "lucide-react";
 
 export default function Loading() {
   return (
-    <div className="w-full min-h-screen theme-bg p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex justify-between items-center">
-          <Skeleton className="w-32 h-8" />
-          <Skeleton className="w-20 h-8" />
-        </div>
-
-        {/* Scoreboard Skeleton */}
-        <div className="theme-bg theme-border border rounded-xl p-8 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Skeleton className="w-16 h-16 rounded-full" />
-            <Skeleton className="w-32 h-6" />
-          </div>
-          <Skeleton className="w-24 h-10" />
-          <div className="flex items-center gap-4">
-            <Skeleton className="w-32 h-6" />
-            <Skeleton className="w-16 h-16 rounded-full" />
-          </div>
-        </div>
-
-        {/* Content Skeleton */}
-        <Skeleton className="w-full h-96 rounded-xl" />
-      </div>
+    <div className="w-full min-h-screen theme-bg flex flex-col items-center justify-center gap-4">
+      {/* This file is sent instantly by the server. 
+         It uses your global theme variables to match the app design.
+      */}
+      <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+      <p className="text-secondary text-sm font-medium animate-pulse">
+        Initializing match feed...
+      </p>
     </div>
   );
 }
