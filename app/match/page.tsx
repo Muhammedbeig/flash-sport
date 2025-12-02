@@ -34,7 +34,6 @@ function MatchContent() {
 // --- Main Page ---
 export default function MatchPage() {
   return (
-    // Restored 'theme-bg' to match your global CSS variables
     <div className="w-full min-h-screen theme-bg">
       <Suspense fallback={null}>
         <MatchContent />
