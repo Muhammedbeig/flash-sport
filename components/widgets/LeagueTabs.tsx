@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import LeagueStandingsTabs from "@/components/widgets/LeagueStandingsTabs";
 
-// ... (Game/Team types remain the same) ...
-type ApiGame = any; 
+// ==========================================
+// 1. TYPES & CONSTANTS
+// ==========================================
 
 type NormalizedGame = {
   id: number;
@@ -21,692 +23,425 @@ type NormalizedGame = {
   awayScore: number | null;
 };
 
-type StandingsRow = {
-  rank: number;
-  team: { id: number; name: string; logo?: string };
-  points: number;
-  goalsDiff?: number;
-  form?: string | null;
-  all?: {
-    played: number;
-    win: number;
-    draw: number;
-    lose: number;
-    goals?: { for: number; against: number };
-  };
-};
-
-const SPORT_HOSTS: Record<string, string> = {
-  football: "v3.football.api-sports.io",
-  basketball: "v1.basketball.api-sports.io",
-  baseball: "v1.baseball.api-sports.io",
-  hockey: "v1.hockey.api-sports.io",
-  rugby: "v1.rugby.api-sports.io",
-  volleyball: "v1.volleyball.api-sports.io",
-  nfl: "v1.american-football.api-sports.io",
-  // REMOVED HANDBALL
-};
-
-const SPORTS_WITH_STANDINGS = new Set([
-  "football",
-  "basketball",
-  "baseball",
-  "hockey",
-  "rugby",
-  "volleyball",
-  "nfl",
-  // REMOVED HANDBALL
-]);
-
-// ... (Rest of the component logic remains identical, preserving functionality) ...
-
-const TABS = [
+// Mode 1: Standard (No Live Games)
+const TABS_STANDARD = [
   { id: "summary", label: "Summary" },
   { id: "results", label: "Results" },
   { id: "fixtures", label: "Fixtures" },
   { id: "standings", label: "Standings" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+// Mode 2: Live (Active Games)
+const TABS_LIVE = [
+  { id: "all", label: "All" },
+  { id: "live", label: "Live" },
+  { id: "finished", label: "Finished" },
+  { id: "scheduled", label: "Scheduled" },
+  { id: "standings", label: "Standings" },
+] as const;
 
-const COMPLETED_STATUSES = new Set([
-  "FT", "AET", "PEN", "FT_PEN", "AP", "END",
-]);
+const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "P", "BT", "LIVE", "INT", "BREAK"]);
+const COMPLETED_STATUSES = new Set(["FT", "AET", "PEN", "FT_PEN", "AP", "END", "AWD", "WO", "CANC", "ABD"]);
+const UPCOMING_STATUSES = new Set(["NS", "TBD", "PST", "SUSP", "DELAYED"]);
 
-const UPCOMING_STATUSES = new Set([
-  "NS", "TBD", "PST", "SUSP", "INT", "DELAYED",
-]);
+// ==========================================
+// 2. HELPER FUNCTIONS
+// ==========================================
 
-const getSeasonForLeague = () => {
-  const now = new Date();
-  return now.getFullYear();
-};
-
-const normalizeGame = (raw: ApiGame): NormalizedGame => {
+const normalizeGame = (raw: any): NormalizedGame => {
   const meta = raw.fixture || raw.game || raw;
   const league = raw.league || {};
   const teams = raw.teams || raw.scores?.teams || {};
-
   const home = teams.home || raw.home || {};
   const away = teams.away || raw.away || {};
-
   const goals = raw.goals || raw.score || raw.scores || {};
-  let scoresHome: any =
-    goals.home ??
-    goals.home?.total ??
-    goals.fulltime?.home ??
-    goals.fulltime_home ??
-    null;
-  let scoresAway: any =
-    goals.away ??
-    goals.away?.total ??
-    goals.fulltime?.away ??
-    goals.fulltime_away ??
-    null;
+  
+  let scoresHome: any = goals.home ?? goals.home?.total ?? null;
+  let scoresAway: any = goals.away ?? goals.away?.total ?? null;
 
-  if (scoresHome && typeof scoresHome === "object") {
-    scoresHome = scoresHome.total ?? scoresHome.score ?? null;
-  }
-  if (scoresAway && typeof scoresAway === "object") {
-    scoresAway = scoresAway.total ?? scoresAway.score ?? null;
-  }
+  // Handle nested objects sometimes returned by API
+  if (scoresHome && typeof scoresHome === "object") scoresHome = scoresHome.total ?? null;
+  if (scoresAway && typeof scoresAway === "object") scoresAway = scoresAway.total ?? null;
 
   return {
     id: meta.id,
     date: meta.date,
     leagueName: league.name,
     leagueLogo: league.logo,
-    statusShort: meta.status?.short || meta.status?.long || "",
+    statusShort: meta.status?.short || "",
     statusLong: meta.status?.long,
-    homeTeam: {
-      id: home.id,
-      name: home.name,
-      logo: home.logo,
-    },
-    awayTeam: {
-      id: away.id,
-      name: away.name,
-      logo: away.logo,
-    },
+    homeTeam: { id: home.id, name: home.name, logo: home.logo },
+    awayTeam: { id: away.id, name: away.name, logo: away.logo },
     homeScore: scoresHome,
     awayScore: scoresAway,
   };
 };
 
-async function fetchLeagueGames(
-  leagueId: string,
-  sport: string,
-  opts: { scope: "last" | "next"; limit: number },
-): Promise<NormalizedGame[]> {
+// Central Fetcher
+async function fetchGames(leagueId: string, sport: string, queryParams: string): Promise<NormalizedGame[]> {
   const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
   const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-  const host = SPORT_HOSTS[sport] || SPORT_HOSTS.football;
-  const season = getSeasonForLeague();
+  
+  // Host mapping
+  const hosts: Record<string, string> = {
+    football: "v3.football.api-sports.io",
+    basketball: "v1.basketball.api-sports.io",
+    baseball: "v1.baseball.api-sports.io",
+    hockey: "v1.hockey.api-sports.io",
+    rugby: "v1.rugby.api-sports.io",
+    volleyball: "v1.volleyball.api-sports.io",
+    nfl: "v1.american-football.api-sports.io",
+  };
+  const host = hosts[sport] || hosts.football;
+  
+  const season = new Date().getFullYear();
   const endpoint = sport === "football" ? "fixtures" : "games";
-
-  let url = "";
+  
+  // Construct Query
+  const query = `league=${leagueId}&season=${season}&${queryParams}`;
+  
+  const url = cdnUrl 
+    ? `${cdnUrl}/${endpoint}?${query}` 
+    : `https://${host}/${endpoint}?${query}`;
+    
+  // FIX: Explicitly defined as Record<string, string> to satisfy TypeScript
   let headers: Record<string, string> = {};
-
-  if (sport === "football" && cdnUrl) {
-    url = `${cdnUrl}/${endpoint}?league=${leagueId}&season=${season}&${opts.scope}=${opts.limit}`;
-  } else {
-    if (!apiKey) throw new Error("Missing API key");
-    url = `https://${host}/${endpoint}?league=${leagueId}&season=${season}&${opts.scope}=${opts.limit}`;
-    headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey };
+  if (!cdnUrl) {
+    headers = {
+      "x-rapidapi-host": host,
+      "x-rapidapi-key": apiKey || ""
+    };
   }
 
-  const res = await fetch(url, { headers });
-  const json = await res.json();
-
-  if (!json.response || !Array.isArray(json.response)) return [];
-  return json.response.map(normalizeGame);
-}
-
-async function fetchLeagueStandings(
-  leagueId: string,
-  sport: string,
-): Promise<StandingsRow[]> {
-  const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
-  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-  const host = SPORT_HOSTS[sport] || SPORT_HOSTS.football;
-  const season = getSeasonForLeague();
-
-  let url = "";
-  let headers: Record<string, string> = {};
-
-  if (sport === "football" && cdnUrl) {
-    url = `${cdnUrl}/standings?league=${leagueId}&season=${season}`;
-  } else {
-    if (!apiKey) throw new Error("Missing API key");
-    url = `https://${host}/standings?league=${leagueId}&season=${season}`;
-    headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey };
+  try {
+    const res = await fetch(url, { headers, next: { revalidate: 60 } });
+    const json = await res.json();
+    if (!json.response || !Array.isArray(json.response)) return [];
+    return json.response.map(normalizeGame);
+  } catch (err) {
+    console.error("Fetch Error:", err);
+    return [];
   }
-
-  const res = await fetch(url, { headers });
-  const json = await res.json();
-
-  const rows =
-    json?.response?.[0]?.league?.standings?.[0] ??
-    json?.response?.[0]?.standings?.[0] ??
-    [];
-
-  return rows;
 }
+
+// ==========================================
+// 3. SUB-COMPONENTS
+// ==========================================
 
 function GameRow({ game }: { game: NormalizedGame }) {
   const { theme } = useTheme();
-  const cardBg =
-    theme === "dark"
-      ? "bg-slate-900/60 hover:bg-slate-800"
-      : "bg-white hover:bg-slate-50";
-  const statusClass =
-    theme === "dark"
-      ? "text-[10px] px-2 py-0.5 rounded-full border border-slate-700 text-slate-300"
-      : "text-[10px] px-2 py-0.5 rounded-full border border-slate-200 text-slate-600";
-
-  const hasScore =
-    game.homeScore !== null &&
-    game.homeScore !== undefined &&
-    game.awayScore !== null &&
-    game.awayScore !== undefined;
+  const isDark = theme === "dark";
+  const isLive = LIVE_STATUSES.has(game.statusShort);
+  
+  const cardBg = isDark ? "bg-slate-900/60 hover:bg-slate-800" : "bg-white hover:bg-slate-50";
+  const statusColor = isLive ? "text-red-500 font-bold" : "text-secondary";
+  const scoreColor = isLive ? "text-red-500 font-bold" : "text-primary font-bold";
 
   return (
-    <div
-      className={`flex items-center justify-between px-3 py-2 rounded-xl border theme-border ${cardBg} transition-colors`}
+    <Link 
+      href={`/match?id=${game.id}&sport=football`} 
+      target="_blank" 
+      prefetch={false} 
+      className={`flex items-center justify-between px-3 py-3 rounded-xl border theme-border ${cardBg} mb-2 transition-colors cursor-pointer group`}
     >
-      <div className="flex flex-col gap-1 w-28 shrink-0 border-r theme-border pr-2">
-        <span className="text-[10px] text-secondary font-medium">
-          {new Date(game.date).toLocaleDateString(undefined, {
-            day: "2-digit",
-            month: "short",
-          })}
+      {/* Time / Status */}
+      <div className="flex flex-col gap-1 w-20 shrink-0 border-r theme-border pr-2">
+        <span className={`text-[10px] ${statusColor}`}>
+          {isLive ? "LIVE" : new Date(game.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
         </span>
-        <div className="flex items-center gap-1">
-          {game.leagueLogo && (
-            <img
-              src={game.leagueLogo}
-              alt={game.leagueName}
-              className="w-3 h-3 object-contain"
-            />
-          )}
-          <span className="text-[9px] text-secondary truncate">
-            {game.leagueName}
+        {!isLive && (
+          <span className="text-[9px] text-secondary">
+            {new Date(game.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
           </span>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col gap-1 px-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {game.homeTeam.logo && (
-              <img
-                src={game.homeTeam.logo}
-                alt={game.homeTeam.name}
-                className="w-5 h-5 object-contain"
-              />
-            )}
-            <span className="text-xs text-primary truncate">
-              {game.homeTeam.name}
-            </span>
-          </div>
-          {hasScore && (
-            <span className="text-xs font-bold">{game.homeScore}</span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {game.awayTeam.logo && (
-              <img
-                src={game.awayTeam.logo}
-                alt={game.awayTeam.name}
-                className="w-5 h-5 object-contain"
-              />
-            )}
-            <span className="text-xs text-primary truncate">
-              {game.awayTeam.name}
-            </span>
-          </div>
-          {hasScore && (
-            <span className="text-xs font-bold">{game.awayScore}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col items-end gap-1 w-20 shrink-0">
-        <span className={statusClass}>
-          {hasScore
-            ? game.statusShort || "FT"
-            : new Date(game.date).toLocaleTimeString(undefined, {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function LeagueSummaryTab({ leagueId, sport }: { leagueId: string; sport: string }) {
-  const [scheduled, setScheduled] = useState<NormalizedGame[]>([]);
-  const [latest, setLatest] = useState<NormalizedGame[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        setLoading(true);
-        const [nextGames, lastGames] = await Promise.all([
-          fetchLeagueGames(leagueId, sport, { scope: "next", limit: 10 }),
-          fetchLeagueGames(leagueId, sport, { scope: "last", limit: 10 }),
-        ]);
-        if (cancelled) return;
-
-        const scheduledGames = nextGames.filter((g) =>
-          UPCOMING_STATUSES.has(g.statusShort),
-        );
-        const finishedGames = lastGames.filter((g) =>
-          COMPLETED_STATUSES.has(g.statusShort),
-        );
-
-        setScheduled(scheduledGames);
-        setLatest(finishedGames);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, sport]);
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-6 w-40 mt-4" />
-        <Skeleton className="h-16 w-full" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 p-4">
-      <div>
-        <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">
-          Scheduled
-        </div>
-        {scheduled.length === 0 ? (
-          <div className="p-4 text-sm text-secondary rounded-lg border theme-border theme-bg">
-            No upcoming games scheduled.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {scheduled.map((g) => (
-              <GameRow key={g.id} game={g} />
-            ))}
-          </div>
         )}
       </div>
 
-      <div>
-        <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">
-          Latest Scores
+      {/* Teams & Scores */}
+      <div className="flex-1 px-3 flex flex-col gap-1">
+        {/* Home */}
+        <div className="flex justify-between items-center">
+           <div className="flex items-center gap-2 overflow-hidden">
+             {game.homeTeam.logo && <img src={game.homeTeam.logo} className="w-4 h-4 object-contain shrink-0"/>}
+             <span className="text-xs text-primary truncate">{game.homeTeam.name}</span>
+           </div>
+           <span className={`text-xs ${scoreColor}`}>{game.homeScore ?? "-"}</span>
         </div>
-        {latest.length === 0 ? (
-          <div className="p-4 text-sm text-secondary rounded-lg border theme-border theme-bg">
-            No recent results available.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {latest.map((g) => (
-              <GameRow key={g.id} game={g} />
-            ))}
-          </div>
-        )}
+        {/* Away */}
+        <div className="flex justify-between items-center">
+           <div className="flex items-center gap-2 overflow-hidden">
+             {game.awayTeam.logo && <img src={game.awayTeam.logo} className="w-4 h-4 object-contain shrink-0"/>}
+             <span className="text-xs text-primary truncate">{game.awayTeam.name}</span>
+           </div>
+           <span className={`text-xs ${scoreColor}`}>{game.awayScore ?? "-"}</span>
+        </div>
       </div>
-    </div>
+
+      {/* Short Status (FT, 65', etc) */}
+      <div className="w-12 text-right text-[10px] text-secondary font-mono">
+        {game.statusShort}
+      </div>
+    </Link>
   );
 }
 
-function LeagueResultsTab({ leagueId, sport }: { leagueId: string; sport: string }) {
+// Generic List for Results/Fixtures/Live
+function GenericList({ leagueId, sport, type }: { leagueId: string, sport: string, type: string }) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function run() {
+    async function load() {
+      setLoading(true);
       try {
-        setLoading(true);
-        const lastGames = await fetchLeagueGames(leagueId, sport, {
-          scope: "last",
-          limit: 50,
-        });
-        if (cancelled) return;
-        setGames(
-          lastGames.filter((g) => COMPLETED_STATUSES.has(g.statusShort)),
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+        let q = "";
+        const today = new Date().toISOString().split('T')[0];
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, sport]);
+        // --- QUERY LOGIC ---
+        if (type === "live") {
+          q = "live=all";
+        } else if (type === "finished" || type === "results") {
+          q = "last=30"; // Last 30 games
+        } else if (type === "scheduled" || type === "fixtures") {
+          q = "next=30"; // Next 30 games
+        } else if (type === "all") {
+          // "All" in Live Mode usually means "Today's Games"
+          q = `date=${today}`;
+        }
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!games.length) {
-    return (
-      <div className="p-8 text-center text-secondary text-sm">
-        No recent results for this league.
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-2">
-      {games.map((g) => (
-        <GameRow key={g.id} game={g} />
-      ))}
-    </div>
-  );
-}
-
-function LeagueFixturesTab({ leagueId, sport }: { leagueId: string; sport: string }) {
-  const [games, setGames] = useState<NormalizedGame[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        setLoading(true);
-        const nextGames = await fetchLeagueGames(leagueId, sport, {
-          scope: "next",
-          limit: 50,
-        });
-        if (cancelled) return;
-        setGames(
-          nextGames.filter((g) => UPCOMING_STATUSES.has(g.statusShort)),
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, sport]);
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!games.length) {
-    return (
-      <div className="p-8 text-center text-secondary text-sm">
-        No upcoming fixtures for this league.
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-2">
-      {games.map((g) => (
-        <GameRow key={g.id} game={g} />
-      ))}
-    </div>
-  );
-}
-
-function LeagueStandingsTab({ leagueId, sport }: { leagueId: string; sport: string }) {
-  const { theme } = useTheme();
-  const [rows, setRows] = useState<StandingsRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [apiFailed, setApiFailed] = useState(false);
-  const season = getSeasonForLeague();
-
-  useEffect(() => {
-    if (!SPORTS_WITH_STANDINGS.has(sport)) {
-      setLoading(false);
-      setApiFailed(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function run() {
-      try {
-        setLoading(true);
-        setApiFailed(false);
-        const data = await fetchLeagueStandings(leagueId, sport);
-        if (cancelled) return;
-
-        if (!data || !data.length) {
-          setApiFailed(true);
+        const data = await fetchGames(leagueId, sport, q);
+        
+        // --- CLIENT-SIDE FILTERING (Extra Safety) ---
+        let final = data;
+        if (type === "finished") final = data.filter(g => COMPLETED_STATUSES.has(g.statusShort));
+        if (type === "scheduled") final = data.filter(g => UPCOMING_STATUSES.has(g.statusShort));
+        
+        // Sort by date: Newest first for results, Oldest first for fixtures
+        if (type === "finished") {
+          final.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         } else {
-          setRows(data);
+          final.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         }
+
+        if (!cancelled) setGames(final);
       } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [leagueId, sport, type]);
+
+  if (loading) return <div className="p-4 space-y-2">{[1,2,3].map(i=><Skeleton key={i} className="h-16 w-full"/>)}</div>;
+  
+  if (games.length === 0) {
+    return (
+      <div className="p-10 text-center text-secondary text-sm">
+        No matches found for this category.
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-2">
+      {games.map(g => <GameRow key={g.id} game={g} />)}
+    </div>
+  );
+}
+
+// Standard Summary (Shows "Upcoming" + "Results" in one view)
+function StandardSummary({ leagueId, sport }: { leagueId: string, sport: string }) {
+  // We fetch Next 5 and Last 5 for the summary view
+  const [fixtures, setFixtures] = useState<NormalizedGame[]>([]);
+  const [results, setResults] = useState<NormalizedGame[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const [nextData, lastData] = await Promise.all([
+          fetchGames(leagueId, sport, "next=5"),
+          fetchGames(leagueId, sport, "last=5")
+        ]);
+        
         if (!cancelled) {
-          console.warn("Standings fetch failed", e);
-          setApiFailed(true);
+          setFixtures(nextData);
+          setResults(lastData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
+    load();
+    return () => { cancelled = true; };
   }, [leagueId, sport]);
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-2">
-        <Skeleton className="h-5 w-32" />
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-8 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (apiFailed || !rows.length) {
-    const widgetHtml = `
-      <api-sports-widget
-        data-type="standings"
-        data-league="${leagueId}"
-        data-season="${season}"
-      ></api-sports-widget>
-    `;
-
-    return (
-      <div className="p-4 space-y-3">
-        <div className="text-xs text-secondary text-center">
-          Standings not available from raw API. Showing widget fallback.
-        </div>
-        <div className="rounded-xl overflow-hidden border theme-border theme-bg">
-          <div
-            className="min-h-[360px]"
-            dangerouslySetInnerHTML={{ __html: widgetHtml }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  const headerBg =
-    theme === "dark" ? "bg-slate-900/80" : "bg-slate-50";
-  const rowHover =
-    theme === "dark" ? "hover:bg-slate-800/80" : "hover:bg-slate-100";
+  if (loading) return <div className="p-4 space-y-3"><Skeleton className="h-6 w-32"/><Skeleton className="h-20 w-full"/><Skeleton className="h-6 w-32"/><Skeleton className="h-20 w-full"/></div>;
 
   return (
-    <div className="p-4">
-      <div
-        className={`grid grid-cols-[2rem,1fr,2.5rem,2.5rem,2.5rem,2.5rem,3rem] items-center px-3 py-2 text-[10px] font-semibold text-secondary uppercase tracking-widest rounded-t-xl border-b theme-border ${headerBg}`}
-      >
-        <span>#</span>
-        <span>Team</span>
-        <span className="text-center">MP</span>
-        <span className="text-center">W</span>
-        <span className="text-center">D</span>
-        <span className="text-center">L</span>
-        <span className="text-center">Pts</span>
-      </div>
+    <div className="space-y-6 p-2">
+      {fixtures.length > 0 && (
+        <div>
+          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">Upcoming</div>
+          {fixtures.map(g => <GameRow key={g.id} game={g} />)}
+        </div>
+      )}
+      
+      {results.length > 0 && (
+        <div>
+          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">Recent Results</div>
+          {results.map(g => <GameRow key={g.id} game={g} />)}
+        </div>
+      )}
 
-      <div className="divide-y theme-border border-x border-b rounded-b-xl overflow-hidden">
-        {rows.map((row: any) => {
-          const stats = row.all || row.games || {};
-          const mp = stats.played ?? stats.played_games ?? 0;
-
-          return (
-            <div
-              key={row.team.id}
-              className={`grid grid-cols-[2rem,1fr,2.5rem,2.5rem,2.5rem,2.5rem,3rem] items-center px-3 py-2 text-xs ${rowHover}`}
-            >
-              <span className="text-[11px] font-semibold text-secondary">
-                {row.rank}
-              </span>
-              <div className="flex items-center gap-2 overflow-hidden">
-                {row.team.logo && (
-                  <img
-                    src={row.team.logo}
-                    alt={row.team.name}
-                    className="w-5 h-5 object-contain shrink-0"
-                  />
-                )}
-                <span className="truncate text-sm text-primary">
-                  {row.team.name}
-                </span>
-              </div>
-              <span className="text-[11px] text-center">{mp}</span>
-              <span className="text-[11px] text-center">
-                {stats.win ?? stats.wins ?? 0}
-              </span>
-              <span className="text-[11px] text-center">
-                {stats.draw ?? stats.ties ?? 0}
-              </span>
-              <span className="text-[11px] text-center">
-                {stats.lose ?? stats.losses ?? 0}
-              </span>
-              <span className="text-[11px] text-center font-bold">
-                {row.points}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {fixtures.length === 0 && results.length === 0 && (
+        <div className="p-8 text-center text-secondary text-sm">No data available.</div>
+      )}
     </div>
   );
 }
+
+// ==========================================
+// 4. MAIN EXPORT
+// ==========================================
 
 export default function LeagueTabs({
   leagueId,
   sport = "football",
+  initialTab = "summary",
+  leagueSlug,
 }: {
   leagueId?: string | null;
   sport?: string;
+  initialTab?: string;
+  leagueSlug?: string;
 }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [checkingLive, setCheckingLive] = useState(true);
+  const [localTab, setLocalTab] = useState(initialTab);
+
+  // 1. Initial Check for Live Games to decide Mode
+  useEffect(() => {
+    if (!leagueId) return;
+    let cancelled = false;
+
+    async function check() {
+      try {
+        // Fast fetch to see if any live games exist
+        const liveData = await fetchGames(leagueId!, sport, "live=all");
+        if (!cancelled && liveData.length > 0) {
+          setIsLiveMode(true);
+        }
+      } catch(e) {
+        console.warn("Live check failed", e);
+      } finally {
+        if (!cancelled) setCheckingLive(false);
+      }
+    }
+    check();
+    return () => { cancelled = true; };
+  }, [leagueId, sport]);
 
   if (!leagueId) return null;
-  const leagueIdStr = String(leagueId);
+  if (checkingLive) return <Skeleton className="w-full h-96 rounded-xl mt-4" />;
 
-  const availableTabs: TabId[] = TABS.filter((t) => {
-    if (t.id === "standings" && !SPORTS_WITH_STANDINGS.has(sport)) {
-      return false;
-    }
-    return true;
-  }).map((t) => t.id as TabId);
+  // 2. Decide Tab Set
+  const tabs = isLiveMode ? TABS_LIVE : TABS_STANDARD;
 
-  const [activeTab, setActiveTab] = useState<TabId>(
-    availableTabs[0] ?? "summary",
-  );
+  // 3. Resolve Active Tab
+  let activeTab = leagueSlug ? initialTab : localTab;
 
-  const getTabStyle = (id: TabId) => {
+  // Fallback Logic: If we are in Live Mode but URL asks for "summary" (which doesn't exist in live mode),
+  // switch to "all". Same for results -> finished.
+  if (isLiveMode) {
+    if (activeTab === "summary") activeTab = "all";
+    if (activeTab === "results") activeTab = "finished";
+    if (activeTab === "fixtures") activeTab = "scheduled";
+  } else {
+    // If Standard mode but URL asks for "live" (maybe user refreshed), fallback to summary
+    if (activeTab === "all" || activeTab === "live") activeTab = "summary";
+  }
+
+  // 4. Styling Helper
+  const getTabStyle = (id: string) => {
     const isActive = id === activeTab;
-    const base =
-      "px-4 py-2 text-xs font-semibold uppercase tracking-widest border rounded-md transition-colors";
+    const base = "px-4 py-2 text-xs font-semibold uppercase tracking-widest border rounded-md transition-colors whitespace-nowrap";
+    
+    // Live Tab Highlight
+    if (id === "live") {
+       return isActive 
+         ? "bg-red-600 text-white border-red-600 animate-pulse px-6" 
+         : "text-red-500 border-red-200 bg-red-50 hover:bg-red-100 px-6";
+    }
 
-    if (isActive) {
-      return `${base} bg-[#0f80da] text-white border-transparent`;
-    }
-    if (isDark) {
-      return `${base} bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800`;
-    }
+    if (isActive) return `${base} bg-[#0f80da] text-white border-transparent`;
+    if (isDark) return `${base} bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800`;
     return `${base} bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200`;
   };
 
- const renderTabContent = () => {
-  switch (activeTab) {
-    case "summary":
-      return <LeagueSummaryTab leagueId={leagueIdStr} sport={sport} />;
-    case "results":
-      return <LeagueResultsTab leagueId={leagueIdStr} sport={sport} />;
-    case "fixtures":
-      return <LeagueFixturesTab leagueId={leagueIdStr} sport={sport} />;
-    case "standings":
-      return (
-        <LeagueStandingsTabs
-          leagueId={leagueIdStr}
-          sport={sport}
-        />
-      );
-    default:
-      return null;
-  }
-};
+  // 5. Render Content Helper
+  const renderContent = () => {
+    // Standings (Shared)
+    if (activeTab === "standings") {
+      return <LeagueStandingsTabs leagueId={String(leagueId)} sport={sport} />;
+    }
+
+    // Live Mode Content
+    if (isLiveMode) {
+      return <GenericList leagueId={String(leagueId)} sport={sport} type={activeTab} />;
+    }
+    
+    // Standard Mode Content
+    if (activeTab === "summary") {
+      return <StandardSummary leagueId={String(leagueId)} sport={sport} />;
+    }
+    // Results / Fixtures
+    return <GenericList leagueId={String(leagueId)} sport={sport} type={activeTab} />;
+  };
 
   return (
-    <div className="mt-4 theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">
-      <div className="flex flex-wrap items-center gap-2 px-4 pt-3 pb-2 border-b theme-border">
-        {availableTabs.map((tabId) => {
-          const meta = TABS.find((t) => t.id === tabId)!;
-          return (
-            <button
-              key={tabId}
-              className={getTabStyle(tabId)}
-              onClick={() => setActiveTab(tabId)}
-              type="button"
-            >
-              {meta.label}
-            </button>
-          );
+    <div className="mt-4 theme-bg rounded-xl border theme-border overflow-hidden shadow-sm min-h-[500px]">
+      {/* TABS HEADER */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b theme-border overflow-x-auto no-scrollbar">
+        {tabs.map((tab) => {
+          const targetId = tab.id; 
+          
+          if (leagueSlug) {
+             return (
+               <Link
+                 key={tab.id}
+                 href={`/football/${leagueSlug}/${targetId}`}
+                 className={getTabStyle(tab.id)}
+                 prefetch={false}
+               >
+                 {tab.id === "live" && <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block"/>}
+                 {tab.label}
+               </Link>
+             );
+          } else {
+             return (
+               <button
+                 key={tab.id}
+                 className={getTabStyle(tab.id)}
+                 onClick={() => setLocalTab(targetId)}
+               >
+                 {tab.id === "live" && <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block"/>}
+                 {tab.label}
+               </button>
+             );
+          }
         })}
       </div>
 
-      <div>{renderTabContent()}</div>
+      {/* CONTENT */}
+      <div>{renderContent()}</div>
     </div>
   );
 }

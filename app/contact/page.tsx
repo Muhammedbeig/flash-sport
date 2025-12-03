@@ -41,7 +41,7 @@ export default function ContactPage() {
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-cyan-500" />
           
           {/* Icon Bubble */}
-          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300 border border-blue-100 dark:border-blue-800">
+          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
             <Mail size={32} className="text-blue-600 dark:text-blue-400" />
           </div>
 
@@ -63,9 +63,11 @@ export default function ContactPage() {
             <ArrowRight size={18} />
           </a>
 
-          {/* Note - UPDATED DESIGN: Matches 'Active' state (Blue-50) from other widgets */}
-          <div className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-xs font-bold text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-            <Info size={14} className="shrink-0" />
+          {/* Note - FIXED: Matches Sidebar Hover Styles exactly */}
+          {/* Light: bg-slate-100 text-primary */}
+          {/* Dark: bg-slate-800/50 text-slate-200 */}
+          <div className="mt-6 flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-primary dark:text-slate-200 text-xs font-bold">
+            <Info size={16} className="shrink-0" />
             <span>We will use only email for contacting.</span>
           </div>
 

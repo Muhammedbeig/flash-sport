@@ -2,29 +2,38 @@
 
 import CustomGameFeed from "@/components/feed/CustomGameFeed";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import LeagueTabs from "./LeagueTabs";
 
 type GameWidgetProps = {
   leagueId?: string;
   sport?: string;
+  initialTab?: string;
+  leagueSlug?: string;
 };
 
-export default function GameWidget({ sport = "football", leagueId }: GameWidgetProps) {
+export default function GameWidget({ 
+  sport = "football", 
+  leagueId, 
+  initialTab,
+  leagueSlug 
+}: GameWidgetProps) {
   const { theme } = useTheme();
-  
 
-  // It will now fall through to the standard widget below.
-  const CUSTOM_FEED_SPORTS = [
-    "football",
-   // "basketball",
-   // "nfl",
-   // "baseball",
-   // "hockey",
-   // "rugby",
-   // "volleyball",
-   // "handball",
-  ];
+  // 1. SEO MODE or LEAGUE VIEW: Render the full League Detail Tabs
+  if (leagueId) {
+    return (
+      <LeagueTabs 
+        leagueId={leagueId} 
+        sport={sport} 
+        initialTab={initialTab}
+        leagueSlug={leagueSlug}
+      />
+    );
+  }
 
-  // 1. If supported, render your Custom Feed (The new separate files)
+  // 2. Standard Feed Logic
+  const CUSTOM_FEED_SPORTS = ["football"];
+
   if (CUSTOM_FEED_SPORTS.includes(sport.toLowerCase())) {
     return (
       <div className="w-full min-h-[500px]">
@@ -33,11 +42,9 @@ export default function GameWidget({ sport = "football", leagueId }: GameWidgetP
     );
   }
 
-  // 2. Fallback for Volleyball, F1, MMA, etc.
-  // This renders the official widget which handles its own data fetching.
+  // 3. Fallback External Widget (for other sports)
   const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
-  const leagueAttr = leagueId ? `data-league="${leagueId}"` : "";
-
+  
   return (
     <div className="w-full min-h-[500px] theme-bg rounded-xl border theme-border p-4">
       <div
@@ -49,7 +56,6 @@ export default function GameWidget({ sport = "football", leagueId }: GameWidgetP
               data-theme="${widgetTheme}" 
               data-show-toolbar="true" 
               data-refresh="60"
-              ${leagueAttr}
             ></api-sports-widget>
           `,
         }}
