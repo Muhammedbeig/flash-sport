@@ -1,36 +1,33 @@
 "use client";
 
 import { Suspense } from "react";
-import PlayerProfile from "@/components/player/PlayerProfile";
-import { Skeleton } from "@/components/ui/Skeleton";
+import PlayerProfile from "@/components/player/PlayerProfile"; // ⚠️ Check this path matches where you saved PlayerProfile.tsx
+import { Loader2 } from "lucide-react";
 
+// 1. The Spinner Component
+// Baked directly into the file to ensure instant loading on GitHub Pages
+function PlayerLoading() {
+  return (
+    <div className="w-full min-h-screen theme-bg flex flex-col items-center justify-center gap-4">
+      <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+      <p className="text-secondary text-sm font-medium animate-pulse">
+        Loading player profile...
+      </p>
+    </div>
+  );
+}
+
+// 2. The Main Page
 export default function PlayerPage() {
   return (
-    <div className="min-h-screen theme-bg p-4 md:p-6">
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Suspense Boundary is CRITICAL for Static Exports */}
-        <Suspense 
-          fallback={
-            <div className="space-y-4">
-              <div className="flex gap-6 items-center">
-                <Skeleton className="w-32 h-32 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-8 w-1/2" />
-                  <Skeleton className="h-4 w-1/4" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-6">
-                <Skeleton className="h-32 w-full rounded-xl" />
-                <Skeleton className="h-32 w-full rounded-xl" />
-              </div>
-            </div>
-          }
-        >
-          <PlayerProfile />
-        </Suspense>
-
-      </div>
+    <div className="w-full min-h-screen theme-bg">
+      {/* CRITICAL FIX: 
+        The 'fallback' is what the user sees immediately (stopping the white screen).
+        Once the browser is ready, it swaps this for <PlayerProfile />.
+      */}
+      <Suspense fallback={<PlayerLoading />}>
+        <PlayerProfile />
+      </Suspense>
     </div>
   );
 }
