@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link"; // Restored Link
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import LeagueTabs from "@/components/widgets/LeagueTabs";
 import { NormalizedGame, NormalizedLeague } from "./utils";
 
-// Sports that support the League Detail View
 const LEAGUE_WIDGET_SPORTS = [
   "football", "afl", "baseball", "basketball", "handball", 
   "hockey", "nfl", "rugby", "volleyball"
@@ -22,12 +22,16 @@ type FeedUIProps = {
   loading: boolean;
   sport: string;
   leagueId?: string;
+  initialTab?: string; // <--- FIX: Added prop
 };
 
-export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps) {
+export default function FeedUI({ games, loading, sport, leagueId, initialTab }: FeedUIProps) {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<"all" | "live" | "finished" | "scheduled">("all");
+  const searchParams = useSearchParams();
   const isDark = theme === "dark";
+
+  // FIX: Use the initialTab prop if provided, otherwise default to "all"
+  const activeTab = initialTab || "all";
 
   // Filter Logic
   const filteredGames = games.filter((g) => {
@@ -58,7 +62,7 @@ export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps)
   }
 
   // Styles
-  const getTabStyle = (tab: typeof activeTab) => {
+  const getTabStyle = (tab: string) => {
     const isActive = activeTab === tab;
     if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
     if (isActive) return "bg-[#0f80da] text-white shadow-sm";
@@ -74,9 +78,24 @@ export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps)
 
   const canShowLeagueTabs = !!leagueId && LEAGUE_WIDGET_SPORTS.includes(sport.toLowerCase());
 
+  // Helper to generate URL: ?sport=football/live
+  const getTabUrl = (tabId: string) => {
+    // If we are currently on "football", append "/live".
+    // If we are already on "football/finished", replace the tab part.
+    
+    // We assume 'sport' prop passed here is the base name (e.g. "football")
+    // The parent (page.tsx) handles stripping the existing tab.
+    const newSportParam = `${sport}/${tabId}`;
+    
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sport", newSportParam);
+    
+    return `/?${params.toString()}`;
+  };
+
   return (
     <div className="w-full space-y-4">
-      {/* TABS */}
+      {/* TABS - Now Links for URL updates */}
       <div className="flex items-center gap-2 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: "all", label: "All" },
@@ -84,15 +103,16 @@ export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps)
           { id: "finished", label: "Finished" },
           { id: "scheduled", label: "Scheduled" }
         ].map((tab) => (
-          <button
+          <Link
             key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(tab.id as any)}`}
+            href={getTabUrl(tab.id)}
+            // IMPORTANT: prefetch={false} prevents 404s on static hosts
+            prefetch={false}
+            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(tab.id)}`}
           >
             {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
             {tab.label}
-          </button>
+          </Link>
         ))}
       </div>
 
@@ -123,8 +143,7 @@ export default function FeedUI({ games, loading, sport, leagueId }: FeedUIProps)
                     key={game.id}
                     href={`/match?id=${game.id}&sport=${sport}`}
                     target="_blank"
-                    // FIX: This stops Next.js from trying to fetch non-existent static files for dynamic IDs.
-                    prefetch={false} 
+                    prefetch={false}
                     className={`${matchRowBase} ${matchRowInactive}`}
                   >
                     <div className={`w-12 text-center text-xs font-bold ${statusColor} shrink-0`}>{displayStatus}</div>

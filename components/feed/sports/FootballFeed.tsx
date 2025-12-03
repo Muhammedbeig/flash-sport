@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import FeedUI from "../FeedUI";
 import { normalizeGame, NormalizedGame } from "../utils";
 
-export default function FootballFeed({ leagueId }: { leagueId?: string }) {
+// FIX: Added initialTab to props
+export default function FootballFeed({ leagueId, initialTab }: { leagueId?: string, initialTab?: string }) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,7 +15,8 @@ export default function FootballFeed({ leagueId }: { leagueId?: string }) {
       try {
         const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const utcDate = new Date().toISOString().split("T")[0]; // Football uses UTC
+        // Fetch matches for "Today" (UTC)
+        const utcDate = new Date().toISOString().split("T")[0]; 
         
         let url = "";
         let headers: Record<string, string> = {};
@@ -47,5 +49,6 @@ export default function FootballFeed({ leagueId }: { leagueId?: string }) {
     fetchFootball();
   }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="football" leagueId={leagueId} />;
+  // Pass initialTab down to the UI
+  return <FeedUI games={games} loading={loading} sport="football" leagueId={leagueId} initialTab={initialTab} />;
 }

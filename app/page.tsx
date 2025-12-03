@@ -11,18 +11,17 @@ function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Params
-  const sport = searchParams.get("sport") || "football";
+  // 1. PARSE SPORT & TAB (e.g. "football/live")
+  const rawSport = searchParams.get("sport") || "football";
+  const [sportName, tabParam] = rawSport.split("/");
+  
   const leagueId = searchParams.get("league") || undefined;
   const viewParam = searchParams.get("view");
   const isFavoritesMode = viewParam === "favorites";
-  
-  // MATCH MODE: Treat this as a completely separate page view
   const isMatchMode = viewParam === "match";
 
   const matchContainerRef = useRef<HTMLDivElement>(null);
 
-  // 1. Back Navigation
   const handleBack = () => {
     if (matchContainerRef.current) {
       matchContainerRef.current.innerHTML = "";
@@ -32,10 +31,8 @@ function HomeContent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  // 2. Observer: Detect Widget Rendering
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
-      // If the widget injects content into our match container, force the "Separate Page" mode
       if (matchContainerRef.current?.hasChildNodes() && !isMatchMode) {
         const params = new URLSearchParams(searchParams.toString());
         params.set("view", "match");
@@ -50,7 +47,6 @@ function HomeContent() {
     return () => observer.disconnect();
   }, [searchParams, pathname, router, isMatchMode]);
 
-  // 3. Handle Browser Back Button
   useEffect(() => {
     const handlePopState = () => {
       if (!window.location.search.includes("view=match")) {
@@ -63,15 +59,8 @@ function HomeContent() {
 
   return (
     <div className="flex flex-col theme-bg min-h-screen">
+      <h1 className="sr-only">{SEO_CONTENT.home.headings.h1}</h1>
       
-      {/* === SEO H1 (Hidden Visually) === 
-          This provides the main context for search engines without cluttering the UI.
-      */}
-      <h1 className="sr-only">
-        {SEO_CONTENT.home.headings.h1}
-      </h1>
-      
-      {/* === SCENARIO A: MATCH DETAILS PAGE === */}
       {isMatchMode && (
         <div className="animate-in fade-in duration-300 w-full">
           <div className="max-w-5xl mx-auto">
@@ -84,19 +73,15 @@ function HomeContent() {
                 <span>Back to Matches</span>
               </button>
             </div>
-
             <div
               id="match-details-container"
               ref={matchContainerRef}
               className="w-full theme-bg theme-border border rounded-xl shadow-sm min-h-[800px] overflow-hidden bg-white dark:bg-slate-900"
-            >
-              {/* Widget injects Match Data here */}
-            </div>
+            />
           </div>
         </div>
       )}
 
-      {/* === SCENARIO B: MAIN FEED PAGE === */}
       <div className={isMatchMode ? "hidden" : "block w-full"}>
         <div className="mb-6 flex items-center justify-between px-2 md:px-0">
           <h2 className="text-xl font-bold text-primary capitalize flex items-center gap-2">
@@ -108,25 +93,24 @@ function HomeContent() {
             ) : leagueId ? (
               "League Matches"
             ) : (
-              `All ${sport} Matches`
+              `All ${sportName} Matches`
             )}
           </h2>
         </div>
 
         <GameWidget
-          key={`${sport}-${leagueId}-${isFavoritesMode}`} 
-          sport={sport}
+          key={`${sportName}-${leagueId}-${tabParam}`} 
+          sport={sportName}
           leagueId={leagueId}
+          initialTab={tabParam} // Pass the parsed tab
         />
       </div>
 
-      {/* Hidden container to catch clicks when in Feed mode */}
       <div 
         id="match-details-container" 
         ref={!isMatchMode ? matchContainerRef : null} 
         className={!isMatchMode ? "absolute opacity-0 pointer-events-none h-0 overflow-hidden" : "hidden"}
       />
-      
     </div>
   );
 }
