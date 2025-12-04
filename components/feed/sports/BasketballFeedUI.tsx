@@ -3,41 +3,42 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
-import LeagueTabs from "@/components/widgets/LeagueTabs";
-import { NormalizedGame, NormalizedLeague } from "./utils";
+import { NormalizedGame, NormalizedLeague } from "../utils";
 
-const LEAGUE_WIDGET_SPORTS = [
-  "football", "afl", "baseball", "basketball", "handball", 
-  "hockey", "nfl", "rugby", "volleyball"
-];
+// --- CONFIGURATION ---
+const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "SUSP", "AWD", "ABD", "Final"];
+const SCHEDULED_CODES = ["NS", "TBD"];
+const LIVE_CODES = ["Q1", "Q2", "Q3", "Q4", "OT", "BT", "HT"];
 
-const finishedCodes = ["FT", "AET", "PEN", "POST", "CANC", "ABD", "AWD", "WO", "FO", "Ended", "Final"];
-const scheduledCodes = ["NS", "TBD", "Not Started", "Scheduled", "Pre-game"];
+type BasketballFeedUIProps = {
+  games: NormalizedGame[];
+  loading: boolean;
+  leagueId?: string;
+  initialTab?: string;
+};
 
-// --- 1. COLLAPSIBLE LEAGUE GROUP COMPONENT ---
-const LeagueGroup = ({ 
+// --- SUB-COMPONENT: COLLAPSIBLE LEAGUE GROUP ---
+const BasketballLeagueGroup = ({ 
   meta, 
   games, 
-  sport, 
   matchRowBase, 
-  matchRowInactive,
-  isDark
-}: {
-  meta: NormalizedLeague,
-  games: NormalizedGame[],
-  sport: string,
-  matchRowBase: string,
-  matchRowInactive: string,
-  isDark: boolean
+  matchRowInactive, 
+  isDark 
+}: { 
+  meta: NormalizedLeague, 
+  games: NormalizedGame[], 
+  matchRowBase: string, 
+  matchRowInactive: string, 
+  isDark: boolean 
 }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
     <div className="border-b theme-border last:border-0">
-      {/* HEADER (Clickable) */}
+      {/* HEADER */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${isDark ? "bg-slate-900/50 hover:bg-slate-900" : "bg-gray-50 hover:bg-gray-100"}`}
@@ -52,26 +53,28 @@ const LeagueGroup = ({
         />
       </div>
 
-      {/* MATCHES LIST (Collapsible) */}
+      {/* MATCHES */}
       <div className={`divide-y theme-border ${isOpen ? "block" : "hidden"}`}>
         {games.map((game) => {
-          const isLive = !finishedCodes.includes(game.status.short) && !scheduledCodes.includes(game.status.short);
+          const isLive = LIVE_CODES.includes(game.status.short);
           const statusColor = isLive ? "text-[#dc2626]" : "text-secondary";
           const dateObj = new Date(game.date);
           const time = !isNaN(dateObj.getTime()) ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-          const displayStatus = isLive ? (game.status.elapsed ? `${game.status.elapsed}'` : "LIVE") : (scheduledCodes.includes(game.status.short) ? time : game.status.short);
+          
+          const displayStatus = isLive ? (game.status.elapsed ? `${game.status.short} ${game.status.elapsed}'` : game.status.short) : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
 
           return (
             <Link
               key={game.id}
-              href={`/match?id=${game.id}&sport=${sport}`}
+              href={`/match?id=${game.id}&sport=basketball`}
               target="_blank"
               prefetch={false}
               className={`${matchRowBase} ${matchRowInactive}`}
             >
-              <div className={`w-12 text-center text-xs font-bold ${statusColor} shrink-0`}>{displayStatus}</div>
+              <div className={`w-14 text-center text-xs font-bold ${statusColor} shrink-0`}>{displayStatus}</div>
               
               <div className="flex-1 px-4 space-y-2">
+                {/* Home Team */}
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" />}
@@ -80,6 +83,7 @@ const LeagueGroup = ({
                   <span className="text-sm font-bold text-primary">{game.scores.home ?? "-"}</span>
                 </div>
                 
+                {/* Away Team */}
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" />}
@@ -88,8 +92,6 @@ const LeagueGroup = ({
                   <span className="text-sm font-bold text-primary">{game.scores.away ?? "-"}</span>
                 </div>
               </div>
-              
-              <ChevronRight size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
             </Link>
           );
         })}
@@ -98,29 +100,21 @@ const LeagueGroup = ({
   );
 };
 
-// --- 2. MAIN COMPONENT ---
-type FeedUIProps = {
-  games: NormalizedGame[];
-  loading: boolean;
-  sport: string;
-  leagueId?: string;
-  initialTab?: string;
-};
-
-export default function FeedUI({ games, loading, sport, leagueId, initialTab }: FeedUIProps) {
+// --- MAIN COMPONENT ---
+export default function BasketballFeedUI({ games, loading, leagueId, initialTab }: BasketballFeedUIProps) {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
   const isDark = theme === "dark";
 
-  // Use URL tab or default to 'all'
+  // Tab Logic
   const activeTab = initialTab || "all";
 
-  // Filter Logic
+  // Filter Games based on Tab
   const filteredGames = games.filter((g) => {
     const s = g.status.short;
-    if (activeTab === "finished") return finishedCodes.includes(s);
-    if (activeTab === "scheduled") return scheduledCodes.includes(s);
-    if (activeTab === "live") return !finishedCodes.includes(s) && !scheduledCodes.includes(s);
+    if (activeTab === "finished") return FINISHED_CODES.includes(s);
+    if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
+    if (activeTab === "live") return LIVE_CODES.includes(s);
     return true;
   });
 
@@ -134,10 +128,7 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
     return groups;
   }, {});
 
-  const liveCount = games.filter((g) => {
-    const s = g.status.short;
-    return !finishedCodes.includes(s) && !scheduledCodes.includes(s);
-  }).length;
+  const liveCount = games.filter((g) => LIVE_CODES.includes(g.status.short)).length;
 
   if (loading) {
     return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
@@ -146,8 +137,14 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
   // Styles
   const getTabStyle = (tab: string) => {
     const isActive = activeTab === tab;
+    
+    // Live Tab = Red
     if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
-    if (isActive) return "bg-[#0f80da] text-white shadow-sm";
+    
+    // Other Tabs = Blue (Consistent with Football Header)
+    if (isActive) return "bg-[#0f80da] text-white shadow-sm"; 
+    
+    // Inactive
     return isDark 
       ? "bg-slate-800 text-slate-400 hover:bg-slate-700" 
       : "bg-gray-100 text-slate-600 hover:bg-gray-200";
@@ -158,11 +155,9 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
-  const canShowLeagueTabs = !!leagueId && LEAGUE_WIDGET_SPORTS.includes(sport.toLowerCase());
-
-  // URL Generator: ?sport=football/live
+  // Generate URL: ?sport=basketball/live
   const getTabUrl = (tabId: string) => {
-    const newSportParam = `${sport}/${tabId}`;
+    const newSportParam = `basketball/${tabId}`;
     const params = new URLSearchParams(searchParams.toString());
     params.set("sport", newSportParam);
     return `/?${params.toString()}`;
@@ -170,7 +165,7 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
 
   return (
     <div className="w-full space-y-4">
-      {/* TABS (Now Links for SEO/Routing) */}
+      {/* TABS */}
       <div className="flex items-center gap-2 pb-2 overflow-x-auto no-scrollbar">
         {[
           { id: "all", label: "All" },
@@ -193,11 +188,10 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
       {/* LIST */}
       <div className="theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">
         {Object.values(grouped).map(({ meta, games: leagueGames }) => (
-          <LeagueGroup 
+          <BasketballLeagueGroup 
             key={`${meta.country}-${meta.name}`}
             meta={meta}
             games={leagueGames}
-            sport={sport}
             matchRowBase={matchRowBase}
             matchRowInactive={matchRowInactive}
             isDark={isDark}
@@ -205,8 +199,8 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
         ))}
 
         {filteredGames.length === 0 && (
-          <div className="p-4">
-            {canShowLeagueTabs ? <LeagueTabs sport={sport} leagueId={leagueId!} /> : <div className="p-8 text-center text-secondary">No matches found for this category today.</div>}
+          <div className="p-8 text-center text-secondary">
+            No matches found for this category today.
           </div>
         )}
       </div>

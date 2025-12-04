@@ -11,18 +11,18 @@ import VolleyballFeed from "./sports/VolleyballFeed";
 type CustomGameFeedProps = {
   sport?: string;
   leagueId?: string;
-  initialTab?: string; // <--- FIX: Added this prop definition
+  initialTab?: string; // <--- FIX: Defined here
 };
 
 export default function CustomGameFeed({ sport = "football", leagueId, initialTab }: CustomGameFeedProps) {
   switch (sport.toLowerCase()) {
     case "football":
-      // Pass the tab down to the football logic
       return <FootballFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "basketball":
     case "nba": 
-      return <BasketballFeed leagueId={leagueId} />;
+      // FIX: Passing initialTab to BasketballFeed
+      return <BasketballFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "nfl":
     case "american-football":

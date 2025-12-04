@@ -2,42 +2,55 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import MatchWidget from "@/components/match/MatchWidget";
+import MatchWidget from "@/components/widgets/MatchWidget";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-// --- Logic Component ---
-function MatchContent() {
+// 1. Inner component to read URL params safely
+function MatchDetailsContent() {
   const searchParams = useSearchParams();
+  
   const id = searchParams.get("id");
-  const sport = searchParams.get("sport") || "football";
+  
+  // Parse "football/lineups" -> sport="football", tab="lineups"
+  const rawSport = searchParams.get("sport") || "football";
+  const [sportName, tabParam] = rawSport.split("/");
 
   if (!id) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4">
-        <h2 className="text-xl font-bold text-primary">Match Not Found</h2>
-        <button 
-          onClick={() => window.close()} 
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Close Tab
-        </button>
+      <div className="p-10 text-center text-secondary">
+        Invalid Match ID provided.
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-2 md:px-0 animate-in fade-in duration-500">
-      <MatchWidget matchId={id} sport={sport} />
-    </div>
+    <MatchWidget 
+      matchId={id} 
+      sport={sportName} 
+      initialTab={tabParam} 
+    />
   );
 }
 
-// --- Main Page ---
+// 2. Main Page Component
 export default function MatchPage() {
   return (
-    <div className="w-full min-h-screen theme-bg">
-      <Suspense fallback={null}>
-        <MatchContent />
-      </Suspense>
+    <div className="min-h-screen theme-bg p-4 md:p-6 transition-colors duration-300">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Suspense Boundary is CRITICAL for Static Exports */}
+        <Suspense 
+          fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <Skeleton className="h-96 w-full rounded-xl" />
+            </div>
+          }
+        >
+          <MatchDetailsContent />
+        </Suspense>
+
+      </div>
     </div>
   );
 }

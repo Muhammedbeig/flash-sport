@@ -40,7 +40,6 @@ export default function MatchLineups({
   useEffect(() => {
     async function fetchLineups() {
       // Lineups API is standardized for Football.
-      // For others, we might need different endpoints or they might not support lineups this way.
       if (sport !== "football") {
         setLoading(false);
         return;
@@ -100,54 +99,60 @@ export default function MatchLineups({
   return (
     <div className="theme-bg rounded-xl overflow-hidden shadow-sm border theme-border">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
-        {lineups.map((teamLineup) => (
-          <div key={teamLineup.team.id} className="flex flex-col gap-4">
+        {lineups.map((teamLineup, index) => (
+          <div key={teamLineup.team?.id || index} className="flex flex-col gap-4">
             {/* Header */}
             <div
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border theme-border ${headerBg}`}
             >
-              <img
-                src={teamLineup.team.logo}
-                alt={teamLineup.team.name}
-                className="w-8 h-8 object-contain"
-              />
+              {teamLineup.team?.logo && (
+                <img
+                  src={teamLineup.team.logo}
+                  alt={teamLineup.team.name}
+                  className="w-8 h-8 object-contain"
+                />
+              )}
               <div className="flex flex-col">
                 <span className="font-bold text-sm text-primary">
-                  {teamLineup.team.name}
+                  {teamLineup.team?.name || "Team"}
                 </span>
                 <span className="text-[10px] text-secondary font-mono bg-background/50 px-1.5 rounded w-fit">
-                  {teamLineup.formation}
+                  {teamLineup.formation || "-"}
                 </span>
               </div>
             </div>
 
             {/* Coach */}
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-8 h-8 flex items-center justify-center bg-muted rounded-full">
-                <User size={14} className="text-secondary" />
+            {teamLineup.coach && (
+              <div className="flex items-center gap-3 px-2">
+                <div className="w-8 h-8 flex items-center justify-center bg-muted rounded-full">
+                  <User size={14} className="text-secondary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase text-muted-foreground">
+                    Coach
+                  </span>
+                  <span className="text-xs font-semibold text-primary">
+                    {teamLineup.coach.name}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase text-muted-foreground">
-                  Coach
-                </span>
-                <span className="text-xs font-semibold text-primary">
-                  {teamLineup.coach.name}
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* Starting XI */}
             <div className="space-y-1">
               <div className="text-[10px] font-bold text-secondary uppercase tracking-widest px-2 mb-1">
                 Starting XI
               </div>
-              {teamLineup.startXI.map(({ player }) => (
+              {/* FIX: Added ( || [] ) to prevent crash if startXI is undefined */}
+              {(teamLineup.startXI || []).map(({ player }) => (
                 <Link
                   key={player.id}
                   href={`/player?id=${player.id}&sport=${sport}`}
                   className={`flex items-center gap-3 px-2 py-1.5 rounded-md transition-colors ${itemHover} group`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  prefetch={false}
                 >
                   <span className="w-6 text-xs font-bold text-blue-500 font-mono">
                     {player.number}
@@ -169,13 +174,15 @@ export default function MatchLineups({
               <div className="text-[10px] font-bold text-secondary uppercase tracking-widest px-2 mb-1">
                 Substitutes
               </div>
-              {teamLineup.substitutes.map(({ player }) => (
+              {/* FIX: Added ( || [] ) to prevent crash if substitutes is undefined */}
+              {(teamLineup.substitutes || []).map(({ player }) => (
                 <Link
                   key={player.id}
                   href={`/player?id=${player.id}&sport=${sport}`}
                   className={`flex items-center gap-3 px-2 py-1.5 rounded-md transition-colors ${itemHover} group`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  prefetch={false}
                 >
                   <span className="w-6 text-xs font-bold text-secondary font-mono">
                     {player.number}

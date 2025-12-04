@@ -7,7 +7,7 @@ import LeagueTabs from "./LeagueTabs";
 type GameWidgetProps = {
   leagueId?: string;
   sport?: string;
-  initialTab?: string;
+  initialTab?: string; // This comes from URL (e.g. football/summary)
   leagueSlug?: string;
 };
 
@@ -19,31 +19,36 @@ export default function GameWidget({
 }: GameWidgetProps) {
   const { theme } = useTheme();
 
-  // 1. SEO MODE: SEO Slug present
-  if (leagueSlug && leagueId) {
+  // 1. FOOTBALL LEAGUE VIEW (Pinned Leagues like Premier League)
+  // Logic: If there is a leagueId AND it's football, show the detailed League Tabs.
+  if (leagueId && sport === "football") {
     return (
       <LeagueTabs 
         leagueId={leagueId} 
         sport={sport} 
-        initialTab={initialTab} 
-        leagueSlug={leagueSlug} 
+        initialTab={initialTab}
+        leagueSlug={leagueSlug}
       />
     );
   }
 
-  // 2. Main Feed Logic
-  const CUSTOM_FEED_SPORTS = ["football"];
+  // 2. MAIN DAILY FEEDS (Football & Basketball)
+  // Logic: If no leagueId is selected (Homepage) OR it's Basketball (which uses a feed style), use CustomFeed.
+  const CUSTOM_FEED_SPORTS = ["football", "basketball"];
 
   if (CUSTOM_FEED_SPORTS.includes(sport.toLowerCase())) {
     return (
       <div className="w-full min-h-[500px]">
-        {/* Pass initialTab down to the feed */}
-        <CustomGameFeed sport={sport} leagueId={leagueId} initialTab={initialTab} />
+        <CustomGameFeed 
+          sport={sport} 
+          leagueId={leagueId} 
+          initialTab={initialTab} 
+        />
       </div>
     );
   }
 
-  // 3. Fallback Widget
+  // 3. FALLBACK WIDGET (Hockey, Rugby, etc.)
   const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
   const leagueAttr = leagueId ? `data-league="${leagueId}"` : "";
 

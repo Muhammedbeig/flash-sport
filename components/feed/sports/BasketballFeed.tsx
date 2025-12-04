@@ -1,83 +1,145 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
-import { normalizeGame, NormalizedGame } from "../utils";
+// FIX: Relative imports to prevent module resolution errors
+import BasketballFeedUI from "./BasketballFeedUI";
+import { NormalizedGame } from "../utils";
 
-const MOCK_NBA_GAMES = [
-  {
-    id: 1, date: new Date().toISOString(), status: { short: "FT", long: "Finished" },
-    league: { id: 12, name: "NBA", country: "USA", logo: "https://media.api-sports.io/basketball/leagues/12.png" },
-    teams: { home: { id: 145, name: "Lakers", logo: "https://media.api-sports.io/basketball/teams/145.png" }, away: { id: 146, name: "Warriors", logo: "https://media.api-sports.io/basketball/teams/146.png" } },
-    scores: { home: { total: 110 }, away: { total: 105 } }
-  },
-  {
-    id: 2, date: new Date(Date.now() + 86400000).toISOString(), status: { short: "NS", long: "Scheduled" },
-    league: { id: 12, name: "NBA", country: "USA", logo: "https://media.api-sports.io/basketball/leagues/12.png" },
-    teams: { home: { id: 135, name: "Celtics", logo: "https://media.api-sports.io/basketball/teams/135.png" }, away: { id: 136, name: "Heat", logo: "https://media.api-sports.io/basketball/teams/136.png" } },
-    scores: { home: { total: null }, away: { total: null } }
+// --- BASKETBALL NORMALIZER ---
+const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
+  try {
+    const { id, date, status, league, teams, scores, country } = rawItem;
+
+    let homeScore = null;
+    let awayScore = null;
+
+    // Basketball API returns scores as objects sometimes (e.g. { quarter_1: 10, total: 50 })
+    // We must extract the 'total' or fallback to null safely.
+    if (scores?.home) {
+      if (typeof scores.home === "object") {
+        homeScore = scores.home.total ?? null;
+      } else {
+        homeScore = scores.home;
+      }
+    }
+
+    if (scores?.away) {
+      if (typeof scores.away === "object") {
+        awayScore = scores.away.total ?? null;
+      } else {
+        awayScore = scores.away;
+      }
+    }
+
+    return {
+      id: id,
+      date: date,
+      status: {
+        short: status.short, 
+        long: status.long,
+        elapsed: status.timer // API-Basketball uses 'timer' field
+      },
+      league: {
+        id: league.id,
+        name: league.name,
+        country: country?.name || league.country || "World",
+        logo: league.logo,
+        flag: country?.flag || league.flag,
+      },
+      teams: {
+        home: {
+          id: teams.home.id,
+          name: teams.home.name,
+          logo: teams.home.logo,
+          winner: teams.home.winner,
+        },
+        away: {
+          id: teams.away.id,
+          name: teams.away.name,
+          logo: teams.away.logo,
+          winner: teams.away.winner,
+        },
+      },
+      scores: {
+        home: homeScore, 
+        away: awayScore,
+      },
+    };
+  } catch (err) {
+    console.warn("Error normalizing basketball game:", err);
+    return null;
   }
-];
+};
 
-export default function BasketballFeed({ leagueId }: { leagueId?: string }) {
+type BasketballFeedProps = {
+  leagueId?: string;
+  initialTab?: string;
+};
+
+export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedProps) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchBasketball() {
       setLoading(true);
       try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_BASKETBALL_URL; 
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const targetLeague = leagueId || "12"; 
-        const season = "2024-2025"; 
+        const host = "v1.basketball.api-sports.io"; 
         
-        if (!apiKey) throw new Error("No API Key");
+        // Fetch Today's games
+        const utcDate = new Date().toISOString().split("T")[0]; 
 
         const params = new URLSearchParams();
-        params.set("league", targetLeague);
-        params.set("season", season);
+        params.set("date", utcDate);
         params.set("timezone", "UTC");
-
-        const url = `https://v1.basketball.api-sports.io/games?${params.toString()}`;
         
-        const res = await fetch(url, {
-          headers: { "x-rapidapi-host": "v1.basketball.api-sports.io", "x-rapidapi-key": apiKey }
-        });
-
-        const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
-
-        // FALLBACK: If empty, use Mock Data immediately
-        if (rawList.length === 0) {
-          console.warn("Basketball API empty, using mock.");
-          setGames(MOCK_NBA_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
-          return;
+        if (leagueId) {
+            params.set("league", leagueId);
         }
 
-        // SMART FILTER
-        const now = new Date();
-        const past = new Date(now); past.setDate(now.getDate() - 7);
-        const future = new Date(now); future.setDate(now.getDate() + 7);
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        const filtered = rawList.filter((item: any) => {
-          const d = new Date(item.date || item.timestamp * 1000);
-          return d >= past && d <= future;
-        });
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
+        } else {
+          url = `https://${host}/games?${params.toString()}`; 
+          headers = {
+            "x-rapidapi-host": host,
+            "x-rapidapi-key": apiKey || "",
+          };
+        }
 
-        const finalData = filtered.length > 0 ? filtered : rawList.slice(-15);
+        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const json = await res.json();
+        const rawList = Array.isArray(json?.response) ? json.response : [];
         
-        // FIX: Added (g: any) type annotation
-        setGames(finalData.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        // Filter out nulls safely
+        const cleanList = rawList
+          .map(normalizeBasketballGame)
+          .filter((g: any): g is NormalizedGame => g !== null);
+
+        setGames(cleanList);
 
       } catch (err) {
-        console.error("Basketball Feed Error:", err);
-        setGames(MOCK_NBA_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        console.error("Basketball feed error:", err);
+        setGames([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+
+    fetchBasketball();
   }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="basketball" leagueId={leagueId} />;
+  return (
+    <BasketballFeedUI 
+      games={games} 
+      loading={loading} 
+      leagueId={leagueId}
+      initialTab={initialTab}
+    />
+  );
 }
