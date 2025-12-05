@@ -1,74 +1,104 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
-import { normalizeGame, NormalizedGame } from "../utils";
+import BaseballFeedUI from "./BaseballFeedUI";
+import { NormalizedGame } from "../utils";
 
-const MOCK_BASEBALL_GAMES = [
-  {
-    game: { id: 20, date: new Date().toISOString(), status: { short: "FT", long: "Finished" } },
-    league: { id: 1, name: "MLB", country: "USA", logo: "https://media.api-sports.io/baseball/leagues/1.png" },
-    teams: { home: { id: 1, name: "Yankees", logo: "https://media.api-sports.io/baseball/teams/1.png" }, away: { id: 2, name: "Red Sox", logo: "https://media.api-sports.io/baseball/teams/2.png" } },
-    scores: { home: 5, away: 3 }
+const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
+  try {
+    const { id, date, status, league, teams, scores, country } = rawItem;
+    if (!id) return null;
+
+    // Baseball scores: scores.home.total
+    let homeScore = null;
+    let awayScore = null;
+
+    if (scores?.home) homeScore = typeof scores.home === "object" ? scores.home.total ?? null : scores.home;
+    if (scores?.away) awayScore = typeof scores.away === "object" ? scores.away.total ?? null : scores.away;
+
+    return {
+      id,
+      date,
+      // FIX: 'elapsed' must be undefined, not null
+      status: { 
+        short: status.short, 
+        long: status.long, 
+        elapsed: undefined 
+      }, 
+      league: {
+        id: league.id,
+        name: league.name,
+        country: country?.name || league.country || "USA",
+        logo: league.logo,
+        flag: country?.flag || league.flag,
+      },
+      teams: {
+        home: { id: teams.home.id, name: teams.home.name, logo: teams.home.logo, winner: teams.home.winner },
+        away: { id: teams.away.id, name: teams.away.name, logo: teams.away.logo, winner: teams.away.winner },
+      },
+      scores: { home: homeScore, away: awayScore },
+    };
+  } catch (e) {
+    return null;
   }
-];
+};
 
-export default function BaseballFeed({ leagueId }: { leagueId?: string }) {
+export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: string, initialTab?: string }) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchBaseball() {
       setLoading(true);
       try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_BASEBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const targetLeague = leagueId || "1"; // MLB
-        const season = "2024";
-
-        if (!apiKey) throw new Error("No API Key");
-
+        const host = "v1.baseball.api-sports.io"; 
+        
         const params = new URLSearchParams();
-        params.set("league", targetLeague);
-        params.set("season", season);
         params.set("timezone", "UTC");
 
-        const url = `https://v1.baseball.api-sports.io/games?${params.toString()}`;
-        
-        const res = await fetch(url, {
-          headers: { "x-rapidapi-host": "v1.baseball.api-sports.io", "x-rapidapi-key": apiKey }
-        });
-
-        const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
-
-        if (rawList.length === 0) {
-           setGames(MOCK_BASEBALL_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
-           return;
+        // Strategy: Season for League view, Date for Main view
+        if (leagueId) {
+           params.set("league", leagueId);
+           params.set("season", "2024");
+        } else {
+           const utcDate = new Date().toISOString().split("T")[0];
+           params.set("date", utcDate);
         }
 
-        const now = new Date();
-        const past = new Date(now); past.setDate(now.getDate() - 7);
-        const future = new Date(now); future.setDate(now.getDate() + 7);
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        const filtered = rawList.filter((item: any) => {
-          const d = new Date(item.game?.date || item.date);
-          return d >= past && d <= future;
-        });
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
+        } else {
+          url = `https://${host}/games?${params.toString()}`;
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
+        }
 
-        const finalData = filtered.length > 0 ? filtered : rawList.slice(-15);
+        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const json = await res.json();
+        const rawList = Array.isArray(json?.response) ? json.response : [];
         
-        // FIX: Added (g: any) type annotation
-        setGames(finalData.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        const cleanList = rawList
+          .map(normalizeBaseballGame)
+          .filter((g: any): g is NormalizedGame => g !== null);
 
-      } catch (e) {
-        console.error(`Baseball feed error:`, e);
-        setGames(MOCK_BASEBALL_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        // Sort by Date
+        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setGames(cleanList);
+
+      } catch (err) {
+        console.error("Baseball Feed Error:", err);
+        setGames([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchBaseball();
   }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="baseball" leagueId={leagueId} />;
+  return <BaseballFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

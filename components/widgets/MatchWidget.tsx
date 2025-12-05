@@ -9,6 +9,8 @@ import MatchStats from "@/components/match/tabs/MatchStats";
 import MatchLineups from "@/components/match/tabs/MatchLineups";
 import MatchH2H from "@/components/match/tabs/MatchH2H";
 import BasketballMatchWidget from "./BasketballMatchWidget"; 
+import NFLMatchWidget from "./NFLMatchWidget";
+import BaseballMatchWidget from "./BaseballMatchWidget";
 
 type MatchWidgetProps = {
   matchId: string | number;
@@ -27,6 +29,14 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
   if (sport === "basketball") {
     // Pass initialTab to the basketball widget
     return <BasketballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  }
+
+  if (sport === "nfl") {
+   return <NFLMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  }
+
+  if (sport === "baseball") {
+    return <BaseballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
   }
 
   // 2. FALLBACK FOR OTHER SPORTS
