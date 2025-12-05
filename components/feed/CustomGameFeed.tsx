@@ -26,18 +26,18 @@ export default function CustomGameFeed({ sport = "football", leagueId, initialTa
     case "nfl":
     case "american-football":
       return <NFLFeed leagueId={leagueId} initialTab={initialTab} />;
-      
+
     case "baseball":
       return <BaseballFeed leagueId={leagueId} initialTab={initialTab} />;
       
-    case "hockey":
-      return <HockeyFeed leagueId={leagueId} />;
+  case "hockey":
+   return <HockeyFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "rugby":
-      return <RugbyFeed leagueId={leagueId} />;
+      return <RugbyFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "volleyball":
-      return <VolleyballFeed leagueId={leagueId} />;
+      return <VolleyballFeed leagueId={leagueId} initialTab={initialTab} />;
       
     default:
       return (

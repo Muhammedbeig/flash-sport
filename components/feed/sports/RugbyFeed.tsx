@@ -1,87 +1,122 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
-import { normalizeGame, NormalizedGame } from "../utils";
+import RugbyFeedUI from "./RugbyFeedUI";
+import { NormalizedGame } from "../utils";
 
-const MOCK_RUGBY_GAMES = [
-  {
-    game: { id: 501, date: new Date().toISOString(), status: { short: "FT", long: "Finished" } },
-    league: { id: 13, name: "Premiership Rugby", country: "England", logo: "https://media.api-sports.io/rugby/leagues/13.png" },
-    teams: { home: { id: 1, name: "Saracens", logo: "https://media.api-sports.io/rugby/teams/1.png" }, away: { id: 2, name: "Exeter Chiefs", logo: "https://media.api-sports.io/rugby/teams/2.png" } },
-    scores: { home: 24, away: 18 }
-  },
-  {
-    game: { id: 502, date: new Date(Date.now() + 86400000).toISOString(), status: { short: "NS", long: "Scheduled" } },
-    league: { id: 13, name: "Premiership Rugby", country: "England", logo: "https://media.api-sports.io/rugby/leagues/13.png" },
-    teams: { home: { id: 3, name: "Bath Rugby", logo: "https://media.api-sports.io/rugby/teams/3.png" }, away: { id: 4, name: "Leicester Tigers", logo: "https://media.api-sports.io/rugby/teams/4.png" } },
-    scores: { home: null, away: null }
+const normalizeRugbyGame = (rawItem: any): NormalizedGame | null => {
+  try {
+    // Rugby API structure: { game: {...}, league: {...}, teams: {...}, scores: {...} }
+    const gameData = rawItem.game || rawItem;
+    const leagueData = rawItem.league || {};
+    const teamsData = rawItem.teams || {};
+    const scoresData = rawItem.scores || {};
+
+    // Safety check
+    if (!gameData.id) return null;
+
+    let homeScore = scoresData.home;
+    let awayScore = scoresData.away;
+
+    return {
+      id: gameData.id,
+      date: gameData.date,
+      status: {
+        short: gameData.status?.short || "NS",
+        long: gameData.status?.long || "Not Started",
+        elapsed: gameData.status?.timer
+      },
+      league: {
+        id: leagueData.id,
+        name: leagueData.name,
+        country: leagueData.country?.name || leagueData.country || "World",
+        logo: leagueData.logo,
+        flag: leagueData.flag || null,
+      },
+      teams: {
+        home: { 
+          id: teamsData.home.id, 
+          name: teamsData.home.name, 
+          logo: teamsData.home.logo, 
+          winner: undefined // FIX: undefined to match type
+        },
+        away: { 
+          id: teamsData.away.id, 
+          name: teamsData.away.name, 
+          logo: teamsData.away.logo, 
+          winner: undefined // FIX: undefined to match type
+        },
+      },
+      scores: { home: homeScore, away: awayScore },
+    };
+  } catch (err) {
+    console.warn("Rugby normalize error", err);
+    return null;
   }
-];
+};
 
-export default function RugbyFeed({ leagueId }: { leagueId?: string }) {
+type RugbyFeedProps = {
+  leagueId?: string;
+  initialTab?: string;
+};
+
+export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchRugby() {
       setLoading(true);
       try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_RUGBY_URL; 
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        // 1. CONFIGURATION
-        // Default to Premiership Rugby (ID 13) if no league selected
-        const targetLeague = leagueId || "13"; 
-        const season = "2024"; 
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
-        if (!apiKey) throw new Error("No API Key");
-
-        const params = new URLSearchParams();
-        params.set("league", targetLeague);
-        params.set("season", season);
-        params.set("timezone", timezone);
-
-        // 2. FETCH SEASON
-        const url = `https://v1.rugby.api-sports.io/games?${params.toString()}`;
+        const host = "v1.rugby.api-sports.io"; 
         
-        const res = await fetch(url, {
-          headers: { "x-rapidapi-host": "v1.rugby.api-sports.io", "x-rapidapi-key": apiKey }
-        });
-
-        const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
-
-        // FALLBACK: If empty, use Mock Data immediately
-        if (rawList.length === 0) {
-          console.warn("Rugby API empty, using mock.");
-          setGames(MOCK_RUGBY_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
-          return;
+        const params = new URLSearchParams();
+        params.set("timezone", "UTC");
+        
+        // Rugby uses seasons (e.g. 2024)
+        if (leagueId) {
+          params.set("league", leagueId);
+          params.set("season", "2024"); 
+        } else {
+          const utcDate = new Date().toISOString().split("T")[0]; 
+          params.set("date", utcDate);
         }
 
-        // 3. SMART FILTER: 1 Week Past + 1 Week Future
-        const now = new Date();
-        const past = new Date(now); past.setDate(now.getDate() - 7);
-        const future = new Date(now); future.setDate(now.getDate() + 7);
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        const filtered = rawList.filter((item: any) => {
-          const d = new Date(item.game?.date || item.date);
-          return d >= past && d <= future;
-        });
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
+        } else {
+          url = `https://${host}/games?${params.toString()}`; 
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
+        }
 
-        const finalData = filtered.length > 0 ? filtered : rawList.slice(-15);
+        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const json = await res.json();
+        const rawList = Array.isArray(json?.response) ? json.response : [];
         
-        // FIX: Explicit Type Assertion to prevent TS errors
-        setGames(finalData.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        const cleanList = rawList
+          .map(normalizeRugbyGame)
+          .filter((g: any): g is NormalizedGame => g !== null);
+
+        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        setGames(cleanList);
 
       } catch (err) {
-        console.error("Rugby Feed Error (Using Mock):", err);
-        setGames(MOCK_RUGBY_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        console.error("Rugby Feed Error:", err);
+        setGames([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchRugby();
   }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="rugby" leagueId={leagueId} />;
+  return <RugbyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

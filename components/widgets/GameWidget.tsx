@@ -34,7 +34,7 @@ export default function GameWidget({
 
   // 2. MAIN DAILY FEEDS (Football & Basketball)
   // Logic: If no leagueId is selected (Homepage) OR it's Basketball (which uses a feed style), use CustomFeed.
-  const CUSTOM_FEED_SPORTS = ["football", "basketball", "nfl", "baseball"];
+  const CUSTOM_FEED_SPORTS = ["football", "basketball", "nfl", "baseball", "hockey", "rugby", "volleyball"];
 
   if (CUSTOM_FEED_SPORTS.includes(sport.toLowerCase())) {
     return (

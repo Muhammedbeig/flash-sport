@@ -11,6 +11,9 @@ import MatchH2H from "@/components/match/tabs/MatchH2H";
 import BasketballMatchWidget from "./BasketballMatchWidget"; 
 import NFLMatchWidget from "./NFLMatchWidget";
 import BaseballMatchWidget from "./BaseballMatchWidget";
+import HockeyMatchWidget from "./HockeyMatchWidget";
+import RugbyMatchWidget from "./RugbyMatchWidget";
+import VolleyballMatchWidget from "./VolleyballMatchWidget";
 
 type MatchWidgetProps = {
   matchId: string | number;
@@ -39,6 +42,17 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
     return <BaseballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
   }
 
+  if (sport === "hockey") {
+  return <HockeyMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  }
+
+  if (sport === "rugby") {
+    return <RugbyMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  }
+
+  if (sport === "volleyball") {
+     return <VolleyballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  }
   // 2. FALLBACK FOR OTHER SPORTS
   if (sport !== "football") {
     return (

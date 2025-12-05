@@ -1,61 +1,106 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useTheme } from "@/components/providers/ThemeProvider";
+import { useEffect, useState } from "react";
+import RugbyFeedUI from "./RugbyFeedUI"; // Ensure this file exists
+import { NormalizedGame } from "../utils";
 
-export default function VolleyballFeed({ leagueId }: { leagueId?: string }) {
-  const { theme } = useTheme();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+const normalizeRugbyGame = (rawItem: any): NormalizedGame | null => {
+  try {
+    const gameData = rawItem.game || rawItem;
+    const leagueData = rawItem.league || {};
+    const teamsData = rawItem.teams || {};
+    const scoresData = rawItem.scores || {};
+
+    if (!gameData.id) return null;
+
+    return {
+      id: gameData.id,
+      date: gameData.date,
+      status: {
+        short: gameData.status?.short || "NS",
+        long: gameData.status?.long || "Not Started",
+        elapsed: gameData.status?.timer || undefined // FIX: undefined
+      },
+      league: {
+        id: leagueData.id,
+        name: leagueData.name,
+        country: leagueData.country?.name || leagueData.country || "World",
+        logo: leagueData.logo,
+        flag: leagueData.flag || null,
+      },
+      teams: {
+        home: { id: teamsData.home.id, name: teamsData.home.name, logo: teamsData.home.logo, winner: undefined }, // FIX: undefined
+        away: { id: teamsData.away.id, name: teamsData.away.name, logo: teamsData.away.logo, winner: undefined }, // FIX: undefined
+      },
+      scores: { home: scoresData.home, away: scoresData.away },
+    };
+  } catch (err) {
+    return null;
+  }
+};
+
+// FIX: Added initialTab to props
+type RugbyFeedProps = {
+  leagueId?: string;
+  initialTab?: string;
+};
+
+export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
+  const [games, setGames] = useState<NormalizedGame[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Clean up previous script to force a re-run
-    const scriptId = "api-sports-script-force";
-    const existingScript = document.getElementById(scriptId);
-    if (existingScript) {
-      existingScript.remove();
+    async function fetchRugby() {
+      setLoading(true);
+      try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_RUGBY_URL; 
+        const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+        const host = "v1.rugby.api-sports.io"; 
+        
+        const params = new URLSearchParams();
+        params.set("timezone", "UTC");
+        
+        if (leagueId) {
+          params.set("league", leagueId);
+          params.set("season", "2024"); 
+        } else {
+          const utcDate = new Date().toISOString().split("T")[0]; 
+          params.set("date", utcDate);
+        }
+
+        let url = "";
+        let headers: Record<string, string> = {};
+
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
+        } else {
+          url = `https://${host}/games?${params.toString()}`; 
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
+        }
+
+        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const json = await res.json();
+        const rawList = Array.isArray(json?.response) ? json.response : [];
+        
+        const cleanList = rawList
+          .map(normalizeRugbyGame)
+          .filter((g: any): g is NormalizedGame => g !== null);
+
+        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        setGames(cleanList);
+
+      } catch (err) {
+        console.error("Rugby Feed Error:", err);
+        setGames([]);
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchRugby();
+  }, [leagueId]);
 
-    // 2. Create and inject the script anew
-    // This forces the API-Sports loader to scan the DOM and render the widget immediately.
-    const script = document.createElement("script");
-    script.id = scriptId;
-    script.src = "https://widgets.api-sports.io/3.1.0/widgets.js";
-    script.type = "module";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      // Cleanup to prevent memory leaks
-      const s = document.getElementById(scriptId);
-      if (s) s.remove();
-    };
-  }, [leagueId]); // Re-run if league changes
-
-  // 3. Configure Widget Attributes
-  const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
-  const leagueAttr = leagueId ? `data-league="${leagueId}"` : "";
-  
-  // If no league is selected (Home), the widget automatically shows "Today's" matches or a list.
-  // We explicitly pass the Key here to ensure it works even if the global config missed it.
-  const html = `
-    <api-sports-widget
-      data-type="games"
-      data-sport="volleyball"
-      data-key="${apiKey}"
-      data-theme="${widgetTheme}"
-      data-show-toolbar="true"
-      data-refresh="60"
-      ${leagueAttr}
-    ></api-sports-widget>
-  `;
-
-  return (
-    <div 
-      ref={containerRef}
-      className="w-full min-h-[600px] theme-bg rounded-xl border theme-border p-4"
-    >
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
-  );
+  return <RugbyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

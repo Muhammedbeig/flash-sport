@@ -1,105 +1,121 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
-import { normalizeGame, NormalizedGame } from "../utils";
+import HockeyFeedUI from "./HockeyFeedUI";
+import { NormalizedGame } from "../utils";
 
-// 1. ROBUST MOCK DATA (Inheriting the media URL pattern)
-const MOCK_HOCKEY_GAMES = [
-  {
-    game: { id: 10, date: new Date().toISOString(), status: { short: "FT", long: "Finished" } },
-    league: { 
-      id: 57, 
-      name: "NHL", 
-      country: "USA", 
-      logo: "https://media.api-sports.io/hockey/leagues/57.png" 
-    },
-    teams: { 
-      home: { 
-        id: 1, 
-        name: "Bruins", 
-        logo: "https://media.api-sports.io/hockey/teams/1.png" 
-      }, 
-      away: { 
-        id: 2, 
-        name: "Rangers", 
-        logo: "https://media.api-sports.io/hockey/teams/2.png" 
-      } 
-    },
-    scores: { home: 3, away: 2 }
+// --- HOCKEY NORMALIZER ---
+const normalizeHockeyGame = (rawItem: any): NormalizedGame | null => {
+  try {
+    // Hockey API: { game: {...}, league: {...}, teams: {...}, scores: {...} }
+    // OR flat structure depending on endpoint
+    const game = rawItem.game || rawItem;
+    const league = rawItem.league || {};
+    const teams = rawItem.teams || {};
+    const scores = rawItem.scores || {};
+
+    if (!game.id) return null;
+
+    // Scores in Hockey are usually simple integers (scores.home, scores.away)
+    // But for consistency, we handle object wrappers if they appear.
+    let homeScore = scores.home;
+    let awayScore = scores.away;
+    
+    // Sometimes total score is nested (rare in Hockey v1 but safe to check)
+    if (typeof homeScore === "object") homeScore = homeScore?.total ?? null;
+    if (typeof awayScore === "object") awayScore = awayScore?.total ?? null;
+
+    return {
+      id: game.id,
+      date: game.date,
+      status: {
+        short: game.status?.short || "NS",
+        long: game.status?.long || "Not Started",
+        elapsed: game.status?.timer
+      },
+      league: {
+        id: league.id,
+        name: league.name,
+        country: league.country?.name || league.country || "World",
+        logo: league.logo,
+        flag: league.flag || null,
+      },
+      teams: {
+        home: { id: teams.home.id, name: teams.home.name, logo: teams.home.logo, winner: teams.home.winner },
+        away: { id: teams.away.id, name: teams.away.name, logo: teams.away.logo, winner: teams.away.winner },
+      },
+      scores: { home: homeScore, away: awayScore },
+    };
+  } catch (err) {
+    console.warn("Error normalizing Hockey game:", err);
+    return null;
   }
-];
+};
 
-export default function HockeyFeed({ leagueId }: { leagueId?: string }) {
+type HockeyFeedProps = {
+  leagueId?: string;
+  initialTab?: string;
+};
+
+export default function HockeyFeed({ leagueId, initialTab }: HockeyFeedProps) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchHockey() {
       setLoading(true);
       try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_HOCKEY_URL; 
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        if (!apiKey) throw new Error("No API Key");
-
-        // 2. CONFIGURATION: Fetch by Season (Pattern Inheritance)
-        // Instead of fetching just "Today", we fetch the league's season.
-        // This guarantees we get data, which we then filter locally.
-        const targetLeague = leagueId || "57"; // Default to NHL if no league selected
-        const season = "2023"; // Hockey uses 4-digit years (e.g., 2023 for 2023-2024 season) [cite: 4119]
+        const host = "v1.hockey.api-sports.io"; 
         
         const params = new URLSearchParams();
-        params.set("league", targetLeague);
-        params.set("season", season);
-        params.set("timezone", "UTC"); // Consistent timezone
-
-        const url = `https://v1.hockey.api-sports.io/games?${params.toString()}`;
+        params.set("timezone", "UTC");
         
-        // 3. HEADER COMPLIANCE
-        // Docs explicitly state: "allows only the headers listed below: x-apisports-key" 
-        const res = await fetch(url, {
-          headers: { 
-            "x-apisports-key": apiKey 
-          }
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
-
-        // 4. FALLBACK: If empty, show Mock
-        if (rawList.length === 0) {
-           console.warn("Hockey API empty, using mock.");
-           setGames(MOCK_HOCKEY_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
-           return;
+        if (leagueId) {
+          params.set("league", leagueId);
+          params.set("season", "2023"); // Hockey season usually spans years, check current
+        } else {
+          const utcDate = new Date().toISOString().split("T")[0]; 
+          params.set("date", utcDate);
         }
 
-        // 5. CLIENT-SIDE FILTERING (Smart Logic)
-        // Filter for games +/- 7 days from now
-        const now = new Date();
-        const past = new Date(now); past.setDate(now.getDate() - 7);
-        const future = new Date(now); future.setDate(now.getDate() + 7);
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        const filtered = rawList.filter((item: any) => {
-          const d = new Date(item.game?.date || item.date);
-          return d >= past && d <= future;
-        });
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
+        } else {
+          url = `https://${host}/games?${params.toString()}`; 
+          headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
+        }
 
-        // 6. "ZERO MATCH" FIX
-        // If the 7-day window is empty, show the last 15 games of the season so the feed is never blank.
-        const finalData = filtered.length > 0 ? filtered : rawList.slice(-15);
+        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const json = await res.json();
         
-        setGames(finalData.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        const rawList = Array.isArray(json?.response) ? json.response : [];
+        
+        const cleanList = rawList
+          .map(normalizeHockeyGame)
+          .filter((g: any): g is NormalizedGame => g !== null);
 
-      } catch (e) {
-        console.error(`Hockey feed error:`, e);
-        setGames(MOCK_HOCKEY_GAMES.map(normalizeGame).filter((g: any) => g !== null) as NormalizedGame[]);
+        // Sort by Date
+        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        setGames(cleanList);
+
+      } catch (err) {
+        console.error("Hockey Feed Error:", err);
+        setGames([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+
+    fetchHockey();
   }, [leagueId]);
 
-  return <FeedUI games={games} loading={loading} sport="hockey" leagueId={leagueId} />;
+  return <HockeyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }
