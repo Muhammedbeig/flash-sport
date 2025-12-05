@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // 3. CRITICAL for subdirectory hosting
   // Since your URL is muhammedbeig.github.io/flash-sport/
   // The basePath must be exactly "/flash-sport"
-  basePath: "",
+  basePath: "/flash-sport",
 
   // 4. Helps prevent 404s on refresh
   trailingSlash: true,
