@@ -5,13 +5,16 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import NFLSummary from "@/components/match/tabs/NFLSummary";
-import MatchH2H from "@/components/match/tabs/MatchH2H";
+// FIX: Import Dedicated Component
+import NFLH2H from "@/components/match/tabs/NFLH2H"; 
+import NFLStandings from "@/components/match/tabs/NFLStandings";
+import NFLOdds from "@/components/match/tabs/NFLOdds";
 
 type NFLMatch = {
   id: number;
   date: string;
   status: { short: string; long: string; elapsed: number | null };
-  league: { id: number; name: string; country: string; logo: string; season: number };
+  league: { id: number; name: string; country: string; logo: string; season: string | number };
   teams: {
     home: { id: number; name: string; logo: string; winner: boolean | null };
     away: { id: number; name: string; logo: string; winner: boolean | null };
@@ -27,13 +30,13 @@ export default function NFLMatchWidget({ matchId, initialTab }: { matchId: strin
   const [match, setMatch] = useState<NFLMatch | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const defaultTab = initialTab === "h2h" ? "h2h" : "summary";
-  const [activeTab, setActiveTab] = useState<"summary" | "h2h">(defaultTab);
-
+  const validTabs = ["summary", "h2h", "standings", "odds"];
+  const defaultTab = (validTabs.includes(initialTab || "")) ? (initialTab as any) : "summary";
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const isDark = theme === "dark";
 
   useEffect(() => {
-    if (initialTab && (initialTab === "summary" || initialTab === "h2h")) {
+    if (initialTab && validTabs.includes(initialTab)) {
       setActiveTab(initialTab);
     }
   }, [initialTab]);
@@ -61,32 +64,33 @@ export default function NFLMatchWidget({ matchId, initialTab }: { matchId: strin
         const data = json.response?.[0];
 
         if (data) {
-          // Handle nested game object if present (sometimes API wraps in 'game')
-          const gameInfo = data.game || data;
-          const leagueInfo = data.league || {};
-          const countryInfo = leagueInfo.country || data.country || {};
+          const game = data.game || data;
+          const league = data.league || {};
+          const country = league.country || data.country || { name: "USA" };
 
           setMatch({
-            id: gameInfo.id,
-            date: gameInfo.date,
+            id: game.id,
+            date: game.date,
             status: {
-              short: gameInfo.status?.short,
-              long: gameInfo.status?.long,
-              elapsed: gameInfo.status?.timer,
+              short: game.status?.short,
+              long: game.status?.long,
+              elapsed: game.status?.timer,
             },
             league: {
-              id: leagueInfo.id,
-              name: leagueInfo.name,
-              // FIX: Ensure we extract the string NAME, not the object
-              country: typeof countryInfo === 'string' ? countryInfo : (countryInfo.name || "USA"),
-              logo: leagueInfo.logo,
-              season: leagueInfo.season, 
+              id: league.id,
+              name: league.name,
+              country: country.name || country,
+              logo: league.logo,
+              season: league.season, 
             },
             teams: {
               home: { id: data.teams.home.id, name: data.teams.home.name, logo: data.teams.home.logo, winner: null },
               away: { id: data.teams.away.id, name: data.teams.away.name, logo: data.teams.away.logo, winner: null },
             },
-            scores: data.scores, 
+            scores: {
+               home: { ...data.scores.home, total: data.scores.home?.total },
+               away: { ...data.scores.away, total: data.scores.away?.total }
+            }, 
           });
         }
       } catch (err) {
@@ -141,14 +145,33 @@ export default function NFLMatchWidget({ matchId, initialTab }: { matchId: strin
 
       {/* TABS */}
       <div className="flex items-center gap-1 px-4 border-b theme-border">
-        <Link href={`/match?id=${matchId}&sport=nfl/summary`} replace={true} prefetch={false} className={`${tabBase} ${activeTab === "summary" ? activeClass : inactiveClass}`}>Summary</Link>
-        <Link href={`/match?id=${matchId}&sport=nfl/h2h`} replace={true} prefetch={false} className={`${tabBase} ${activeTab === "h2h" ? activeClass : inactiveClass}`}>H2H</Link>
+        {validTabs.map((t) => {
+             const label = t.charAt(0).toUpperCase() + t.slice(1);
+             const finalLabel = label === "H2h" ? "H2H" : label;
+             const isActive = activeTab === t;
+             return (
+               <Link 
+                 key={t}
+                 href={`/match?id=${matchId}&sport=nfl/${t}`}
+                 replace={true}
+                 prefetch={false}
+                 className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
+               >
+                 {finalLabel}
+               </Link>
+             );
+        })}
       </div>
 
       {/* CONTENT */}
       <div className="min-h-[300px]">
         {activeTab === "summary" && <NFLSummary match={match} />}
-        {activeTab === "h2h" && <MatchH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} sport="nfl" />}
+        
+        {/* FIX: Use NFLH2H instead of MatchH2H */}
+        {activeTab === "h2h" && <NFLH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
+        
+        {activeTab === "standings" && <NFLStandings leagueId={league.id} season={league.season} />}
+        {activeTab === "odds" && <NFLOdds matchId={String(match.id)} />}
       </div>
     </div>
   );
