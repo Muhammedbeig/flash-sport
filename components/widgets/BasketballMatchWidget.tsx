@@ -6,10 +6,9 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import BasketballSummary from "@/components/match/tabs/BasketballSummary";
 import BasketballH2H from "@/components/match/tabs/BasketballH2H";
-import BasketballStandings from "@/components/match/tabs/BasketballStandings";
 import BasketballOdds from "@/components/match/tabs/BasketballOdds";
 
-// Defined to allow nulls for pre-match states
+// Type definitions
 type BasketballScore = {
   quarter_1: number | null;
   quarter_2: number | null;
@@ -39,8 +38,10 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
   const [match, setMatch] = useState<BasketballMatch | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const validTabs = ["summary", "h2h", "standings", "odds"];
-  // Default to summary if tab is invalid or missing
+  // 1. Define the Allowed Tabs (Removed Standings & Stats)
+  const validTabs = ["summary", "h2h", "odds"];
+  
+  // 2. Safe Active Tab Logic
   const activeTab = (initialTab && validTabs.includes(initialTab)) ? initialTab : "summary";
   const isDark = theme === "dark";
 
@@ -67,6 +68,8 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         const data = json.response?.[0];
 
         if (data) {
+          // 3. Safe Score Extraction
+          // API can return null scores for scheduled games, which is handled here
           setMatch({
             id: data.id,
             date: data.date,
@@ -80,7 +83,6 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
               name: data.league.name,
               country: data.country?.name || data.league.country,
               logo: data.league.logo,
-              // CRITICAL: Capture season to pass to Standings tab
               season: data.league.season, 
             },
             teams: {
@@ -108,16 +110,16 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
   const { teams, scores, league, status } = match;
   const isLive = ["Q1", "Q2", "Q3", "Q4", "OT", "BT", "HT"].includes(status.short);
 
+  // Styling Constants
   const tabBase = "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
   const activeClass = "border-blue-500 text-blue-600 dark:text-blue-400";
   const inactiveClass = "border-transparent text-secondary hover:text-primary";
-
   const leagueBadgeStyle = isDark ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-white text-slate-700 border-slate-200 shadow-sm";
   const statusBadgeStyle = isLive ? "bg-red-100 text-red-600 animate-pulse" : (isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-600");
 
   return (
     <div className="theme-bg rounded-xl border theme-border overflow-hidden">
-      {/* HEADER */}
+      {/* HEADER SECTION */}
       <div className="p-6 border-b theme-border flex flex-col items-center gap-6 relative overflow-hidden">
         <div className={`absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${leagueBadgeStyle}`}>
           {league.logo && <img src={league.logo} className="w-4 h-4 object-contain" />}
@@ -134,7 +136,7 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
           {/* Score Board */}
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="text-4xl font-black text-primary tracking-tight font-mono">
-              {/* FIX: Optional chaining to prevent crash if scores are null (e.g. NS) */}
+              {/* Optional chaining ensures no crash if data is loading/missing */}
               {scores.home?.total ?? "-"} : {scores.away?.total ?? "-"}
             </div>
             <span className={`text-xs font-bold uppercase px-4 py-1.5 rounded-full border ${statusBadgeStyle}`}>
@@ -150,11 +152,12 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         </div>
       </div>
 
-      {/* TABS */}
+      {/* TABS NAVIGATION */}
       <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
         {validTabs.map((t) => {
-            const label = t.charAt(0).toUpperCase() + t.slice(1);
-            const finalLabel = label === "H2h" ? "H2H" : label;
+            let label = t.charAt(0).toUpperCase() + t.slice(1);
+            if (t === "h2h") label = "H2H"; // Custom Label
+
             const isActive = activeTab === t;
             return (
                 <Link 
@@ -164,19 +167,30 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
                   prefetch={false}
                   className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
                 >
-                  {finalLabel}
+                  {label}
                 </Link>
             );
         })}
       </div>
 
-      {/* CONTENT */}
-      <div className="min-h-[300px]">
+      {/* CONTENT AREA */}
+      <div className="min-h-[300px] w-full">
         {activeTab === "summary" && <BasketballSummary match={match} />}
-        {activeTab === "h2h" && <BasketballH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
-        {/* FIX: Passing captured season correctly */}
-        {activeTab === "standings" && <BasketballStandings leagueId={league.id} season={league.season} />}
-        {activeTab === "odds" && <BasketballOdds matchId={String(match.id)} />}
+        
+        {/* Pass Team IDs correctly for H2H */}
+        {activeTab === "h2h" && (
+            <BasketballH2H 
+                teamOneId={teams.home.id} 
+                teamTwoId={teams.away.id} 
+            />
+        )}
+        
+        {/* Pass Match ID correctly for Odds */}
+        {activeTab === "odds" && (
+            <BasketballOdds 
+                matchId={String(match.id)} 
+            />
+        )}
       </div>
     </div>
   );
