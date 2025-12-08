@@ -5,7 +5,6 @@ export default function BaseballSummary({ match }: { match: any }) {
   const home = scores.home || {};
   const away = scores.away || {};
 
-  // Helper to render innings safely
   const renderInning = (val: any) => (val !== null && val !== undefined ? val : "-");
 
   return (
@@ -18,6 +17,7 @@ export default function BaseballSummary({ match }: { match: any }) {
             <tr className="text-secondary border-b theme-border">
               <th className="p-2 text-left">Team</th>
               {[1,2,3,4,5,6,7,8,9].map(i => <th key={i} className="p-2">{i}</th>)}
+              {(home.innings?.[10] || away.innings?.[10]) && <th className="p-2">EI</th>}
               <th className="p-2 font-bold text-primary">Total</th>
             </tr>
           </thead>
@@ -27,6 +27,7 @@ export default function BaseballSummary({ match }: { match: any }) {
               {[1,2,3,4,5,6,7,8,9].map(i => (
                  <td key={i} className="p-3">{renderInning(home.innings?.[i])}</td>
               ))}
+              {(home.innings?.[10] || away.innings?.[10]) && <td className="p-3">{renderInning(home.innings?.[10])}</td>}
               <td className="p-3 font-bold">{home.total ?? "-"}</td>
             </tr>
             <tr>
@@ -34,6 +35,7 @@ export default function BaseballSummary({ match }: { match: any }) {
               {[1,2,3,4,5,6,7,8,9].map(i => (
                  <td key={i} className="p-3">{renderInning(away.innings?.[i])}</td>
               ))}
+              {(home.innings?.[10] || away.innings?.[10]) && <td className="p-3">{renderInning(away.innings?.[10])}</td>}
               <td className="p-3 font-bold">{away.total ?? "-"}</td>
             </tr>
           </tbody>

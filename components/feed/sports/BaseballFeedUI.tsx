@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { NormalizedGame, NormalizedLeague } from "../utils";
 
-// --- BASEBALL STATUS CODES ---
+// Baseball Status Codes
 const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "SUSP", "AWD", "ABD", "Final"];
 const SCHEDULED_CODES = ["NS", "TBD"];
-// Innings 1-9 + Extra Innings (IN1..IN9, INTR)
+// Live: Innings 1-9 + Extra (IN1...IN9, INTR)
 const LIVE_CODES = ["IN1", "IN2", "IN3", "IN4", "IN5", "IN6", "IN7", "IN8", "IN9", "INTR"];
 
 type BaseballFeedUIProps = {
@@ -21,7 +21,6 @@ type BaseballFeedUIProps = {
   initialTab?: string;
 };
 
-// --- COLLAPSIBLE GROUP ---
 const BaseballLeagueGroup = ({ 
   meta, games, matchRowBase, matchRowInactive, isDark 
 }: any) => {
@@ -47,10 +46,10 @@ const BaseballLeagueGroup = ({
           const dateObj = new Date(game.date);
           const time = !isNaN(dateObj.getTime()) ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
           
-          // Display: "IN 5" for Inning 5, or "14:00" for Scheduled
+          // Display: "IN 5" (Inning 5) or "14:00"
           const displayStatus = isLive 
-            ? (game.status.short.startsWith("IN") ? `IN ${game.status.short.slice(2)}` : game.status.short)
-            : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
+             ? (game.status.short.startsWith("IN") ? `IN ${game.status.short.slice(2)}` : game.status.short)
+             : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
 
           return (
             <Link
@@ -77,7 +76,6 @@ const BaseballLeagueGroup = ({
                   <span className="text-sm font-bold text-primary">{game.scores.away ?? "-"}</span>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
             </Link>
           );
         })}
@@ -86,7 +84,6 @@ const BaseballLeagueGroup = ({
   );
 };
 
-// --- MAIN COMPONENT ---
 export default function BaseballFeedUI({ games, loading, leagueId, initialTab }: BaseballFeedUIProps) {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
