@@ -7,6 +7,7 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import BasketballSummary from "@/components/match/tabs/BasketballSummary";
 import BasketballH2H from "@/components/match/tabs/BasketballH2H";
 import BasketballOdds from "@/components/match/tabs/BasketballOdds";
+import BasketballStandings from "@/components/match/tabs/BasketballStandings"; // Importing the new component
 
 // Type definitions
 type BasketballScore = {
@@ -38,8 +39,8 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
   const [match, setMatch] = useState<BasketballMatch | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // 1. Define the Allowed Tabs (Removed Standings & Stats)
-  const validTabs = ["summary", "h2h", "odds"];
+  // 1. Updated Allowed Tabs to include "standings"
+  const validTabs = ["summary", "h2h", "standings", "odds"];
   
   // 2. Safe Active Tab Logic
   const activeTab = (initialTab && validTabs.includes(initialTab)) ? initialTab : "summary";
@@ -68,8 +69,6 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         const data = json.response?.[0];
 
         if (data) {
-          // 3. Safe Score Extraction
-          // API can return null scores for scheduled games, which is handled here
           setMatch({
             id: data.id,
             date: data.date,
@@ -174,7 +173,7 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
       </div>
 
       {/* CONTENT AREA */}
-      <div className="min-h-[300px] w-full">
+      <div className="min-h-[300px] w-full p-4">
         {activeTab === "summary" && <BasketballSummary match={match} />}
         
         {/* Pass Team IDs correctly for H2H */}
@@ -182,6 +181,14 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
             <BasketballH2H 
                 teamOneId={teams.home.id} 
                 teamTwoId={teams.away.id} 
+            />
+        )}
+        
+        {/* NEW: Standings Tab */}
+        {activeTab === "standings" && (
+            <BasketballStandings 
+                leagueId={league.id} 
+                season={league.season} 
             />
         )}
         
