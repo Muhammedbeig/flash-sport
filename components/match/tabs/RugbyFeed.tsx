@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import HockeyFeedUI from "./HockeyFeedUI"; // Imports the UI component
-import { NormalizedGame } from "../utils";
+import RugbyFeedUI from "./RugbyFeedUI";
+import { NormalizedGame } from "@/components/feed/utils";
 
-const normalizeHockeyGame = (rawItem: any): NormalizedGame | null => {
+const normalizeRugbyGame = (rawItem: any): NormalizedGame | null => {
   try {
     const { id, date, status, league, teams, scores, country } = rawItem;
     if (!id) return null;
@@ -12,7 +12,7 @@ const normalizeHockeyGame = (rawItem: any): NormalizedGame | null => {
     let homeScore = scores?.home;
     let awayScore = scores?.away;
 
-    // Safety for score objects (Hockey API sometimes wraps them)
+    // Rugby score safety
     if (typeof homeScore === "object") homeScore = homeScore?.total ?? null;
     if (typeof awayScore === "object") awayScore = awayScore?.total ?? null;
 
@@ -38,28 +38,28 @@ const normalizeHockeyGame = (rawItem: any): NormalizedGame | null => {
       scores: { home: homeScore, away: awayScore },
     };
   } catch (err) {
-    console.error("Hockey Normalize Error", err);
+    console.error("Rugby Normalize Error", err);
     return null;
   }
 };
 
-type HockeyFeedProps = {
+type RugbyFeedProps = {
   leagueId?: string;
   initialTab?: string;
 };
 
-export default function HockeyFeed({ leagueId, initialTab }: HockeyFeedProps) {
+export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchHockey() {
+    async function fetchRugby() {
       setLoading(true);
       try {
-        const cdnUrl = process.env.NEXT_PUBLIC_CDN_HOCKEY_URL; 
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_RUGBY_URL; // Optional CDN
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        // Host for Hockey API
-        const host = "v1.hockey.api-sports.io"; 
+        // CRITICAL: Rugby Host
+        const host = "v1.rugby.api-sports.io"; 
         
         const params = new URLSearchParams();
         params.set("timezone", "UTC");
@@ -88,7 +88,7 @@ export default function HockeyFeed({ leagueId, initialTab }: HockeyFeedProps) {
         const rawList = Array.isArray(json?.response) ? json.response : [];
         
         const cleanList = rawList
-          .map(normalizeHockeyGame)
+          .map(normalizeRugbyGame)
           .filter((g: any): g is NormalizedGame => g !== null);
 
         cleanList.sort((a: NormalizedGame, b: NormalizedGame) => 
@@ -98,16 +98,15 @@ export default function HockeyFeed({ leagueId, initialTab }: HockeyFeedProps) {
         setGames(cleanList);
 
       } catch (err) {
-        console.error("Hockey Feed Error:", err);
+        console.error("Rugby Feed Error:", err);
         setGames([]);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchHockey();
+    fetchRugby();
   }, [leagueId]);
 
-  // Renders the UI component with the required props
-  return <HockeyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
+  return <RugbyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

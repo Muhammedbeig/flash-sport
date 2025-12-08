@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type OddValue = {
   value: string;
@@ -19,6 +20,9 @@ export default function BasketballOdds({ matchId }: { matchId: string }) {
   const { theme } = useTheme();
   const [odds, setOdds] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const isDark = theme === "dark";
 
   useEffect(() => {
     async function fetchOdds() {
@@ -48,6 +52,10 @@ export default function BasketballOdds({ matchId }: { matchId: string }) {
   if (!odds.length) return <div className="p-8 text-center text-secondary text-sm">No odds available for this match.</div>;
 
   const primaryBookmaker = odds[0];
+  
+  // Display Logic: First 3 or All
+  const displayedBets = showAll ? primaryBookmaker.bets : primaryBookmaker.bets.slice(0, 3);
+  const hasMore = primaryBookmaker.bets.length > 3;
 
   return (
     <div className="p-4 space-y-6">
@@ -56,7 +64,7 @@ export default function BasketballOdds({ matchId }: { matchId: string }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {primaryBookmaker.bets.map((bet) => (
+        {displayedBets.map((bet) => (
           <div key={bet.id} className="theme-bg border theme-border rounded-lg p-3 shadow-sm">
             <h4 className="text-xs font-bold text-primary mb-3">{bet.name}</h4>
             <div className="flex flex-wrap gap-2">
@@ -73,6 +81,26 @@ export default function BasketballOdds({ matchId }: { matchId: string }) {
           </div>
         ))}
       </div>
+
+      {/* Toggle Button */}
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+              isDark 
+                ? "bg-slate-800 hover:bg-slate-700 text-slate-300" 
+                : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+            }`}
+          >
+            {showAll ? (
+              <>Show Less <ChevronUp size={14} /></>
+            ) : (
+              <>See More ({primaryBookmaker.bets.length - 3}) <ChevronDown size={14} /></>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

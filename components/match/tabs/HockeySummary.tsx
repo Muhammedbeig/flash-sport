@@ -2,14 +2,9 @@
 
 export default function HockeySummary({ match }: { match: any }) {
   const scores = match.scores || {}; 
-  // Hockey API structure is typically scores: { home: 3, away: 2 } 
-  // but "periods" or "periods" object contains the breakdown.
-  // Check documentation: Often it's `periods` object with { first, second, third, overtime, penalties }
-  
-  // We'll assume the match object passed here has `periods` or we adapt based on API response structure.
-  // API-Hockey V1 usually provides `periods` in the game object or `score` details.
-  // Let's adapt to standard V1 structure:
-  const periods = match.periods || {}; 
+  const periods = match.periods || {};
+
+  // Extract periods safely
   const home = {
     p1: periods.first?.home,
     p2: periods.second?.home,

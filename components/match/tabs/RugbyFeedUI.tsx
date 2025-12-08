@@ -3,25 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, AlertCircle } from "lucide-react"; // Added Alert Icon
+import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { NormalizedGame, NormalizedLeague } from "../utils";
+import { NormalizedGame, NormalizedLeague } from "@/components/feed/utils";
 
-// --- STATUS CODES ---
+// --- RUGBY STATUS CODES ---
 const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "ABD", "AWD", "Finished"];
 const SCHEDULED_CODES = ["NS", "TBD"];
-const LIVE_CODES = ["S1", "S2", "S3", "S4", "S5"];
+const LIVE_CODES = ["H1", "H2", "HT", "ET", "PT"];
 
-type VolleyballFeedUIProps = {
+type RugbyFeedUIProps = {
   games?: NormalizedGame[];
   loading: boolean;
-  error?: string | null; // Added Error Prop
   leagueId?: string;
   initialTab?: string;
 };
 
-const VolleyballLeagueGroup = ({ meta, games, matchRowBase, matchRowInactive, isDark }: any) => {
+const RugbyLeagueGroup = ({ meta, games, matchRowBase, matchRowInactive, isDark }: any) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -44,12 +43,14 @@ const VolleyballLeagueGroup = ({ meta, games, matchRowBase, matchRowInactive, is
           const dateObj = new Date(game.date);
           const time = !isNaN(dateObj.getTime()) ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
           
-          const displayStatus = isLive ? game.status.short : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
+          const displayStatus = isLive 
+             ? (game.status.elapsed ? `${game.status.short} ${game.status.elapsed}'` : game.status.short)
+             : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
 
           return (
             <Link
               key={game.id}
-              href={`/match?id=${game.id}&sport=volleyball`}
+              href={`/match?id=${game.id}&sport=rugby`}
               target="_blank"
               prefetch={false}
               className={`${matchRowBase} ${matchRowInactive}`}
@@ -79,7 +80,7 @@ const VolleyballLeagueGroup = ({ meta, games, matchRowBase, matchRowInactive, is
   );
 };
 
-export default function VolleyballFeedUI({ games = [], loading, error, leagueId, initialTab }: VolleyballFeedUIProps) {
+export default function RugbyFeedUI({ games = [], loading, leagueId, initialTab }: RugbyFeedUIProps) {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
   const isDark = theme === "dark";
@@ -106,16 +107,6 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
-  // ERROR STATE
-  if (error) {
-     return (
-        <div className="w-full p-6 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800 flex flex-col items-center gap-2 text-center">
-           <AlertCircle className="w-8 h-8 text-red-500" />
-           <p className="text-sm font-bold text-red-600 dark:text-red-400">{error}</p>
-        </div>
-     );
-  }
-
   const getTabStyle = (tab: string) => {
     const isActive = activeTab === tab;
     if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
@@ -127,7 +118,7 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
   const matchRowInactive = isDark ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent" : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
   const getTabUrl = (tabId: string) => {
-    const newSportParam = `volleyball/${tabId}`;
+    const newSportParam = `rugby/${tabId}`;
     const params = new URLSearchParams(searchParams.toString());
     params.set("sport", newSportParam);
     return `/?${params.toString()}`;
@@ -151,7 +142,7 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
 
       <div className="theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">
         {Object.values(grouped).map(({ meta, games: leagueGames }) => (
-          <VolleyballLeagueGroup 
+          <RugbyLeagueGroup 
             key={`${meta.country}-${meta.name}`}
             meta={meta}
             games={leagueGames}
@@ -160,7 +151,6 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
             isDark={isDark}
           />
         ))}
-
         {filteredGames.length === 0 && (
           <div className="p-8 text-center text-secondary">No matches found.</div>
         )}

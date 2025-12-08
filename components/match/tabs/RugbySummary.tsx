@@ -1,21 +1,19 @@
 "use client";
 
 export default function RugbySummary({ match }: { match: any }) {
-  // Rugby uses 'periods' object: { first, second, overtime, second_extra }
-  // Or simply root scores if periods missing
+  const scores = match.scores || {}; 
   const periods = match.periods || {};
-  const scores = match.scores || {};
-  
+
   const home = {
     p1: periods.first?.home,
     p2: periods.second?.home,
-    ot: periods.overtime?.home,
+    et: periods.overtime?.home,
     total: scores.home
   };
   const away = {
     p1: periods.first?.away,
     p2: periods.second?.away,
-    ot: periods.overtime?.away,
+    et: periods.overtime?.away,
     total: scores.away
   };
 
@@ -32,7 +30,7 @@ export default function RugbySummary({ match }: { match: any }) {
               <th className="p-2 text-left">Team</th>
               <th className="p-2">1st Half</th>
               <th className="p-2">2nd Half</th>
-              <th className="p-2">OT</th>
+              { (home.et || away.et) && <th className="p-2">ET</th> }
               <th className="p-2 font-bold text-primary">Total</th>
             </tr>
           </thead>
@@ -41,14 +39,14 @@ export default function RugbySummary({ match }: { match: any }) {
               <td className="p-3 text-left font-bold">{match.teams.home.name}</td>
               <td className="p-3">{renderVal(home.p1)}</td>
               <td className="p-3">{renderVal(home.p2)}</td>
-              <td className="p-3">{renderVal(home.ot)}</td>
+              { (home.et || away.et) && <td className="p-3">{renderVal(home.et)}</td> }
               <td className="p-3 font-bold">{renderVal(home.total)}</td>
             </tr>
             <tr>
               <td className="p-3 text-left font-bold">{match.teams.away.name}</td>
               <td className="p-3">{renderVal(away.p1)}</td>
               <td className="p-3">{renderVal(away.p2)}</td>
-              <td className="p-3">{renderVal(away.ot)}</td>
+              { (home.et || away.et) && <td className="p-3">{renderVal(away.et)}</td> }
               <td className="p-3 font-bold">{renderVal(away.total)}</td>
             </tr>
           </tbody>

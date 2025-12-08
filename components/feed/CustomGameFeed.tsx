@@ -11,12 +11,15 @@ import VolleyballFeed from "./sports/VolleyballFeed";
 type CustomGameFeedProps = {
   sport?: string;
   leagueId?: string;
-  initialTab?: string; // <--- FIX: Defined here
+  initialTab?: string;
 };
 
 export default function CustomGameFeed({ sport = "football", leagueId, initialTab }: CustomGameFeedProps) {
-  switch (sport.toLowerCase()) {
+  const sportKey = sport.toLowerCase();
+
+  switch (sportKey) {
     case "football":
+    case "soccer":
       return <FootballFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "basketball":
@@ -28,10 +31,12 @@ export default function CustomGameFeed({ sport = "football", leagueId, initialTa
       return <NFLFeed leagueId={leagueId} initialTab={initialTab} />;
 
     case "baseball":
+    case "mlb":
       return <BaseballFeed leagueId={leagueId} initialTab={initialTab} />;
       
-  case "hockey":
-   return <HockeyFeed leagueId={leagueId} initialTab={initialTab} />;
+    case "hockey":
+    case "nhl":
+      return <HockeyFeed leagueId={leagueId} initialTab={initialTab} />;
       
     case "rugby":
       return <RugbyFeed leagueId={leagueId} initialTab={initialTab} />;
@@ -41,8 +46,8 @@ export default function CustomGameFeed({ sport = "football", leagueId, initialTa
       
     default:
       return (
-        <div className="p-10 text-center text-secondary">
-          No custom feed available for {sport}.
+        <div className="p-10 text-center text-secondary bg-slate-50 dark:bg-slate-900 rounded-xl border theme-border">
+          <p>No custom feed available for <span className="font-bold">{sport}</span>.</p>
         </div>
       );
   }

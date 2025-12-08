@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import HockeySummary from "@/components/match/tabs/HockeySummary";
-import MatchH2H from "@/components/match/tabs/MatchH2H";
+import HockeyH2H from "@/components/match/tabs/HockeyH2H";
+import HockeyStandings from "@/components/match/tabs/HockeyStandings";
+import HockeyOdds from "@/components/match/tabs/HockeyOdds";
 
-// Type for Hockey Match Data
 type HockeyMatch = {
   id: number;
   date: string;
@@ -17,14 +18,8 @@ type HockeyMatch = {
     home: { id: number; name: string; logo: string; winner: boolean | null };
     away: { id: number; name: string; logo: string; winner: boolean | null };
   };
-  scores: { home: number; away: number };
-  periods: {
-    first: { home: number; away: number };
-    second: { home: number; away: number };
-    third: { home: number; away: number };
-    overtime: { home: number; away: number };
-    penalties: { home: number; away: number };
-  };
+  scores: { home: number | null; away: number | null };
+  periods: any;
 };
 
 export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: string, initialTab?: string }) {
@@ -32,14 +27,13 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
   const [match, setMatch] = useState<HockeyMatch | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const defaultTab = initialTab === "h2h" ? "h2h" : "summary";
-  const [activeTab, setActiveTab] = useState<"summary" | "h2h">(defaultTab);
+  const validTabs = ["summary", "h2h", "standings", "odds"];
+  const defaultTab = validTabs.includes(initialTab || "") ? (initialTab as any) : "summary";
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const isDark = theme === "dark";
 
   useEffect(() => {
-    if (initialTab && (initialTab === "summary" || initialTab === "h2h")) {
-      setActiveTab(initialTab);
-    }
+    if (initialTab && validTabs.includes(initialTab)) setActiveTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
@@ -53,9 +47,8 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
         let url = "";
         let headers: Record<string, string> = {};
 
-        if (cdnUrl) {
-          url = `${cdnUrl.replace(/\/$/, "")}/games?id=${matchId}`;
-        } else {
+        if (cdnUrl) url = `${cdnUrl.replace(/\/$/, "")}/games?id=${matchId}`;
+        else {
           url = `https://${host}/games?id=${matchId}`;
           headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
         }
@@ -65,14 +58,19 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
         const data = json.response?.[0];
 
         if (data) {
+          // --- SCORE NORMALIZATION LOGIC ---
+          // Hockey API games endpoint usually returns numbers for scores, 
+          // but sometimes wraps them in objects (e.g. { total: 2 }).
+          let homeScore = data.scores?.home;
+          let awayScore = data.scores?.away;
+
+          if (typeof homeScore === "object" && homeScore !== null) homeScore = homeScore.total;
+          if (typeof awayScore === "object" && awayScore !== null) awayScore = awayScore.total;
+
           setMatch({
             id: data.id,
             date: data.date,
-            status: {
-              short: data.status.short,
-              long: data.status.long,
-              elapsed: data.status.timer,
-            },
+            status: { short: data.status.short, long: data.status.long, elapsed: data.status.timer },
             league: {
               id: data.league.id,
               name: data.league.name,
@@ -81,18 +79,14 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
               season: data.league.season, 
             },
             teams: {
-              home: { id: data.teams.home.id, name: data.teams.home.name, logo: data.teams.home.logo, winner: null },
-              away: { id: data.teams.away.id, name: data.teams.away.name, logo: data.teams.away.logo, winner: null },
+              home: { id: data.teams.home.id, name: data.teams.home.name, logo: data.teams.home.logo, winner: data.teams.home.winner },
+              away: { id: data.teams.away.id, name: data.teams.away.name, logo: data.teams.away.logo, winner: data.teams.away.winner },
             },
-            scores: data.scores,
+            scores: { home: homeScore ?? null, away: awayScore ?? null },
             periods: data.periods 
           });
         }
-      } catch (err) {
-        console.error("Hockey Match Error:", err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     fetchMatch();
   }, [matchId]);
@@ -102,20 +96,19 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
 
   const { teams, scores, league, status } = match;
   const isLive = ["P1", "P2", "P3", "OT", "PT", "BT"].includes(status.short);
-
+  
+  // Styles
   const tabBase = "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
   const activeClass = "border-blue-500 text-blue-600 dark:text-blue-400";
   const inactiveClass = "border-transparent text-secondary hover:text-primary";
-
-  const leagueBadgeStyle = isDark ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-white text-slate-700 border-slate-200 shadow-sm";
   const statusBadgeStyle = isLive ? "bg-red-100 text-red-600 animate-pulse" : (isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-600");
+  const leagueBadgeStyle = isDark ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700";
 
   return (
     <div className="theme-bg rounded-xl border theme-border overflow-hidden">
-      {/* HEADER */}
       <div className="p-6 border-b theme-border flex flex-col items-center gap-6 relative overflow-hidden">
         <div className={`absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${leagueBadgeStyle}`}>
-          {league.logo && <img src={league.logo} className="w-4 h-4 object-contain" />}
+          {league.logo && <img src={league.logo} className="w-4 h-4 object-contain" alt=""/>}
           <span>{league.country}: {league.name}</span>
         </div>
         <div className="flex items-center justify-between w-full max-w-2xl mt-8">
@@ -138,16 +131,25 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="flex items-center gap-1 px-4 border-b theme-border">
-        <Link href={`/match?id=${matchId}&sport=hockey/summary`} replace={true} prefetch={false} className={`${tabBase} ${activeTab === "summary" ? activeClass : inactiveClass}`}>Summary</Link>
-        <Link href={`/match?id=${matchId}&sport=hockey/h2h`} replace={true} prefetch={false} className={`${tabBase} ${activeTab === "h2h" ? activeClass : inactiveClass}`}>H2H</Link>
+      <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
+        {validTabs.map(t => (
+            <Link 
+              key={t} 
+              href={`/match?id=${matchId}&sport=hockey/${t}`} 
+              replace={true} 
+              prefetch={false} 
+              className={`${tabBase} ${activeTab === t ? activeClass : inactiveClass}`}
+            >
+              {t === "h2h" ? "H2H" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </Link>
+        ))}
       </div>
 
-      {/* CONTENT */}
       <div className="min-h-[300px]">
         {activeTab === "summary" && <HockeySummary match={match} />}
-        {activeTab === "h2h" && <MatchH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} sport="hockey" />}
+        {activeTab === "h2h" && <HockeyH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
+        {activeTab === "standings" && <HockeyStandings leagueId={league.id} teamId={teams.home.id} />}
+        {activeTab === "odds" && <HockeyOdds matchId={String(match.id)} />}
       </div>
     </div>
   );

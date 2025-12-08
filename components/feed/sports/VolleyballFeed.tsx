@@ -1,61 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import RugbyFeedUI from "./RugbyFeedUI"; // Ensure this file exists
+import VolleyballFeedUI from "./VolleyballFeedUI";
 import { NormalizedGame } from "../utils";
 
-const normalizeRugbyGame = (rawItem: any): NormalizedGame | null => {
+const normalizeVolleyballGame = (rawItem: any): NormalizedGame | null => {
   try {
-    const gameData = rawItem.game || rawItem;
-    const leagueData = rawItem.league || {};
-    const teamsData = rawItem.teams || {};
-    const scoresData = rawItem.scores || {};
+    const { id, date, status, league, teams, scores, country } = rawItem;
+    if (!id) return null;
 
-    if (!gameData.id) return null;
+    let homeScore = scores?.home;
+    let awayScore = scores?.away;
+
+    if (typeof homeScore === "object") homeScore = homeScore?.total ?? null;
+    if (typeof awayScore === "object") awayScore = awayScore?.total ?? null;
 
     return {
-      id: gameData.id,
-      date: gameData.date,
+      id,
+      date,
       status: {
-        short: gameData.status?.short || "NS",
-        long: gameData.status?.long || "Not Started",
-        elapsed: gameData.status?.timer || undefined // FIX: undefined
+        short: status?.short || "NS",
+        long: status?.long || "Not Started",
+        elapsed: undefined 
       },
       league: {
-        id: leagueData.id,
-        name: leagueData.name,
-        country: leagueData.country?.name || leagueData.country || "World",
-        logo: leagueData.logo,
-        flag: leagueData.flag || null,
+        id: league.id,
+        name: league.name,
+        country: country?.name || league.country || "World",
+        logo: league.logo,
+        flag: country?.flag || league.flag,
       },
       teams: {
-        home: { id: teamsData.home.id, name: teamsData.home.name, logo: teamsData.home.logo, winner: undefined }, // FIX: undefined
-        away: { id: teamsData.away.id, name: teamsData.away.name, logo: teamsData.away.logo, winner: undefined }, // FIX: undefined
+        home: { id: teams.home.id, name: teams.home.name, logo: teams.home.logo, winner: teams.home.winner },
+        away: { id: teams.away.id, name: teams.away.name, logo: teams.away.logo, winner: teams.away.winner },
       },
-      scores: { home: scoresData.home, away: scoresData.away },
+      scores: { home: homeScore, away: awayScore },
     };
   } catch (err) {
+    console.error("Volleyball Normalize Error", err);
     return null;
   }
 };
 
-// FIX: Added initialTab to props
-type RugbyFeedProps = {
+type VolleyballFeedProps = {
   leagueId?: string;
   initialTab?: string;
 };
 
-export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
+export default function VolleyballFeed({ leagueId, initialTab }: VolleyballFeedProps) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchRugby() {
+    async function fetchVolleyball() {
       setLoading(true);
+      setError(null);
       try {
-        const cdnUrl = process.env.NEXT_PUBLIC_CDN_RUGBY_URL; 
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_VOLLEYBALL_URL; 
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const host = "v1.rugby.api-sports.io"; 
+        const host = "v1.volleyball.api-sports.io"; 
         
         const params = new URLSearchParams();
         params.set("timezone", "UTC");
@@ -80,10 +84,20 @@ export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
 
         const res = await fetch(url, { headers, next: { revalidate: 60 } });
         const json = await res.json();
+
+        // Check for API-level errors (Rate Limit, etc.)
+        if (json.errors && Object.keys(json.errors).length > 0) {
+            // json.errors can be an object { rateLimit: "..." } or array
+            const msg = typeof json.errors === 'object' 
+                ? Object.values(json.errors).join(', ') 
+                : "An error occurred fetching data.";
+            throw new Error(msg);
+        }
+        
         const rawList = Array.isArray(json?.response) ? json.response : [];
         
         const cleanList = rawList
-          .map(normalizeRugbyGame)
+          .map(normalizeVolleyballGame)
           .filter((g: any): g is NormalizedGame => g !== null);
 
         cleanList.sort((a: NormalizedGame, b: NormalizedGame) => 
@@ -92,15 +106,17 @@ export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
 
         setGames(cleanList);
 
-      } catch (err) {
-        console.error("Rugby Feed Error:", err);
+      } catch (err: any) {
+        console.error("Volleyball Feed Error:", err);
+        setError(err.message || "Failed to load matches.");
         setGames([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchRugby();
+
+    fetchVolleyball();
   }, [leagueId]);
 
-  return <RugbyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
+  return <VolleyballFeedUI games={games} loading={loading} error={error} leagueId={leagueId} initialTab={initialTab} />;
 }

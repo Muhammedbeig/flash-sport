@@ -2,32 +2,25 @@
 
 export default function VolleyballSummary({ match }: { match: any }) {
   const scores = match.scores || {}; 
-  
-  // Ensure sets object exists (API sometimes puts it under 'sets', sometimes flat in scores)
-  // Based on doc, it is often: scores: { home: 3, away: 1, set1: {home:25, away:20}, ... }
-  // Let's adapt to the standard structure we saw in Hockey/Basketball but for Sets.
-  
-  // Assuming data structure from API V1:
-  // scores: { home: 3, away: 1 } (Sets won)
-  // periods/sets: { set1: {home: 25, away: 23}, ... }
-  
-  // We will pass the RAW match object into this component so we can access nested set data.
-  // Let's extract safely.
-  const homeSets = {
-    s1: match.scores?.set1?.home,
-    s2: match.scores?.set2?.home,
-    s3: match.scores?.set3?.home,
-    s4: match.scores?.set4?.home,
-    s5: match.scores?.set5?.home,
-    total: match.scores?.home
+  const periods = match.periods || {}; 
+
+  // Safely extract Set scores (1-5)
+  // Volleyball API uses 'first', 'second', 'third', 'fourth', 'fifth' keys
+  const home = {
+    s1: periods.first?.home,
+    s2: periods.second?.home,
+    s3: periods.third?.home,
+    s4: periods.fourth?.home,
+    s5: periods.fifth?.home,
+    total: scores.home
   };
-  const awaySets = {
-    s1: match.scores?.set1?.away,
-    s2: match.scores?.set2?.away,
-    s3: match.scores?.set3?.away,
-    s4: match.scores?.set4?.away,
-    s5: match.scores?.set5?.away,
-    total: match.scores?.away
+  const away = {
+    s1: periods.first?.away,
+    s2: periods.second?.away,
+    s3: periods.third?.away,
+    s4: periods.fourth?.away,
+    s5: periods.fifth?.away,
+    total: scores.away
   };
 
   const renderVal = (v: any) => (v !== null && v !== undefined ? v : "-");
@@ -46,27 +39,27 @@ export default function VolleyballSummary({ match }: { match: any }) {
               <th className="p-2">S3</th>
               <th className="p-2">S4</th>
               <th className="p-2">S5</th>
-              <th className="p-2 font-bold text-primary">Sets</th>
+              <th className="p-2 font-bold text-primary">Sets Won</th>
             </tr>
           </thead>
           <tbody className="font-medium text-primary">
             <tr className="border-b theme-border">
               <td className="p-3 text-left font-bold">{match.teams.home.name}</td>
-              <td className="p-3">{renderVal(homeSets.s1)}</td>
-              <td className="p-3">{renderVal(homeSets.s2)}</td>
-              <td className="p-3">{renderVal(homeSets.s3)}</td>
-              <td className="p-3">{renderVal(homeSets.s4)}</td>
-              <td className="p-3">{renderVal(homeSets.s5)}</td>
-              <td className="p-3 font-bold">{renderVal(homeSets.total)}</td>
+              <td className="p-3">{renderVal(home.s1)}</td>
+              <td className="p-3">{renderVal(home.s2)}</td>
+              <td className="p-3">{renderVal(home.s3)}</td>
+              <td className="p-3">{renderVal(home.s4)}</td>
+              <td className="p-3">{renderVal(home.s5)}</td>
+              <td className="p-3 font-bold">{renderVal(home.total)}</td>
             </tr>
             <tr>
               <td className="p-3 text-left font-bold">{match.teams.away.name}</td>
-              <td className="p-3">{renderVal(awaySets.s1)}</td>
-              <td className="p-3">{renderVal(awaySets.s2)}</td>
-              <td className="p-3">{renderVal(awaySets.s3)}</td>
-              <td className="p-3">{renderVal(awaySets.s4)}</td>
-              <td className="p-3">{renderVal(awaySets.s5)}</td>
-              <td className="p-3 font-bold">{renderVal(awaySets.total)}</td>
+              <td className="p-3">{renderVal(away.s1)}</td>
+              <td className="p-3">{renderVal(away.s2)}</td>
+              <td className="p-3">{renderVal(away.s3)}</td>
+              <td className="p-3">{renderVal(away.s4)}</td>
+              <td className="p-3">{renderVal(away.s5)}</td>
+              <td className="p-3 font-bold">{renderVal(away.total)}</td>
             </tr>
           </tbody>
         </table>

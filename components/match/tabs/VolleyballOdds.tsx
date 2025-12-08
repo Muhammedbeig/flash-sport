@@ -5,67 +5,82 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
-type OddValue = { value: string; odd: string; };
+type OddValue = { value: string; odd: string };
 type Bet = { id: number; name: string; values: OddValue[] };
 type Bookmaker = { id: number; name: string; bets: Bet[] };
 
-export default function NFLOdds({ matchId }: { matchId: string }) {
+export default function VolleyballOdds({ matchId }: { matchId: string }) {
   const { theme } = useTheme();
   const [odds, setOdds] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false); // Toggle State
 
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     async function fetchOdds() {
+      if (!matchId) return;
+      setLoading(true);
+      setError(null);
       try {
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const host = "v1.american-football.api-sports.io";
-        const url = `https://${host}/odds?game=${matchId}`;
-
-        const res = await fetch(url, {
-          headers: { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" }
+        const host = "v1.volleyball.api-sports.io";
+        
+        const res = await fetch(`https://${host}/odds?game=${matchId}`, { 
+            headers: { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" } 
         });
-
+        
         const json = await res.json();
-        const data = json.response?.[0]?.bookmakers || [];
-        setOdds(data);
+        
+        if (json.errors && Object.keys(json.errors).length > 0) {
+            const msg = typeof json.errors === 'object' ? Object.values(json.errors).join(', ') : "Error fetching odds.";
+            throw new Error(msg);
+        }
 
-      } catch (err) {
-        console.error("NFL Odds Error:", err);
-      } finally {
-        setLoading(false);
+        setOdds(json.response?.[0]?.bookmakers || []);
+      } catch (e: any) { 
+          console.error("Volleyball Odds Error:", e);
+          setError(e.message || "Failed to load odds.");
+      } finally { 
+          setLoading(false); 
       }
     }
-    if (matchId) fetchOdds();
+    fetchOdds();
   }, [matchId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-40 w-full rounded-xl" /></div>;
-  if (!odds.length) return <div className="p-8 text-center text-secondary text-sm">No odds available for this match.</div>;
+  if (loading) return <div className="p-4"><Skeleton className="h-40 rounded-xl"/></div>;
+  
+  if (error) {
+    return (
+        <div className="p-8 text-center">
+            <span className="block text-red-500 font-bold mb-1">Unable to Load Odds</span>
+            <span className="text-sm text-secondary">{error}</span>
+        </div>
+    );
+  }
+
+  if (!odds.length) {
+      return <div className="p-8 text-center text-secondary text-sm">No odds available for this match.</div>;
+  }
 
   const activeBookmaker = odds[0];
-  
-  // Logic: Show first 3 or all
   const displayedBets = showAll ? activeBookmaker.bets : activeBookmaker.bets.slice(0, 3);
   const hasMore = activeBookmaker.bets.length > 3;
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between border-b theme-border pb-2 mb-4">
-        <span className="text-xs font-bold uppercase text-secondary">Bookmaker: {activeBookmaker.name}</span>
+      <div className="border-b theme-border pb-2 mb-4 text-xs font-bold uppercase text-secondary">
+        Bookmaker: {activeBookmaker.name}
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {displayedBets.map((bet) => (
-          <div key={bet.id} className="theme-bg border theme-border rounded-lg p-3 shadow-sm">
+        {displayedBets.map((bet, betIdx) => (
+          <div key={`${bet.id}-${betIdx}`} className="theme-bg border theme-border rounded-lg p-3 shadow-sm">
             <h4 className="text-xs font-bold text-primary mb-3">{bet.name}</h4>
             <div className="flex flex-wrap gap-2">
-              {bet.values.map((val, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-center justify-between rounded px-3 py-2 flex-1 min-w-[80px] border theme-border ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}`}
-                >
+              {bet.values.map((val, valIdx) => (
+                <div key={`${val.value}-${valIdx}`} className={`flex items-center justify-between rounded px-3 py-2 flex-1 min-w-[80px] border theme-border ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}`}>
                   <span className="text-[11px] text-secondary truncate mr-2">{val.value}</span>
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{val.odd}</span>
                 </div>
@@ -75,7 +90,6 @@ export default function NFLOdds({ matchId }: { matchId: string }) {
         ))}
       </div>
 
-      {/* See More Button */}
       {hasMore && (
         <div className="flex justify-center pt-2">
           <button

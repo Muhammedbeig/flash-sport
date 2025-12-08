@@ -8,10 +8,10 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { NormalizedGame, NormalizedLeague } from "../utils";
 
-// Hockey Status Codes (Based on API-Hockey docs)
+// --- HOCKEY STATUS CODES ---
 const FINISHED_CODES = ["FT", "AOT", "AP", "POST", "CANC", "ABD", "AWD", "Final"];
 const SCHEDULED_CODES = ["NS", "TBD"];
-const LIVE_CODES = ["P1", "P2", "P3", "OT", "PT", "BT"]; // Period 1, 2, 3, Overtime, Penalties, Break
+const LIVE_CODES = ["P1", "P2", "P3", "OT", "PT", "BT"];
 
 type HockeyFeedUIProps = {
   games: NormalizedGame[];
@@ -20,20 +20,9 @@ type HockeyFeedUIProps = {
   initialTab?: string;
 };
 
-// --- COLLAPSIBLE LEAGUE GROUP ---
 const HockeyLeagueGroup = ({ 
-  meta, 
-  games, 
-  matchRowBase, 
-  matchRowInactive, 
-  isDark 
-}: { 
-  meta: NormalizedLeague, 
-  games: NormalizedGame[], 
-  matchRowBase: string, 
-  matchRowInactive: string, 
-  isDark: boolean 
-}) => {
+  meta, games, matchRowBase, matchRowInactive, isDark 
+}: any) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -46,20 +35,16 @@ const HockeyLeagueGroup = ({
           {meta.flag && <img src={meta.flag} alt={meta.country} className="w-4 h-4 object-contain" />}
           <span className="text-xs font-bold text-secondary uppercase tracking-wider">{meta.country} : {meta.name}</span>
         </div>
-        <ChevronDown 
-          size={16} 
-          className={`text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} 
-        />
+        <ChevronDown size={16} className={`text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
       <div className={`divide-y theme-border ${isOpen ? "block" : "hidden"}`}>
-        {games.map((game) => {
+        {games.map((game: NormalizedGame) => {
           const isLive = LIVE_CODES.includes(game.status.short);
           const statusColor = isLive ? "text-[#dc2626]" : "text-secondary";
           const dateObj = new Date(game.date);
           const time = !isNaN(dateObj.getTime()) ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
           
-          // Hockey display logic: "P1 15:00" or "FT"
           const displayStatus = isLive 
             ? (game.status.elapsed ? `${game.status.short} ${game.status.elapsed}'` : game.status.short) 
             : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
@@ -73,7 +58,6 @@ const HockeyLeagueGroup = ({
               className={`${matchRowBase} ${matchRowInactive}`}
             >
               <div className={`w-14 text-center text-xs font-bold ${statusColor} shrink-0`}>{displayStatus}</div>
-              
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
@@ -98,7 +82,6 @@ const HockeyLeagueGroup = ({
   );
 };
 
-// --- MAIN COMPONENT ---
 export default function HockeyFeedUI({ games, loading, leagueId, initialTab }: HockeyFeedUIProps) {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
@@ -128,15 +111,11 @@ export default function HockeyFeedUI({ games, loading, leagueId, initialTab }: H
     const isActive = activeTab === tab;
     if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
     if (isActive) return "bg-[#0f80da] text-white shadow-sm"; 
-    return isDark 
-      ? "bg-slate-800 text-slate-400 hover:bg-slate-700" 
-      : "bg-gray-100 text-slate-600 hover:bg-gray-200";
+    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
   };
 
   const matchRowBase = "flex items-center justify-between px-3 py-3 rounded-lg text-sm border-l-4 transition-all duration-200 group cursor-pointer";
-  const matchRowInactive = isDark
-    ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
-    : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
+  const matchRowInactive = isDark ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent" : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
   const getTabUrl = (tabId: string) => {
     const newSportParam = `hockey/${tabId}`;
