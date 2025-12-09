@@ -3,14 +3,17 @@
   "homepage": "https://helloajmal007-commits.github.io/livesocer.com",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "deploy:flash": "cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && gh-pages -d out -t -r https://github.com/Muhammedbeig/flash-sport.git",
-    "deploy:live": "cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && gh-pages -d out -t -r https://github.com/helloajmal007-commits/livesocer.com.git"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "clean:cache": "rimraf .gh-pages-cache node_modules/.cache/gh-pages",
+  
+  "deploy:flash": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
+  
+  "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git main"
+},
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.554.0",
@@ -28,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.4",
     "gh-pages": "^6.3.0",
+    "rimraf": "^6.1.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

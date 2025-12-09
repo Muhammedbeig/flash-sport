@@ -10,6 +10,7 @@ import FootballStandings from "@/components/match/tabs/FootballStandings";
 import FootballOdds from "@/components/match/tabs/FootballOdds";
 import FootballLineups from "@/components/match/tabs/FootballLineups";
 import FootballStats from "@/components/match/tabs/FootballStats";
+import { FootballScoreboardSkeleton } from "@/components/match/skeletons/FootballSkeletons";
 
 export default function FootballMatchWidget({ matchId, initialTab }: { matchId: string, initialTab?: string }) {
   const { theme } = useTheme();
@@ -70,7 +71,7 @@ export default function FootballMatchWidget({ matchId, initialTab }: { matchId: 
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <FootballScoreboardSkeleton />;
 
   // Use optional chaining for safety
   const teams = match?.teams || { home: {}, away: {} };
