@@ -1,20 +1,29 @@
 import type { NextConfig } from "next";
 
+// 1. Get the Repo Name from the environment variable (defined in your package.json scripts)
+const repoName = process.env.NEXT_PUBLIC_REPO_NAME || "";
+
+// 2. Set the Base Path
+// If deployed, it becomes "/livesocer.com". In dev (npm run dev), it stays "" (empty).
+const basePath = repoName ? `/${repoName}` : "";
+
 const nextConfig: NextConfig = {
-  // 1. Required for GitHub Pages
+  // Required for GitHub Pages (Static Export)
   output: "export",
 
-  // 2. Disable Image Optimization (Required for static export)
+  // Required: Next.js Image Optimization doesn't work with static export
   images: {
     unoptimized: true,
   },
 
-  // 3. CRITICAL for subdirectory hosting
-  // Since your URL is muhammedbeig.github.io/flash-sport/
-  // The basePath must be exactly "/flash-sport"
-  basePath: "",
+  // 3. Apply the dynamic configuration
+  // This tells Next.js to expect the app to run under a subdirectory
+  basePath: basePath,
+  
+  // This ensures CSS and JS files are loaded from the correct path
+  assetPrefix: basePath,
 
-  // 4. Helps prevent 404s on refresh
+  // Helps prevent 404s on page refresh by generating index.html for every route
   trailingSlash: true,
 };
 
