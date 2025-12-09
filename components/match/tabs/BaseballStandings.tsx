@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { cn } from "@/lib/utils";
+import { BaseballStandingsSkeleton } from "@/components/match/skeletons/BaseballSkeletons";
 
 // --- TYPES FOR BASEBALL API ---
 type BaseballTeam = {
@@ -100,12 +101,7 @@ export default function BaseballStandings({ leagueId, teamId }: { leagueId: numb
     return () => { isMounted = false; };
   }, [leagueId]);
 
-  if (loading) return (
-      <div className="p-4 space-y-4">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-64 rounded-xl" />
-      </div>
-  );
+  if (loading) return <BaseballStandingsSkeleton />;
   
   if (error || !groups.length) return (
       <div className="p-8 text-center text-secondary text-sm">

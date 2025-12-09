@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { NFLH2HSkeleton } from "@/components/match/skeletons/NFLSkeletons";
 
 type H2HGame = {
   id: number;
@@ -109,15 +110,7 @@ export default function NFLH2H({
     fetchH2H();
   }, [teamOneId, teamTwoId]);
 
-  if (loading) {
-    return (
-      <div className="space-y-3 p-4">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-xl" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <NFLH2HSkeleton />;
 
   if (data.length === 0) {
     return (

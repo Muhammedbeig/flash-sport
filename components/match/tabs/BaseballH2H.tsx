@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { BaseballH2HSkeleton } from "@/components/match/skeletons/BaseballSkeletons";
 
 type H2HGame = {
   id: number;
@@ -74,7 +75,7 @@ export default function BaseballH2H({ teamOneId, teamTwoId }: { teamOneId: numbe
     fetchH2H();
   }, [teamOneId, teamTwoId]);
 
-  if (loading) return <div className="p-4 space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl"/>)}</div>;
+  if (loading) return <BaseballH2HSkeleton />;
   if (!data.length) return <div className="p-8 text-center text-secondary text-sm">No head-to-head data available.</div>;
 
   return (

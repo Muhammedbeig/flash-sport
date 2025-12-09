@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { BaseballOddsSkeleton } from "@/components/match/skeletons/BaseballSkeletons";
 
 // Types for Odds Response
 type OddValue = {
@@ -76,17 +77,7 @@ export default function BaseballOdds({ matchId }: { matchId: string }) {
     return () => { isMounted = false; };
   }, [matchId]);
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-6">
-        <Skeleton className="h-8 w-48 mb-4" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-40 w-full rounded-xl" />
-          <Skeleton className="h-40 w-full rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <BaseballOddsSkeleton />;
 
   if (!bookmakers.length) {
     return (

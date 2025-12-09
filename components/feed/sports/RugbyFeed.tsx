@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import RugbyFeedUI from "./RugbyFeedUI";
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 const normalizeRugbyGame = (rawItem: any): NormalizedGame | null => {
   try {
@@ -117,6 +118,8 @@ export default function RugbyFeed({ leagueId, initialTab }: RugbyFeedProps) {
     }
     fetchRugby();
   }, [leagueId]);
+
+  if (loading) return <GameFeedSkeleton />;
 
   return <RugbyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

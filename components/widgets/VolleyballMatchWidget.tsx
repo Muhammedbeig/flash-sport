@@ -8,6 +8,7 @@ import VolleyballSummary from "@/components/match/tabs/VolleyballSummary";
 import VolleyballH2H from "@/components/match/tabs/VolleyballH2H";
 import VolleyballStandings from "@/components/match/tabs/VolleyballStandings";
 import VolleyballOdds from "@/components/match/tabs/VolleyballOdds";
+import { VolleyballScoreboardSkeleton } from "@/components/match/skeletons/VolleyballSkeletons";
 
 type VolleyballMatch = {
   id: number;
@@ -105,7 +106,7 @@ export default function VolleyballMatchWidget({ matchId, initialTab }: { matchId
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <VolleyballScoreboardSkeleton />;
 
   // USER FRIENDLY ERROR
   if (error) {

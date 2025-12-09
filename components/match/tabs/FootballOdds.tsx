@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { FootballOddsSkeleton } from "@/components/match/skeletons/FootballSkeletons";
 
 type OddValue = { value: string; odd: string };
 type Bet = { id: number; name: string; values: OddValue[] };
@@ -33,7 +34,7 @@ export default function FootballOdds({ matchId }: { matchId: string }) {
     fetchOdds();
   }, [matchId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-40 rounded-xl"/></div>;
+  if (loading) return <FootballOddsSkeleton />;
   if (!odds.length) return <div className="p-8 text-center text-secondary text-sm">No odds available.</div>;
 
   const activeBookmaker = odds[0];

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { HockeyStandingsSkeleton } from "@/components/match/skeletons/HockeySkeletons";
 
 // --- LOOSE TYPES TO PREVENT ERRORS ---
 // We use 'any' for the nested stats because the API is inconsistent
@@ -74,7 +75,7 @@ export default function HockeyStandings({ leagueId, teamId }: { leagueId: number
       return 0;
   };
 
-  if (loading) return <div className="p-4"><Skeleton className="h-64 rounded-xl"/></div>;
+  if (loading) return <HockeyStandingsSkeleton />;
   if (!groups.length) return <div className="p-8 text-center text-secondary text-sm">No standings available.</div>;
 
   return (

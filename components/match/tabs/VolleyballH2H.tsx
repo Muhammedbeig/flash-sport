@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { VolleyballH2HSkeleton } from "@/components/match/skeletons/VolleyballSkeletons";
 
 // Types
 type NormalizedVolleyballH2H = {
@@ -78,7 +79,7 @@ export default function VolleyballH2H({ teamOneId, teamTwoId }: { teamOneId: num
     fetchH2H();
   }, [teamOneId, teamTwoId]);
 
-  if (loading) return <div className="p-4 space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl"/>)}</div>;
+  if (loading) return <VolleyballH2HSkeleton />;
   
   if (error) return <div className="p-8 text-center text-red-500 font-medium">{error}</div>;
 

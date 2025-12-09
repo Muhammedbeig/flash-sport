@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import NFLFeedUI from "@/components/feed/NFLFeedUI";
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 // --- NFL NORMALIZER ---
 const normalizeNFLGame = (rawItem: any): NormalizedGame | null => {
@@ -138,6 +139,8 @@ export default function NFLFeed({ leagueId, initialTab }: NFLFeedProps) {
 
     fetchNFL();
   }, [leagueId]);
+
+  if (loading) return <GameFeedSkeleton />;
 
   return (
     <NFLFeedUI 

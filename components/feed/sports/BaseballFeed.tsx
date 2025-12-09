@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import BaseballFeedUI from "./BaseballFeedUI";
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
   try {
@@ -99,6 +100,8 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
     }
     fetchBaseball();
   }, [leagueId]);
+
+  if (loading) return <GameFeedSkeleton />;
 
   return <BaseballFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

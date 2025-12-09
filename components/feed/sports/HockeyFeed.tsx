@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import HockeyFeedUI from "./HockeyFeedUI"; // Imports the UI component
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 const normalizeHockeyGame = (rawItem: any): NormalizedGame | null => {
   try {
@@ -108,6 +109,7 @@ export default function HockeyFeed({ leagueId, initialTab }: HockeyFeedProps) {
     fetchHockey();
   }, [leagueId]);
 
+  if (loading) return <GameFeedSkeleton />;
   // Renders the UI component with the required props
   return <HockeyFeedUI games={games} loading={loading} leagueId={leagueId} initialTab={initialTab} />;
 }

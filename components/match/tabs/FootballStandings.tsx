@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { FootballStandingsSkeleton } from "@/components/match/skeletons/FootballSkeletons";
 
 type FootballRow = {
   rank: number;
@@ -53,7 +54,7 @@ export default function FootballStandings({ leagueId, season, teamId }: { league
     fetchStandings();
   }, [leagueId, season]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-64 rounded-xl"/></div>;
+  if (loading) return <FootballStandingsSkeleton />;
   if (!groups.length) return <div className="p-8 text-center text-secondary text-sm">No standings available.</div>;
 
   return (

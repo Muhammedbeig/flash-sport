@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { RugbyStandingsSkeleton } from "@/components/match/skeletons/RugbySkeletons";
 
 // --- TYPES ---
 type RugbyRow = {
@@ -59,7 +60,7 @@ export default function RugbyStandings({ leagueId, teamId }: { leagueId: number,
     fetchStandings();
   }, [leagueId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-64 rounded-xl"/></div>;
+  if (loading) return <RugbyStandingsSkeleton />;
   if (!groups.length) return <div className="p-8 text-center text-secondary text-sm">No standings available for {activeSeason}.</div>;
 
   return (

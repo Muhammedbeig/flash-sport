@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 // FIX: Relative imports to prevent module resolution errors
 import BasketballFeedUI from "./BasketballFeedUI";
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 // --- BASKETBALL NORMALIZER ---
 const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
@@ -134,6 +135,8 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
     fetchBasketball();
   }, [leagueId]);
 
+  if (loading) return <GameFeedSkeleton />;
+  
   return (
     <BasketballFeedUI 
       games={games} 

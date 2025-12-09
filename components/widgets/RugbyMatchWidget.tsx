@@ -8,6 +8,7 @@ import RugbySummary from "@/components/match/tabs/RugbySummary";
 import RugbyH2H from "@/components/match/tabs/RugbyH2H";
 import RugbyStandings from "@/components/match/tabs/RugbyStandings";
 import RugbyOdds from "@/components/match/tabs/RugbyOdds";
+import { RugbyScoreboardSkeleton } from "@/components/match/skeletons/RugbySkeletons";
 
 type RugbyMatch = {
   id: number;
@@ -82,7 +83,7 @@ export default function RugbyMatchWidget({ matchId, initialTab }: { matchId: str
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <RugbyScoreboardSkeleton />;
   if (!match) return <div className="p-8 text-center text-secondary">Match not found.</div>;
 
   const { teams, scores, league, status } = match;

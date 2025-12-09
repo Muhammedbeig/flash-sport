@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import FeedUI from "../FeedUI";
 import { normalizeGame, NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 // FIX: Added initialTab to props
 export default function FootballFeed({ leagueId, initialTab }: { leagueId?: string, initialTab?: string }) {
@@ -50,5 +51,6 @@ export default function FootballFeed({ leagueId, initialTab }: { leagueId?: stri
   }, [leagueId]);
 
   // Pass initialTab down to the UI
+  if (loading) return <GameFeedSkeleton />;
   return <FeedUI games={games} loading={loading} sport="football" leagueId={leagueId} initialTab={initialTab} />;
 }

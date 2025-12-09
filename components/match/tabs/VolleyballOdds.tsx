@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { VolleyballOddsSkeleton } from "@/components/match/skeletons/VolleyballSkeletons";
 
 type OddValue = { value: string; odd: string };
 type Bet = { id: number; name: string; values: OddValue[] };
@@ -49,7 +50,7 @@ export default function VolleyballOdds({ matchId }: { matchId: string }) {
     fetchOdds();
   }, [matchId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-40 rounded-xl"/></div>;
+  if (loading) return <VolleyballOddsSkeleton />;
   
   if (error) {
     return (

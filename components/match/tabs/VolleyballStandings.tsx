@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { VolleyballStandingsSkeleton } from "@/components/match/skeletons/VolleyballSkeletons";
 
 type VolleyballRow = {
   position: number;
@@ -65,7 +66,7 @@ export default function VolleyballStandings({ leagueId, teamId }: { leagueId: nu
     fetchStandings();
   }, [leagueId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-64 rounded-xl"/></div>;
+  if (loading) return <VolleyballStandingsSkeleton />;
   
   if (error) return <div className="p-8 text-center text-red-500 font-medium">{error}</div>;
 

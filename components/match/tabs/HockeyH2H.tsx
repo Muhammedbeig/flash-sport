@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { HockeyH2HSkeleton } from "@/components/match/skeletons/HockeySkeletons";
 
 // --- TYPES ---
 // Allows flexibility for API returning numbers OR objects OR null
@@ -112,13 +113,7 @@ export default function HockeyH2H({ teamOneId, teamTwoId }: { teamOneId: number;
     fetchH2H();
   }, [teamOneId, teamTwoId]);
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-3">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
-      </div>
-    );
-  }
+  if (loading) return <HockeyH2HSkeleton />;
 
   if (data.length === 0) {
     return <div className="p-8 text-center text-secondary text-sm">No head-to-head data available.</div>;

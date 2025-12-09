@@ -9,6 +9,7 @@ import NFLSummary from "@/components/match/tabs/NFLSummary";
 import NFLH2H from "@/components/match/tabs/NFLH2H"; 
 import NFLStandings from "@/components/match/tabs/NFLStandings";
 import NFLOdds from "@/components/match/tabs/NFLOdds";
+import { NFLScoreboardSkeleton } from "@/components/match/skeletons/NFLSkeletons";
 
 type NFLMatch = {
   id: number;
@@ -102,7 +103,7 @@ export default function NFLMatchWidget({ matchId, initialTab }: { matchId: strin
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <NFLScoreboardSkeleton />;
   if (!match) return <div className="p-8 text-center text-secondary">Match not found.</div>;
 
   const { teams, scores, league, status } = match;

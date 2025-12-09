@@ -9,6 +9,7 @@ import BaseballSummary from "@/components/match/tabs/BaseballSummary";
 import BaseballH2H from "@/components/match/tabs/BaseballH2H";
 import BaseballStandings from "@/components/match/tabs/BaseballStandings";
 import BaseballOdds from "@/components/match/tabs/BaseballOdds";
+import { BaseballScoreboardSkeleton } from "@/components/match/skeletons/BaseballSkeletons";
 
 type BaseballMatch = {
   id: number;
@@ -81,7 +82,7 @@ export default function BaseballMatchWidget({ matchId, initialTab }: { matchId: 
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <BaseballScoreboardSkeleton />;
   if (!match) return <div className="p-8 text-center text-secondary">Match not found.</div>;
 
   const { teams, scores, league, status } = match;

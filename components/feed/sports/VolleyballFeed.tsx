@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import VolleyballFeedUI from "./VolleyballFeedUI";
 import { NormalizedGame } from "../utils";
+import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
 const normalizeVolleyballGame = (rawItem: any): NormalizedGame | null => {
   try {
@@ -117,6 +118,8 @@ export default function VolleyballFeed({ leagueId, initialTab }: VolleyballFeedP
 
     fetchVolleyball();
   }, [leagueId]);
+
+  if (loading) return <GameFeedSkeleton />;
 
   return <VolleyballFeedUI games={games} loading={loading} error={error} leagueId={leagueId} initialTab={initialTab} />;
 }

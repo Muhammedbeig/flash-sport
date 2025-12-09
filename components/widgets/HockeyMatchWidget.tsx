@@ -8,6 +8,7 @@ import HockeySummary from "@/components/match/tabs/HockeySummary";
 import HockeyH2H from "@/components/match/tabs/HockeyH2H";
 import HockeyStandings from "@/components/match/tabs/HockeyStandings";
 import HockeyOdds from "@/components/match/tabs/HockeyOdds";
+import { HockeyScoreboardSkeleton } from "@/components/match/skeletons/HockeySkeletons";
 
 type HockeyMatch = {
   id: number;
@@ -91,7 +92,7 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <HockeyScoreboardSkeleton />;
   if (!match) return <div className="p-8 text-center text-secondary">Match not found.</div>;
 
   const { teams, scores, league, status } = match;

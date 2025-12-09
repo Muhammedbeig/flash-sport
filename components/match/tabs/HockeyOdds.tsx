@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { HockeyOddsSkeleton } from "@/components/match/skeletons/HockeySkeletons";
 
 type SimpleBookmaker = {
   id: number;
@@ -43,7 +44,7 @@ export default function HockeyOdds({ matchId }: { matchId: string }) {
     fetchOdds();
   }, [matchId]);
 
-  if (loading) return <div className="p-4"><Skeleton className="h-40 rounded-xl"/></div>;
+  if (loading) return <HockeyOddsSkeleton />;
   if (!bookmakers.length) return <div className="p-8 text-center text-secondary text-sm">No odds available.</div>;
 
   const activeBookmaker = bookmakers[0];

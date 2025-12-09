@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { NFLStandingsSkeleton } from "@/components/match/skeletons/NFLSkeletons";
 
 // --- TYPES (Specific to NFL API structure) ---
 type NFLStandingRow = {
@@ -105,18 +106,7 @@ export default function NFLStandings({ leagueId, season }: { leagueId: number, s
     return () => { isMounted = false; };
   }, [leagueId, season]);
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-6">
-        {[1, 2].map((i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-48 w-full rounded-xl" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <NFLStandingsSkeleton />
 
   if (error || !groups.length) {
     return (

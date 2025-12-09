@@ -8,7 +8,7 @@ import BasketballSummary from "@/components/match/tabs/BasketballSummary";
 import BasketballH2H from "@/components/match/tabs/BasketballH2H";
 import BasketballOdds from "@/components/match/tabs/BasketballOdds";
 import BasketballStandings from "@/components/match/tabs/BasketballStandings"; // Importing the new component
-
+import { BasketballScoreboardSkeleton } from "@/components/match/skeletons/BasketballSkeletons";
 // Type definitions
 type BasketballScore = {
   quarter_1: number | null;
@@ -103,7 +103,7 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
     fetchMatch();
   }, [matchId]);
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-xl" /></div>;
+  if (loading) return <BasketballScoreboardSkeleton />;
   if (!match) return <div className="p-8 text-center text-secondary">Match not found.</div>;
 
   const { teams, scores, league, status } = match;

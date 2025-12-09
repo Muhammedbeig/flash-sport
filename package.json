@@ -12,7 +12,7 @@
   
   "deploy:flash": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
   
-  "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git main"
+  "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git gh-pages"
 },
   "dependencies": {
     "clsx": "^2.1.1",
