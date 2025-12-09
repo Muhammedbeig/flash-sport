@@ -3,6 +3,7 @@
 import FootballFeed from "./sports/FootballFeed";
 import BasketballFeed from "./sports/BasketballFeed";
 import NFLFeed from "./sports/NFLFeed";
+// NEW IMPORTS
 import BaseballFeed from "./sports/BaseballFeed";
 import HockeyFeed from "./sports/HockeyFeed";
 import RugbyFeed from "./sports/RugbyFeed";
@@ -15,6 +16,7 @@ type CustomGameFeedProps = {
 };
 
 export default function CustomGameFeed({ sport = "football", leagueId, initialTab }: CustomGameFeedProps) {
+  // Normalize sport string to handle variations (e.g. "nba" -> "basketball")
   const sportKey = sport.toLowerCase();
 
   switch (sportKey) {

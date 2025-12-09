@@ -2,7 +2,8 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import MatchWidget from "@/components/widgets/MatchWidget";
+// FIX: Import the Master Switch Widget from the correct location
+import MatchWidget from "@/components/match/MatchWidget"; 
 import { Skeleton } from "@/components/ui/Skeleton";
 
 // 1. Inner component to read URL params safely
