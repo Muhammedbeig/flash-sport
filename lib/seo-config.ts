@@ -2,7 +2,7 @@
 
 export const SEO_CONTENT = {
   global: {
-    siteName: "LiveSoccerR",
+    siteName: "Live Score",
     domain: "LiveSoccerR.com",
   },
   home: {

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Mail, ArrowRight, Info } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Contact Us | LiveSocer",
-  description: "Submit your queries or feedback to the LiveSocer team via email. We review every message and will get back to you directly.",
+  title: "Contact Us | LiveSoccer",
+  description: "Submit your queries or feedback to the LiveSoccer team via email. We review every message and will get back to you directly.",
   robots: {
     index: true,
     follow: true,
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
-  const CONTACT_EMAIL = "service@livesocer.com";
+  // Corrected Email based on domain
+  const CONTACT_EMAIL = "service@livesoccer.com";
 
   return (
     <div className="w-full min-h-screen p-4 md:p-8 flex items-center justify-center">
@@ -40,8 +41,8 @@ export default function ContactPage() {
           {/* Decorative Background Blur */}
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-cyan-500" />
           
-          {/* Icon Bubble */}
-          <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
+          {/* Icon Bubble (Fixed: Uses theme secondary color instead of hardcoded slate) */}
+          <div className="w-20 h-20 bg-secondary/10 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
             <Mail size={32} className="text-blue-600 dark:text-blue-400" />
           </div>
 
@@ -63,10 +64,8 @@ export default function ContactPage() {
             <ArrowRight size={18} />
           </a>
 
-          {/* Note - FIXED: Matches Sidebar Hover Styles exactly */}
-          {/* Light: bg-slate-100 text-primary */}
-          {/* Dark: bg-slate-800/50 text-slate-200 */}
-          <div className="mt-6 flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-primary dark:text-slate-200 text-xs font-bold">
+          {/* Note (Fixed: Uses theme-adaptive colors) */}
+          <div className="mt-6 flex items-center gap-2 px-5 py-3 rounded-xl bg-secondary/10 text-secondary text-xs font-bold">
             <Info size={16} className="shrink-0" />
             <span>We will use only email for contacting.</span>
           </div>
