@@ -110,7 +110,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               F
             </div>
             <h1 className={`text-2xl font-bold tracking-tight ${logoTextClass}`}>
-              FlashSport
+              Live Score
             </h1>
           </Link>
           <div
