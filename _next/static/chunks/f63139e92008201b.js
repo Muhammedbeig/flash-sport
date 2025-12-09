@@ -1,0 +1,8 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,71689,e=>{"use strict";let t=(0,e.i(75254).default)("arrow-left",[["path",{d:"m12 19-7-7 7-7",key:"1l729n"}],["path",{d:"M19 12H5",key:"x3x0zl"}]]);e.s(["ArrowLeft",()=>t],71689)},59224,e=>{"use strict";var t=e.i(43476),s=e.i(71645),a=e.i(18566),r=e.i(71689),i=e.i(22016),l=e.i(5622);function d(){let e=(0,a.useSearchParams)().get("sport")||"football",{theme:d}=(0,l.useTheme)(),[o,c]=(0,s.useState)(!1);return(0,s.useEffect)(()=>{c(!0)},[]),(0,t.jsxs)("div",{className:"max-w-4xl mx-auto p-4 md:p-8",children:[(0,t.jsxs)("div",{className:"mb-6",children:[(0,t.jsxs)(i.default,{href:"/",className:"inline-flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors mb-4",children:[(0,t.jsx)(r.ArrowLeft,{size:16}),"Back to Matches"]}),(0,t.jsx)("h1",{className:"text-2xl font-bold text-primary",children:"All Countries & Leagues"})]}),(0,t.jsx)("div",{className:"theme-bg theme-border border rounded-xl shadow-sm p-4 min-h-[600px]",children:o?(0,t.jsx)("div",{dangerouslySetInnerHTML:{__html:`
+                <api-sports-widget 
+                  data-type="leagues" 
+                  data-sport="${e}" 
+                  data-theme="${"dark"===d?"dark":"white"}"
+                  data-show-errors="false"
+                ></api-sports-widget>
+              `}}):(0,t.jsx)("div",{className:"text-center p-10 text-secondary",children:"Loading..."})})]})}e.s(["default",()=>d])}]);

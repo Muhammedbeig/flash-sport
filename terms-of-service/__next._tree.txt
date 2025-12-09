@@ -1,0 +1,2 @@
+:HL["/flash-sport/_next/static/chunks/b337f24cd393f0e3.css","style"]
+0:{"buildId":"P7vsGbR2LOPpRbmucU0kb","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"terms-of-service","paramType":null,"paramKey":"terms-of-service","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":false}},"isRootLayout":true},"staleTime":300}

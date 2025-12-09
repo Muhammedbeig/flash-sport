@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:"$Sreact.suspense"
+3:I[24876,["/flash-sport/_next/static/chunks/c510ff7440c2196d.js","/flash-sport/_next/static/chunks/2aeac92579e59d89.js","/flash-sport/_next/static/chunks/2773f9129f60cd55.js","/flash-sport/_next/static/chunks/ab0a70977c8d744a.js"],"Skeleton"]
+4:I[62909,["/flash-sport/_next/static/chunks/c510ff7440c2196d.js","/flash-sport/_next/static/chunks/2aeac92579e59d89.js","/flash-sport/_next/static/chunks/2773f9129f60cd55.js","/flash-sport/_next/static/chunks/ab0a70977c8d744a.js"],"default"]
+5:I[97367,["/flash-sport/_next/static/chunks/ff1a16fafef87110.js","/flash-sport/_next/static/chunks/247eb132b7f7b574.js"],"OutletBoundary"]
+0:{"buildId":"P7vsGbR2LOPpRbmucU0kb","rsc":["$","$1","c",{"children":[["$","div",null,{"className":"w-full min-h-screen theme-bg space-y-4","children":[["$","h1",null,{"className":"text-xl font-bold text-primary capitalize px-4 pt-4 border-b theme-border pb-2","children":["mls"," - ","results"]}],["$","$2",null,{"fallback":["$","$L3",null,{"className":"w-full h-[600px] rounded-xl"}],"children":["$","$L4",null,{"leagueId":"253","sport":"football","leagueSlug":"mls","initialTab":"results"}]}]]}],[["$","script","script-0",{"src":"/flash-sport/_next/static/chunks/2773f9129f60cd55.js","async":true}],["$","script","script-1",{"src":"/flash-sport/_next/static/chunks/ab0a70977c8d744a.js","async":true}]],["$","$L5",null,{"children":["$","$2",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"loading":null,"isPartial":false}
+6:null
