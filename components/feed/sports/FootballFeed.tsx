@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FeedUI from "../FeedUI";
+import FeedUI from "@/components/feed/FeedUI";
 import { normalizeGame, NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NFLFeedUI from "@/components/feed/NFLFeedUI";
+import NFLFeedUI from "@/components/feed/sports/NFLFeedUI";
 import { NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 

@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import BasketballSummary from "@/components/match/tabs/BasketballSummary";
 import BasketballH2H from "@/components/match/tabs/BasketballH2H";
 import BasketballOdds from "@/components/match/tabs/BasketballOdds";
-import BasketballStandings from "@/components/match/tabs/BasketballStandings"; // Importing the new component
+import BasketballStandings from "@/components/match/tabs/BasketballStandings";
 import { BasketballScoreboardSkeleton } from "@/components/match/skeletons/BasketballSkeletons";
-// Type definitions
+
 type BasketballScore = {
   quarter_1: number | null;
   quarter_2: number | null;
@@ -34,17 +33,16 @@ type BasketballMatch = {
   };
 };
 
-export default function BasketballMatchWidget({ matchId, initialTab }: { matchId: string, initialTab?: string }) {
+export default function BasketballMatchWidget({ matchId, initialTab }: { matchId: string; initialTab?: string }) {
   const { theme } = useTheme();
   const [match, setMatch] = useState<BasketballMatch | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // 1. Updated Allowed Tabs to include "standings"
+
   const validTabs = ["summary", "h2h", "standings", "odds"];
-  
-  // 2. Safe Active Tab Logic
-  const activeTab = (initialTab && validTabs.includes(initialTab)) ? initialTab : "summary";
+  const activeTab = initialTab && validTabs.includes(initialTab) ? initialTab : "summary";
+
   const isDark = theme === "dark";
+  const encodedId = encodeURIComponent(String(matchId));
 
   useEffect(() => {
     async function fetchMatch() {
@@ -82,16 +80,16 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
               name: data.league.name,
               country: data.country?.name || data.league.country,
               logo: data.league.logo,
-              season: data.league.season, 
+              season: data.league.season,
             },
             teams: {
               home: { id: data.teams.home.id, name: data.teams.home.name, logo: data.teams.home.logo, winner: data.teams.home.winner },
               away: { id: data.teams.away.id, name: data.teams.away.name, logo: data.teams.away.logo, winner: data.teams.away.winner },
             },
             scores: {
-                home: data.scores.home,
-                away: data.scores.away
-            }, 
+              home: data.scores.home,
+              away: data.scores.away,
+            },
           });
         }
       } catch (err) {
@@ -100,6 +98,7 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         setLoading(false);
       }
     }
+
     fetchMatch();
   }, [matchId]);
 
@@ -109,7 +108,6 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
   const { teams, scores, league, status } = match;
   const isLive = ["Q1", "Q2", "Q3", "Q4", "OT", "BT", "HT"].includes(status.short);
 
-  // Styling Constants
   const tabBase = "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
   const activeClass = "border-blue-500 text-blue-600 dark:text-blue-400";
   const inactiveClass = "border-transparent text-secondary hover:text-primary";
@@ -126,16 +124,13 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         </div>
 
         <div className="flex items-center justify-between w-full max-w-2xl mt-8">
-          {/* Home Team */}
           <div className="flex flex-col items-center gap-3 w-1/3 text-center">
             <img src={teams.home.logo} alt={teams.home.name} className="w-20 h-20 object-contain" />
             <span className="text-lg font-bold text-primary leading-tight">{teams.home.name}</span>
           </div>
 
-          {/* Score Board */}
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="text-4xl font-black text-primary tracking-tight font-mono">
-              {/* Optional chaining ensures no crash if data is loading/missing */}
               {scores.home?.total ?? "-"} : {scores.away?.total ?? "-"}
             </div>
             <span className={`text-xs font-bold uppercase px-4 py-1.5 rounded-full border ${statusBadgeStyle}`}>
@@ -143,7 +138,6 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
             </span>
           </div>
 
-          {/* Away Team */}
           <div className="flex flex-col items-center gap-3 w-1/3 text-center">
             <img src={teams.away.logo} alt={teams.away.name} className="w-20 h-20 object-contain" />
             <span className="text-lg font-bold text-primary leading-tight">{teams.away.name}</span>
@@ -151,53 +145,33 @@ export default function BasketballMatchWidget({ matchId, initialTab }: { matchId
         </div>
       </div>
 
-      {/* TABS NAVIGATION */}
+      {/* TABS (Path-based) */}
       <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
         {validTabs.map((t) => {
-            let label = t.charAt(0).toUpperCase() + t.slice(1);
-            if (t === "h2h") label = "H2H"; // Custom Label
+          let label = t.charAt(0).toUpperCase() + t.slice(1);
+          if (t === "h2h") label = "H2H";
+          const isActive = activeTab === t;
 
-            const isActive = activeTab === t;
-            return (
-                <Link 
-                  key={t}
-                  href={`/match?id=${matchId}&sport=basketball/${t}`}
-                  replace={true}
-                  prefetch={false}
-                  className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
-                >
-                  {label}
-                </Link>
-            );
+          return (
+            <Link
+              key={t}
+              href={`/match/basketball/${encodedId}/${t}`}
+              replace={true}
+              prefetch={false}
+              className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
+            >
+              {label}
+            </Link>
+          );
         })}
       </div>
 
-      {/* CONTENT AREA */}
+      {/* CONTENT */}
       <div className="min-h-[300px] w-full p-4">
         {activeTab === "summary" && <BasketballSummary match={match} />}
-        
-        {/* Pass Team IDs correctly for H2H */}
-        {activeTab === "h2h" && (
-            <BasketballH2H 
-                teamOneId={teams.home.id} 
-                teamTwoId={teams.away.id} 
-            />
-        )}
-        
-        {/* NEW: Standings Tab */}
-        {activeTab === "standings" && (
-            <BasketballStandings 
-                leagueId={league.id} 
-                season={league.season} 
-            />
-        )}
-        
-        {/* Pass Match ID correctly for Odds */}
-        {activeTab === "odds" && (
-            <BasketballOdds 
-                matchId={String(match.id)} 
-            />
-        )}
+        {activeTab === "h2h" && <BasketballH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
+        {activeTab === "standings" && <BasketballStandings leagueId={league.id} season={league.season} />}
+        {activeTab === "odds" && <BasketballOdds matchId={String(match.id)} />}
       </div>
     </div>
   );

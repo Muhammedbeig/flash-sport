@@ -131,27 +131,19 @@ export default function HockeyMatchWidget({ matchId, initialTab }: { matchId: st
           </div>
         </div>
       </div>
-
-      <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
-        {validTabs.map(t => (
-            <Link 
-              key={t} 
-              href={`/match?id=${matchId}&sport=hockey/${t}`} 
-              replace={true} 
-              prefetch={false} 
+        <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
+          {validTabs.map((t) => (
+            <Link
+              key={t}
+              href={`/match/hockey/${matchId}/${t}`}
+              replace
+              prefetch={false}
               className={`${tabBase} ${activeTab === t ? activeClass : inactiveClass}`}
             >
               {t === "h2h" ? "H2H" : t.charAt(0).toUpperCase() + t.slice(1)}
             </Link>
-        ))}
-      </div>
-
-      <div className="min-h-[300px]">
-        {activeTab === "summary" && <HockeySummary match={match} />}
-        {activeTab === "h2h" && <HockeyH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
-        {activeTab === "standings" && <HockeyStandings leagueId={league.id} teamId={teams.home.id} />}
-        {activeTab === "odds" && <HockeyOdds matchId={String(match.id)} />}
-      </div>
+          ))}
+        </div>
     </div>
   );
 }

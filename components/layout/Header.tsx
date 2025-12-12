@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import type { CSSProperties } from "react";
@@ -29,9 +29,40 @@ type HeaderProps = {
   onMenuClick: () => void;
 };
 
+function getSportFromPathname(pathname: string | null | undefined): string | null {
+  if (!pathname) return null;
+
+  // New canonical routes:
+  // /sports/:sport/:tab
+  // /sports/:sport/:tab/league/:leagueId
+  const sportsMatch = pathname.match(/^\/sports\/([^/]+)(\/|$)/);
+  if (sportsMatch?.[1]) return sportsMatch[1].toLowerCase();
+
+  // Match routes:
+  // /match/:sport/:id
+  const matchMatch = pathname.match(/^\/match\/([^/]+)(\/|$)/);
+  if (matchMatch?.[1]) return matchMatch[1].toLowerCase();
+
+  // Legacy football routes you already had (path-based)
+  if (pathname.startsWith("/football")) return "football";
+
+  return null;
+}
+
 export default function Header({ onMenuClick }: HeaderProps) {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentSport = searchParams.get("sport") || "football";
+
+  // ✅ PATH-based sport detection (primary)
+  const sportFromPath = getSportFromPathname(pathname);
+
+  // ✅ Legacy query fallback only (secondary)
+  const sportFromQuery = (searchParams.get("sport") || "").split("/")[0]?.toLowerCase();
+
+  const currentSport =
+    sportFromPath ||
+    (pathname === "/" && sportFromQuery ? sportFromQuery : null) ||
+    "football";
 
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -68,8 +99,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
         : "text-slate-200 border-b-[3px] border-transparent hover:bg-slate-800/70";
     }
     return isActive
-      ? "bg-[#f1f5f9] text-[#0f80da]" 
-      : "text-white/90 hover:bg-white/10"; 
+      ? "bg-[#f1f5f9] text-[#0f80da]"
+      : "text-white/90 hover:bg-white/10";
   };
 
   const getMobileNavItemClass = (isActive: boolean) => {
@@ -87,13 +118,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
     if (isActive) {
       return { filter: "none" };
     }
-    const strokeColor = !isDark && isMobile ? "#ffffff" : (isDark ? "#e2e8f0" : "#ffffff");
+    const strokeColor = !isDark && isMobile ? "#ffffff" : isDark ? "#e2e8f0" : "#ffffff";
     return {
       color: "transparent",
       WebkitTextStroke: `1px ${strokeColor}`,
       textStroke: `1px ${strokeColor}`,
     } as CSSProperties;
   };
+
+  const sportHref = (sportId: string) => `/sports/${sportId}/all`;
 
   return (
     <header
@@ -114,9 +147,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </h1>
           </Link>
           <div
-            className={`h-8 w-px mx-6 ${
-              isDark ? "bg-slate-800" : "bg-white/20"
-            }`}
+            className={`h-8 w-px mx-6 ${isDark ? "bg-slate-800" : "bg-white/20"}`}
           />
         </div>
 
@@ -127,7 +158,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             return (
               <Link
                 key={sport.id}
-                href={`/?sport=${sport.id}`}
+                href={sportHref(sport.id)}
                 className={`
                   relative flex items-center justify-center gap-2
                   h-full px-5 text-sm font-bold uppercase tracking-wide
@@ -135,10 +166,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   ${getDesktopNavItemClass(isActive)}
                 `}
               >
-                <span
-                  className="text-lg leading-none"
-                  style={getIconStyle(isActive)}
-                >
+                <span className="text-lg leading-none" style={getIconStyle(isActive)}>
                   {sport.icon}
                 </span>
                 <span>{sport.name}</span>
@@ -164,9 +192,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <span>More</span>
                 <ChevronDown
                   size={16}
-                  className={`transition-transform ${
-                    desktopMoreOpen ? "rotate-180" : ""
-                  }`}
+                  className={`transition-transform ${desktopMoreOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {desktopMoreOpen && (
@@ -179,13 +205,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
                           ? "text-blue-400 bg-slate-900"
                           : "text-secondary hover:text-slate-200 hover:bg-slate-800"
                         : isItemActive
-                        ? "text-[#0f80da] bg-blue-50"
-                        : "text-secondary hover:text-primary hover:bg-slate-50";
+                          ? "text-[#0f80da] bg-blue-50"
+                          : "text-secondary hover:text-primary hover:bg-slate-50";
 
                       return (
                         <Link
                           key={sport.id}
-                          href={`/?sport=${sport.id}`}
+                          href={sportHref(sport.id)}
                           className={`flex items-center gap-3 px-5 py-3 text-sm font-medium transition-colors ${itemClass}`}
                         >
                           <span
@@ -234,9 +260,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             >
               F
             </div>
-            <span
-              className={`text-lg font-bold tracking-tight ${logoTextClass}`}
-            >
+            <span className={`text-lg font-bold tracking-tight ${logoTextClass}`}>
               FlashSport
             </span>
           </Link>
@@ -278,7 +302,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               return (
                 <Link
                   key={sport.id}
-                  href={`/?sport=${sport.id}`}
+                  href={sportHref(sport.id)}
                   onClick={() => setMobileMoreOpen(false)}
                   className={`
                     flex-1 flex items-center justify-center gap-2
@@ -319,7 +343,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </button>
 
               {mobileMoreOpen && (
-                <div 
+                <div
                   className="absolute right-0 top-full mt-2 w-48 theme-bg theme-border border rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
                 >
                   {mobileHidden.map((sport) => {
@@ -335,7 +359,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     return (
                       <Link
                         key={sport.id}
-                        href={`/?sport=${sport.id}`}
+                        href={sportHref(sport.id)}
                         onClick={() => setMobileMoreOpen(false)}
                         className={`
                           flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wide border-b theme-border last:border-0 transition-colors

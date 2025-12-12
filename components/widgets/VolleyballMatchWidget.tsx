@@ -156,23 +156,23 @@ export default function VolleyballMatchWidget({ matchId, initialTab }: { matchId
         </div>
       </div>
 
-      {/* TABS */}
       <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto">
         {validTabs.map((t) => {
-            const label = t === "h2h" ? "H2H" : t.charAt(0).toUpperCase() + t.slice(1);
-            return (
-                <Link 
-                  key={t}
-                  href={`/match?id=${matchId}&sport=volleyball/${t}`}
-                  replace={true}
-                  prefetch={false}
-                  className={`${tabBase} ${activeTab === t ? activeClass : inactiveClass}`}
-                >
-                  {label}
-                </Link>
-            );
+          const label = t === "h2h" ? "H2H" : t.charAt(0).toUpperCase() + t.slice(1);
+          return (
+            <Link
+              key={t}
+              href={`/match/volleyball/${matchId}/${t}`}
+              replace
+              prefetch={false}
+              className={`${tabBase} ${activeTab === t ? activeClass : inactiveClass}`}
+            >
+              {label}
+            </Link>
+          );
         })}
       </div>
+
 
       {/* CONTENT */}
       <div className="min-h-[300px]">

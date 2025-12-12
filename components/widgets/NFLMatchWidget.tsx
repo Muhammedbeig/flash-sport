@@ -143,37 +143,22 @@ export default function NFLMatchWidget({ matchId, initialTab }: { matchId: strin
           </div>
         </div>
       </div>
-
-      {/* TABS */}
-      <div className="flex items-center gap-1 px-4 border-b theme-border">
-        {validTabs.map((t) => {
-             const label = t.charAt(0).toUpperCase() + t.slice(1);
-             const finalLabel = label === "H2h" ? "H2H" : label;
-             const isActive = activeTab === t;
-             return (
-               <Link 
-                 key={t}
-                 href={`/match?id=${matchId}&sport=nfl/${t}`}
-                 replace={true}
-                 prefetch={false}
-                 className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
-               >
-                 {finalLabel}
-               </Link>
-             );
-        })}
-      </div>
-
-      {/* CONTENT */}
-      <div className="min-h-[300px]">
-        {activeTab === "summary" && <NFLSummary match={match} />}
-        
-        {/* FIX: Use NFLH2H instead of MatchH2H */}
-        {activeTab === "h2h" && <NFLH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} />}
-        
-        {activeTab === "standings" && <NFLStandings leagueId={league.id} season={league.season} />}
-        {activeTab === "odds" && <NFLOdds matchId={String(match.id)} />}
-      </div>
+        <div className="flex items-center gap-1 px-4 border-b theme-border">
+          {validTabs.map((t) => {
+            const label = t === "h2h" ? "H2H" : t.charAt(0).toUpperCase() + t.slice(1);
+            return (
+              <Link
+                key={t}
+                href={`/match/nfl/${matchId}/${t}`}
+                replace
+                prefetch={false}
+                className={`${tabBase} ${activeTab === t ? activeClass : inactiveClass}`}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
     </div>
   );
 }

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link"; // Import Link
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import MatchSummary from "@/components/match/tabs/MatchSummary";
 import MatchStats from "@/components/match/tabs/MatchStats";
 import MatchLineups from "@/components/match/tabs/MatchLineups";
 import MatchH2H from "@/components/match/tabs/MatchH2H";
-import BasketballMatchWidget from "./BasketballMatchWidget"; 
+import BasketballMatchWidget from "./BasketballMatchWidget";
 import NFLMatchWidget from "./NFLMatchWidget";
 import BaseballMatchWidget from "./BaseballMatchWidget";
 import HockeyMatchWidget from "./HockeyMatchWidget";
@@ -18,7 +18,7 @@ import VolleyballMatchWidget from "./VolleyballMatchWidget";
 type MatchWidgetProps = {
   matchId: string | number;
   sport: string;
-  initialTab?: string; // Added prop
+  initialTab?: string;
 };
 
 type TabId = "summary" | "stats" | "lineups" | "h2h";
@@ -28,33 +28,36 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
   const isDark = theme === "dark";
   const widgetTheme = isDark ? "flash-dark" : "flash-light";
 
-  // 1. BASKETBALL HANDLER
-  if (sport === "basketball") {
-    // Pass initialTab to the basketball widget
-    return <BasketballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  const sportKey = (sport || "football").toLowerCase().trim();
+  const matchIdStr = String(matchId);
+
+  // 1. SPORT-SPECIFIC HANDLERS
+  if (sportKey === "basketball") {
+    return <BasketballMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
 
-  if (sport === "nfl") {
-   return <NFLMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  if (sportKey === "nfl") {
+    return <NFLMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
 
-  if (sport === "baseball") {
-    return <BaseballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  if (sportKey === "baseball") {
+    return <BaseballMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
 
-  if (sport === "hockey") {
-  return <HockeyMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  if (sportKey === "hockey") {
+    return <HockeyMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
 
-  if (sport === "rugby") {
-    return <RugbyMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  if (sportKey === "rugby") {
+    return <RugbyMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
 
-  if (sport === "volleyball") {
-     return <VolleyballMatchWidget matchId={String(matchId)} initialTab={initialTab} />;
+  if (sportKey === "volleyball") {
+    return <VolleyballMatchWidget matchId={matchIdStr} initialTab={initialTab} />;
   }
+
   // 2. FALLBACK FOR OTHER SPORTS
-  if (sport !== "football") {
+  if (sportKey !== "football") {
     return (
       <div className="theme-bg rounded-xl border theme-border overflow-hidden min-h-[500px] p-4">
         <div
@@ -62,8 +65,8 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
             __html: `
               <api-sports-widget
                 data-type="game"
-                data-game-id="${matchId}"
-                data-sport="${sport}"
+                data-game-id="${matchIdStr}"
+                data-sport="${sportKey}"
                 data-theme="${widgetTheme}"
                 data-show-toolbar="true"
                 data-refresh="60"
@@ -78,15 +81,13 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
   // 3. FOOTBALL LOGIC
   const [match, setMatch] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Initialize state from URL if present, otherwise default to summary
-  const validTabs = ["summary", "stats", "lineups", "h2h"];
-  const defaultTab = validTabs.includes(initialTab || "") ? (initialTab as TabId) : "summary";
+
+  const validTabs: TabId[] = ["summary", "stats", "lineups", "h2h"];
+  const defaultTab = validTabs.includes((initialTab || "") as TabId) ? (initialTab as TabId) : "summary";
   const [tab, setTab] = useState<TabId>(defaultTab);
 
-  // Sync state if prop changes (e.g. user clicks Link)
   useEffect(() => {
-    if (initialTab && validTabs.includes(initialTab)) {
+    if (initialTab && validTabs.includes(initialTab as TabId)) {
       setTab(initialTab as TabId);
     }
   }, [initialTab]);
@@ -103,9 +104,9 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
         let headers: Record<string, string> = {};
 
         if (cdnFootball) {
-          url = `${cdnFootball}/fixtures?id=${matchId}`;
+          url = `${cdnFootball}/fixtures?id=${matchIdStr}`;
         } else {
-          url = `https://${host}/fixtures?id=${matchId}`;
+          url = `https://${host}/fixtures?id=${matchIdStr}`;
           headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
         }
 
@@ -134,8 +135,8 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
       }
     }
 
-    if (matchId) loadFootball();
-  }, [matchId]);
+    if (matchIdStr) loadFootball();
+  }, [matchIdStr]);
 
   if (loading) {
     return (
@@ -159,7 +160,7 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
 
   const { teams, goals, league, status } = match;
   const isLive = ["1H", "HT", "2H", "ET", "P", "BT"].includes(status.short);
-  
+
   const tabBase = "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
   const activeClass = "border-blue-500 text-blue-600 dark:text-blue-400";
   const inactiveClass = "border-transparent text-secondary hover:text-primary";
@@ -168,19 +169,25 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
     ? "bg-slate-800 text-slate-300 border-slate-700"
     : "bg-white text-slate-700 border-slate-200 shadow-sm";
 
-  const statusBadgeStyle = isLive 
-    ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse border-red-200" 
-    : (isDark 
-        ? "bg-slate-800 text-slate-400 border-slate-700" 
-        : "bg-slate-100 text-slate-600 border-slate-200"); 
+  const statusBadgeStyle = isLive
+    ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse border-red-200"
+    : isDark
+      ? "bg-slate-800 text-slate-400 border-slate-700"
+      : "bg-slate-100 text-slate-600 border-slate-200";
+
+  const encodedId = encodeURIComponent(matchIdStr);
 
   return (
     <div className="theme-bg rounded-xl border theme-border overflow-hidden">
       {/* HEADER */}
       <div className="p-6 border-b theme-border flex flex-col items-center gap-6 relative overflow-hidden">
-        <div className={`absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${leagueBadgeStyle}`}>
+        <div
+          className={`absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${leagueBadgeStyle}`}
+        >
           {league.logo && <img src={league.logo} className="w-4 h-4 object-contain" />}
-          <span>{league.country}: {league.name}</span>
+          <span>
+            {league.country}: {league.name}
+          </span>
         </div>
 
         <div className="flex items-center justify-between w-full max-w-2xl mt-8">
@@ -205,7 +212,7 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
         </div>
       </div>
 
-      {/* TABS (Using Links) */}
+      {/* TABS (Path-based) */}
       <div className="flex items-center gap-1 px-4 border-b theme-border overflow-x-auto no-scrollbar">
         {[
           { id: "summary", label: "Summary" },
@@ -213,11 +220,11 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
           { id: "lineups", label: "Lineups" },
           { id: "h2h", label: "H2H" },
         ].map((t) => {
-          const isActive = tab === t.id;
+          const isActive = tab === (t.id as TabId);
           return (
             <Link
               key={t.id}
-              href={`/match?id=${matchId}&sport=football/${t.id}`}
+              href={`/match/football/${encodedId}/${t.id}`}
               replace={true}
               prefetch={false}
               className={`${tabBase} ${isActive ? activeClass : inactiveClass}`}
@@ -232,9 +239,7 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
       <div className="min-h-[300px]">
         {tab === "summary" && <MatchSummary events={match.events} homeId={teams.home.id} awayId={teams.away.id} sport="football" />}
         {tab === "stats" && <MatchStats stats={match.statistics} />}
-        {tab === "lineups" && (
-          <MatchLineups matchId={matchId} sport="football" widgetTheme={widgetTheme} />
-        )}
+        {tab === "lineups" && <MatchLineups matchId={matchIdStr} sport="football" widgetTheme={widgetTheme} />}
         {tab === "h2h" && <MatchH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} sport="football" />}
       </div>
     </div>
