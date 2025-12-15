@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-// FIX: Relative imports to prevent module resolution errors
 import BasketballFeedUI from "./BasketballFeedUI";
 import { NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
@@ -10,6 +9,7 @@ import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton"
 function utcTodayYMD() {
   return new Date().toISOString().split("T")[0];
 }
+
 function isValidYMD(v: string | null) {
   return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
@@ -19,23 +19,17 @@ const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
   try {
     const { id, date, status, league, teams, scores, country } = rawItem;
 
-    let homeScore = null;
-    let awayScore = null;
+    let homeScore: number | null = null;
+    let awayScore: number | null = null;
 
     if (scores?.home) {
-      if (typeof scores.home === "object") {
-        homeScore = scores.home.total ?? null;
-      } else {
-        homeScore = scores.home;
-      }
+      if (typeof scores.home === "object") homeScore = scores.home.total ?? null;
+      else homeScore = scores.home;
     }
 
     if (scores?.away) {
-      if (typeof scores.away === "object") {
-        awayScore = scores.away.total ?? null;
-      } else {
-        awayScore = scores.away;
-      }
+      if (typeof scores.away === "object") awayScore = scores.away.total ?? null;
+      else awayScore = scores.away;
     }
 
     return {
@@ -44,7 +38,7 @@ const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
       status: {
         short: status.short,
         long: status.long,
-        elapsed: status.timer, // API-Basketball uses 'timer'
+        elapsed: status.timer, // basketball uses timer
       },
       league: {
         id: league.id,
@@ -92,7 +86,9 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
   const urlDate = searchParams.get("date");
   const hasUrlDate = isValidYMD(urlDate);
 
-  // Today tab always forces current date (ignores ?date)
+  // ✅ Date rules:
+  // - Today tab ALWAYS fetches today's date (and should not show date in URL)
+  // - Other tabs fetch ?date= if present, otherwise today's date
   const selectedDate = useMemo(() => {
     if (tab === "today") return today;
     if (hasUrlDate) return urlDate as string;
@@ -113,8 +109,6 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
         const params = new URLSearchParams();
         params.set("date", selectedDate);
         params.set("timezone", "UTC");
-
-        // league filter still supported (keeps existing behavior)
         if (leagueId) params.set("league", leagueId);
 
         let url = "";
@@ -132,8 +126,8 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
 
         const res = await fetch(url, { headers } as any);
         const json = await res.json();
-        const rawList = Array.isArray(json?.response) ? json.response : [];
 
+        const rawList = Array.isArray(json?.response) ? json.response : [];
         const cleanList = rawList
           .map(normalizeBasketballGame)
           .filter((g: any): g is NormalizedGame => g !== null);

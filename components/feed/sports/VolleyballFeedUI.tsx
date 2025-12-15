@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, AlertCircle } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
+import DateDropdown from "@/components/feed/DateDropdown";
 import { NormalizedGame, NormalizedLeague } from "../utils";
 
 // --- VOLLEYBALL STATUS CODES ---
@@ -61,7 +62,7 @@ const VolleyballLeagueGroup = ({
   return (
     <div className="border-b theme-border last:border-0">
       <div
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
         className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${
           isDark ? "bg-slate-900/50 hover:bg-slate-900" : "bg-gray-50 hover:bg-gray-100"
         }`}
@@ -72,7 +73,10 @@ const VolleyballLeagueGroup = ({
             {meta.country} : {meta.name}
           </span>
         </div>
-        <ChevronDown size={16} className={`text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={16}
+          className={`text-secondary transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
       </div>
 
       <div className={`divide-y theme-border ${isOpen ? "block" : "hidden"}`}>
@@ -88,7 +92,11 @@ const VolleyballLeagueGroup = ({
             ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
             : "";
 
-          const displayStatus = isLive ? game.status.short : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
+          const displayStatus = isLive
+            ? game.status.short
+            : SCHEDULED_CODES.includes(game.status.short)
+              ? time
+              : game.status.short;
 
           return (
             <Link
@@ -104,8 +112,12 @@ const VolleyballLeagueGroup = ({
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" />}
-                    <span className={`text-sm ${game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"}`}>
+                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />}
+                    <span
+                      className={`text-sm ${
+                        game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"
+                      }`}
+                    >
                       {game.teams.home.name}
                     </span>
                   </div>
@@ -114,8 +126,12 @@ const VolleyballLeagueGroup = ({
 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" />}
-                    <span className={`text-sm ${game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"}`}>
+                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />}
+                    <span
+                      className={`text-sm ${
+                        game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"
+                      }`}
+                    >
                       {game.teams.away.name}
                     </span>
                   </div>
@@ -132,23 +148,20 @@ const VolleyballLeagueGroup = ({
 
 export default function VolleyballFeedUI({ games = [], loading, error, leagueId, initialTab }: VolleyballFeedUIProps) {
   const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isDark = theme === "dark";
 
   const safeGames = Array.isArray(games) ? games : [];
   const today = useMemo(() => utcTodayYMD(), []);
-  const urlDate = searchParams.get("date");
-  const hasUrlDate = isValidYMD(urlDate);
-
   const activeTab = (initialTab || "all").toLowerCase();
 
-  // Today ignores url date
-  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
+  const rawUrlDate = searchParams.get("date");
+  const urlDate = isValidYMD(rawUrlDate) ? (rawUrlDate as string) : null;
+  const urlHasFilterDate = !!urlDate;
 
-  // Apply behavior (prevents auto filtering while navigating date picker)
-  const [pendingDate, setPendingDate] = useState(effectiveDate);
-  const showApply = pendingDate !== effectiveDate;
+  const pickerDate = activeTab === "today" ? today : urlHasFilterDate ? (urlDate as string) : today;
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
@@ -174,18 +187,11 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
-  const dateInputClass = isDark
-    ? "bg-slate-800 text-slate-300 border-slate-700"
-    : "bg-gray-100 text-slate-600 border-gray-200";
+  const basePathForTab = (tabId: string) =>
+    leagueId ? `/sports/volleyball/${tabId}/league/${leagueId}` : `/sports/volleyball/${tabId}`;
 
-  const basePathForTab = (tabId: string) => {
-    return leagueId ? `/sports/volleyball/${tabId}/league/${leagueId}` : `/sports/volleyball/${tabId}`;
-  };
-
-  // Today must NOT include ?date. Date exists only when applied with calendar.
   const getTabUrl = (tabId: string) => {
     const base = basePathForTab(tabId);
-
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
@@ -193,7 +199,7 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
     if (tabId === "today") {
       params.delete("date");
     } else {
-      if (hasUrlDate) params.set("date", urlDate as string);
+      if (urlHasFilterDate) params.set("date", urlDate as string);
       else params.delete("date");
     }
 
@@ -201,44 +207,44 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
     return qs ? `${base}?${qs}` : base;
   };
 
-  const applyDateFilter = () => {
-    if (!pendingDate) return;
+  const applyCalendarDate = (pickedYMD: string) => {
+    if (!isValidYMD(pickedYMD)) return;
 
-    // selecting today => clean URL (remove date)
-    if (pendingDate === today) {
-      router.push(basePathForTab(activeTab === "today" ? "today" : activeTab));
+    if (activeTab === "today") {
+      if (pickedYMD === today) {
+        router.push(basePathForTab("today"));
+        return;
+      }
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("sport");
+      params.delete("league");
+      params.set("date", pickedYMD);
+      router.push(`${basePathForTab("all")}?${params.toString()}`);
       return;
     }
-
-    // if on Today and applying another date => go to all + ?date
-    const nextTab = activeTab === "today" ? "all" : activeTab;
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
-    params.set("date", pendingDate);
-
-    router.push(`${basePathForTab(nextTab)}?${params.toString()}`);
+    params.set("date", pickedYMD);
+    router.push(`${basePathForTab(activeTab)}?${params.toString()}`);
   };
 
-  // date filtering (calendar actually works)
   const dateFilteredGames = useMemo(() => {
     if (activeTab === "today") return safeGames.filter((g) => gameYMD(g.date) === today);
-    if (hasUrlDate) return safeGames.filter((g) => gameYMD(g.date) === (urlDate as string));
+    if (urlHasFilterDate) return safeGames.filter((g) => gameYMD(g.date) === (urlDate as string));
     return safeGames;
-  }, [activeTab, hasUrlDate, safeGames, today, urlDate]);
+  }, [activeTab, safeGames, today, urlHasFilterDate, urlDate]);
 
-  // tab filtering
   const filteredGames = dateFilteredGames.filter((g) => {
     const s = g.status.short;
 
-    if (activeTab === "today") {
-      // Today: only live + finished (no scheduled)
-      return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
-    }
+    if (activeTab === "today") return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
     if (activeTab === "finished") return FINISHED_CODES.includes(s);
     if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
     if (activeTab === "live") return LIVE_CODES.includes(s);
+
     return true;
   });
 
@@ -253,7 +259,6 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
 
   return (
     <div className="w-full space-y-4">
-      {/* Tabs + Calendar */}
       <div className="flex items-center justify-between gap-3 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {[
@@ -277,24 +282,8 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
           ))}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <input
-            type="date"
-            value={pendingDate}
-            onChange={(e) => setPendingDate(e.target.value)}
-            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
-          />
-          {showApply && (
-            <button
-              type="button"
-              onClick={applyDateFilter}
-              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-                "__apply__"
-              )}`}
-            >
-              Apply
-            </button>
-          )}
+        <div className="shrink-0">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
         </div>
       </div>
 

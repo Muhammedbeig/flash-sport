@@ -31,7 +31,7 @@ const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
       status: {
         short: status.short,
         long: status.long,
-        elapsed: undefined, // keep as before
+        elapsed: undefined,
       },
       league: {
         id: league.id,
@@ -60,7 +60,7 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
   const urlDate = searchParams.get("date");
   const hasUrlDate = isValidYMD(urlDate);
 
-  // For Today tab always force current date. Otherwise allow calendar date.
+  // Today tab always forces current date. Otherwise allow calendar date.
   const selectedDate = useMemo(() => {
     if (activeTab === "today") return today;
     if (hasUrlDate) return urlDate as string;
@@ -86,8 +86,7 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
         if (leagueId) {
           params.set("league", leagueId);
 
-          // Keep your old behavior when no calendar date is used:
-          // league view = season 2024.
+          // league view default = season 2024 (unless calendar used or Today tab)
           if (hasUrlDate || activeTab === "today") {
             params.set("date", selectedDate);
             params.set("season", selectedDate.slice(0, 4));
@@ -117,9 +116,7 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
           .filter((g: any): g is NormalizedGame => g !== null);
 
         // Sort by Date (keep your old behavior)
-        cleanList.sort(
-          (a: NormalizedGame, b: NormalizedGame) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
+        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         setGames(cleanList);
       } catch (err) {

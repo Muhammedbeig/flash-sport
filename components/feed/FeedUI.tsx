@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
 import LeagueTabs from "@/components/widgets/LeagueTabs";
+import DateDropdown from "@/components/feed/DateDropdown";
 import { NormalizedGame, NormalizedLeague } from "./utils";
 
 const LEAGUE_WIDGET_SPORTS = [
@@ -21,30 +22,15 @@ const LEAGUE_WIDGET_SPORTS = [
   "volleyball",
 ];
 
-const finishedCodes = [
-  "FT",
-  "AET",
-  "PEN",
-  "POST",
-  "CANC",
-  "ABD",
-  "AWD",
-  "WO",
-  "FO",
-  "Ended",
-  "Final",
-];
-
+const finishedCodes = ["FT", "AET", "PEN", "POST", "CANC", "ABD", "AWD", "WO", "FO", "Ended", "Final"];
 const scheduledCodes = ["NS", "TBD", "Not Started", "Scheduled", "Pre-game"];
 
 function utcTodayYMD() {
   return new Date().toISOString().split("T")[0];
 }
-
 function isValidYMD(v: string | null) {
   return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
-
 function gameYMD(d: unknown) {
   if (typeof d === "string" && d.length >= 10) return d.slice(0, 10);
   try {
@@ -82,7 +68,7 @@ const LeagueGroup = ({
   return (
     <div className="border-b theme-border last:border-0">
       <div
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
         className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${
           isDark ? "bg-slate-900/50 hover:bg-slate-900" : "bg-gray-50 hover:bg-gray-100"
         }`}
@@ -101,8 +87,7 @@ const LeagueGroup = ({
 
       <div className={`divide-y theme-border ${isOpen ? "block" : "hidden"}`}>
         {games.map((game) => {
-          const isLive =
-            !finishedCodes.includes(game.status.short) && !scheduledCodes.includes(game.status.short);
+          const isLive = !finishedCodes.includes(game.status.short) && !scheduledCodes.includes(game.status.short);
 
           const statusColor = isLive ? "text-[#dc2626]" : "text-secondary";
           const dateObj = new Date(game.date);
@@ -115,8 +100,8 @@ const LeagueGroup = ({
               ? `${game.status.elapsed}'`
               : "LIVE"
             : scheduledCodes.includes(game.status.short)
-                ? time
-                : game.status.short;
+              ? time
+              : game.status.short;
 
           const href = makeMatchHref(game.id);
 
@@ -127,7 +112,7 @@ const LeagueGroup = ({
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" />}
+                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />}
                     <span
                       className={`text-sm ${
                         game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -141,7 +126,7 @@ const LeagueGroup = ({
 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" />}
+                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />}
                     <span
                       className={`text-sm ${
                         game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -200,18 +185,11 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
   const searchParams = useSearchParams();
 
   const today = useMemo(() => utcTodayYMD(), []);
-  const urlDate = searchParams.get("date");
-  const hasUrlDate = isValidYMD(urlDate);
-
   const activeTab = (initialTab || "all").toLowerCase();
 
-  // IMPORTANT RULE:
-  // - Today tab ALWAYS means real today and ignores url date
-  // - other tabs use url date only when calendar applied
-  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
-
-  // Use a pending date so month navigation doesn't instantly refresh.
-  const [pendingDate, setPendingDate] = useState(effectiveDate);
+  const rawUrlDate = searchParams.get("date");
+  const urlDate = isValidYMD(rawUrlDate) ? (rawUrlDate as string) : null;
+  const urlHasFilterDate = !!urlDate;
 
   const safeSport = encodeURIComponent(String(sport || "football"));
   const safeLeague = leagueId ? encodeURIComponent(String(leagueId)) : undefined;
@@ -223,72 +201,74 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
     return `/sports/${safeSport}/${tabId}`;
   };
 
-  // Keep ?date only if it already exists in the URL (i.e. user applied calendar before)
-  const maybeWithDate = (basePath: string) => {
-    if (!hasUrlDate) return basePath;
+  const getTabUrl = (tabId: string) => {
+    const base = getTabPath(tabId);
+
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", effectiveDate);
-    return `${basePath}?${params.toString()}`;
+    params.delete("sport");
+    params.delete("league");
+
+    if (tabId === "today") {
+      params.delete("date");
+    } else {
+      if (urlHasFilterDate) params.set("date", urlDate as string);
+      else params.delete("date");
+    }
+
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   };
 
-  const applyDateFilter = () => {
-    if (!pendingDate) return;
+  // Date shown in dropdown
+  const pickerDate = activeTab === "today" ? today : urlHasFilterDate ? (urlDate as string) : today;
 
-    // If user picks today => REMOVE date param (clean URL)
-    if (pendingDate === today) {
-      if (activeTab === "today") {
-        router.push(getTabPath("today")); // no ?date
-      } else {
-        router.push(getTabPath(activeTab)); // no ?date
+  const applyCalendarDate = (pickedYMD: string) => {
+    if (!isValidYMD(pickedYMD)) return;
+
+    // Today tab never uses ?date
+    if (activeTab === "today") {
+      if (pickedYMD === today) {
+        router.push(getTabPath("today"));
+        return;
       }
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("date", pickedYMD);
+      router.push(`${getTabPath("all")}?${params.toString()}`);
       return;
     }
 
-    // If user is on Today and applies some other date => switch to ALL + ?date
-    const nextTab = activeTab === "today" ? "all" : activeTab;
-
+    // Other tabs: calendar selection always sets ?date (even if it's today)
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", pendingDate);
-    router.push(`${getTabPath(nextTab)}?${params.toString()}`);
+    params.set("date", pickedYMD);
+    router.push(`${getTabPath(activeTab)}?${params.toString()}`);
   };
 
-  // FIRST apply date filtering (this makes calendar actually work)
+  // Date filtering
   const dateFilteredGames = useMemo(() => {
-    // Today tab must show ONLY current date
     if (activeTab === "today") return games.filter((g) => gameYMD(g.date) === today);
-
-    // If url has date => filter to that date
-    if (hasUrlDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
-
-    // no url date => don't force filter here (keep existing behavior)
+    if (urlHasFilterDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
     return games;
-  }, [activeTab, games, hasUrlDate, today, urlDate]);
+  }, [activeTab, games, today, urlHasFilterDate, urlDate]);
 
-  // THEN apply tab filtering
+  // Tab filtering
   const filteredGames = dateFilteredGames.filter((g) => {
     const s = g.status.short;
 
-    if (activeTab === "today") {
-      // Today must show ONLY live + finished -> exclude scheduled
-      return !scheduledCodes.includes(s);
-    }
-
+    if (activeTab === "today") return !scheduledCodes.includes(s); // live + finished only (today date already applied)
     if (activeTab === "finished") return finishedCodes.includes(s);
     if (activeTab === "scheduled") return scheduledCodes.includes(s);
     if (activeTab === "live") return !finishedCodes.includes(s) && !scheduledCodes.includes(s);
 
-    return true; // all
+    return true;
   });
 
-  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>(
-    (groups, game) => {
-      const key = `${game.league.country || "World"}-${game.league.name}`;
-      if (!groups[key]) groups[key] = { meta: game.league, games: [] };
-      groups[key].games.push(game);
-      return groups;
-    },
-    {}
-  );
+  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>((groups, game) => {
+    const key = `${game.league.country || "World"}-${game.league.name}`;
+    if (!groups[key]) groups[key] = { meta: game.league, games: [] };
+    groups[key].games.push(game);
+    return groups;
+  }, {});
 
   const liveCount = games.filter(
     (g) => !finishedCodes.includes(g.status.short) && !scheduledCodes.includes(g.status.short)
@@ -296,12 +276,11 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
-  const getTabStyle = (isActive: boolean, tabId?: string) => {
+  const getTabStyle = (tabId: string) => {
+    const isActive = activeTab === tabId;
     if (isActive && tabId === "live") return "bg-[#dc2626] text-white shadow-sm";
     if (isActive) return "bg-[#0f80da] text-white shadow-sm";
-    return isDark
-      ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
-      : "bg-gray-100 text-slate-600 hover:bg-gray-200";
+    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
   };
 
   const matchRowBase =
@@ -310,95 +289,33 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
-  const dateInputClass = isDark
-    ? "bg-slate-800 text-slate-300 border-slate-700"
-    : "bg-gray-100 text-slate-600 border-gray-200";
-
-  const showApply = pendingDate !== effectiveDate;
-
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between gap-3 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {/* Order required: All / Live / Today / Finished / Scheduled */}
-          <Link
-            href={maybeWithDate(getTabPath("all"))}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-              activeTab === "all",
-              "all"
-            )}`}
-          >
-            All
-          </Link>
-
-          <Link
-            href={maybeWithDate(getTabPath("live"))}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
-              activeTab === "live",
-              "live"
-            )}`}
-          >
-            {activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-            Live ({liveCount})
-          </Link>
-
-          {/* Today must NEVER carry ?date */}
-          <Link
-            href={getTabPath("today")}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-              activeTab === "today",
-              "today"
-            )}`}
-          >
-            Today
-          </Link>
-
-          <Link
-            href={maybeWithDate(getTabPath("finished"))}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-              activeTab === "finished",
-              "finished"
-            )}`}
-          >
-            Finished
-          </Link>
-
-          <Link
-            href={maybeWithDate(getTabPath("scheduled"))}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-              activeTab === "scheduled",
-              "scheduled"
-            )}`}
-          >
-            Scheduled
-          </Link>
-        </div>
-
-        {/* Calendar + Apply (same style, minimal) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <input
-            type="date"
-            value={pendingDate}
-            onChange={(e) => setPendingDate(e.target.value)}
-            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
-          />
-
-          {showApply && (
-            <button
-              type="button"
-              onClick={applyDateFilter}
-              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-                false
+          {[
+            { id: "all", label: "All" },
+            { id: "live", label: `Live (${liveCount})`, hasDot: true },
+            { id: "today", label: "Today" },
+            { id: "finished", label: "Finished" },
+            { id: "scheduled", label: "Scheduled" },
+          ].map((tab) => (
+            <Link
+              key={tab.id}
+              href={getTabUrl(tab.id)}
+              prefetch={false}
+              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                tab.id
               )}`}
             >
-              Apply
-            </button>
-          )}
+              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="shrink-0">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
         </div>
       </div>
 

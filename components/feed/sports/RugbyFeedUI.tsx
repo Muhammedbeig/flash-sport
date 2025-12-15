@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
+import DateDropdown from "@/components/feed/DateDropdown";
 import { NormalizedGame, NormalizedLeague } from "../utils";
 
 // --- RUGBY STATUS CODES ---
@@ -60,7 +61,7 @@ const RugbyLeagueGroup = ({
   return (
     <div className="border-b theme-border last:border-0">
       <div
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
         className={`px-4 py-3 flex items-center justify-between cursor-pointer transition-colors ${
           isDark ? "bg-slate-900/50 hover:bg-slate-900" : "bg-gray-50 hover:bg-gray-100"
         }`}
@@ -112,7 +113,7 @@ const RugbyLeagueGroup = ({
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" />}
+                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />}
                     <span
                       className={`text-sm ${
                         game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -126,7 +127,7 @@ const RugbyLeagueGroup = ({
 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" />}
+                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />}
                     <span
                       className={`text-sm ${
                         game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -154,26 +155,16 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
   const searchParams = useSearchParams();
 
   const today = useMemo(() => utcTodayYMD(), []);
-  const urlDate = searchParams.get("date");
-  const hasUrlDate = isValidYMD(urlDate);
-
   const activeTab = (initialTab || "all").toLowerCase();
 
-  // Today ignores url date
-  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
+  const rawUrlDate = searchParams.get("date");
+  const urlDate = isValidYMD(rawUrlDate) ? (rawUrlDate as string) : null;
+  const urlHasFilterDate = !!urlDate; // calendar-selected date only
 
-  // Apply button behavior: don’t auto-filter while picking month/date
-  const [pendingDate, setPendingDate] = useState(effectiveDate);
-  const showApply = pendingDate !== effectiveDate;
-
-  const getTabStyle = (tab: string) => {
-    const isActive = activeTab === tab;
-    if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
-    if (isActive) return "bg-[#0f80da] text-white shadow-sm";
-    return isDark
-      ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
-      : "bg-gray-100 text-slate-600 hover:bg-gray-200";
-  };
+  // date shown in dropdown:
+  // - Today tab: show today (no date in URL)
+  // - Other tabs: show url date if present, else today in UI
+  const pickerDate = activeTab === "today" ? today : urlHasFilterDate ? (urlDate as string) : today;
 
   const matchRowBase =
     "flex items-center justify-between px-3 py-3 rounded-lg text-sm border-l-4 transition-all duration-200 group cursor-pointer";
@@ -181,19 +172,20 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
-  const dateInputClass = isDark
-    ? "bg-slate-800 text-slate-300 border-slate-700"
-    : "bg-gray-100 text-slate-600 border-gray-200";
-
-  const basePathForTab = (tabId: string) => {
-    return leagueId ? `/sports/rugby/${tabId}/league/${leagueId}` : `/sports/rugby/${tabId}`;
+  const getTabStyle = (tab: string) => {
+    const isActive = activeTab === tab;
+    if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
+    if (isActive) return "bg-[#0f80da] text-white shadow-sm";
+    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
   };
 
-  // Today must never include ?date.
-  // Date appears only when user applied a calendar date (?date exists).
+  const basePathForTab = (tabId: string) =>
+    leagueId ? `/sports/rugby/${tabId}/league/${leagueId}` : `/sports/rugby/${tabId}`;
+
+  // Today tab must never have ?date.
+  // Other tabs keep ?date only if already present (calendar filter).
   const getTabUrl = (tabId: string) => {
     const base = basePathForTab(tabId);
-
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
@@ -201,7 +193,7 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
     if (tabId === "today") {
       params.delete("date");
     } else {
-      if (hasUrlDate) params.set("date", urlDate as string);
+      if (urlHasFilterDate) params.set("date", urlDate as string);
       else params.delete("date");
     }
 
@@ -209,44 +201,51 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
     return qs ? `${base}?${qs}` : base;
   };
 
-  const applyDateFilter = () => {
-    if (!pendingDate) return;
+  // AUTO APPLY: only when a date is selected in dropdown (NOT on month navigation)
+  const applyCalendarDate = (pickedYMD: string) => {
+    if (!isValidYMD(pickedYMD)) return;
 
-    // If selecting today's date => remove date param (clean URL)
-    if (pendingDate === today) {
-      router.push(basePathForTab(activeTab === "today" ? "today" : activeTab));
+    // If on Today tab:
+    // - picking today keeps clean URL
+    // - picking another date switches to All + ?date
+    if (activeTab === "today") {
+      if (pickedYMD === today) {
+        router.push(basePathForTab("today"));
+        return;
+      }
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("sport");
+      params.delete("league");
+      params.set("date", pickedYMD);
+      router.push(`${basePathForTab("all")}?${params.toString()}`);
       return;
     }
 
-    // If on Today and applying another date => move to All + ?date
-    const nextTab = activeTab === "today" ? "all" : activeTab;
-
+    // On other tabs: always set date param when calendar used (even if it's today)
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
-    params.set("date", pendingDate);
-
-    router.push(`${basePathForTab(nextTab)}?${params.toString()}`);
+    params.set("date", pickedYMD);
+    router.push(`${basePathForTab(activeTab)}?${params.toString()}`);
   };
 
-  // Date filtering (calendar actually works)
+  // Date filtering
   const dateFilteredGames = useMemo(() => {
     if (activeTab === "today") return games.filter((g) => gameYMD(g.date) === today);
-    if (hasUrlDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
+    if (urlHasFilterDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
     return games;
-  }, [activeTab, games, hasUrlDate, today, urlDate]);
+  }, [activeTab, games, today, urlHasFilterDate, urlDate]);
 
   // Tab filtering
   const filteredGames = dateFilteredGames.filter((g) => {
     const s = g.status.short;
 
-    if (activeTab === "today") {
-      // Today = only live + finished
-      return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
-    }
+    if (activeTab === "today") return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
     if (activeTab === "finished") return FINISHED_CODES.includes(s);
     if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
     if (activeTab === "live") return LIVE_CODES.includes(s);
+
     return true;
   });
 
@@ -266,7 +265,6 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
 
   return (
     <div className="w-full space-y-4">
-      {/* Tabs + Calendar */}
       <div className="flex items-center justify-between gap-3 pb-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {[
@@ -290,24 +288,8 @@ export default function RugbyFeedUI({ games, loading, leagueId, initialTab }: Ru
           ))}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <input
-            type="date"
-            value={pendingDate}
-            onChange={(e) => setPendingDate(e.target.value)}
-            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
-          />
-          {showApply && (
-            <button
-              type="button"
-              onClick={applyDateFilter}
-              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
-                "__apply__"
-              )}`}
-            >
-              Apply
-            </button>
-          )}
+        <div className="shrink-0">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
         </div>
       </div>
 
