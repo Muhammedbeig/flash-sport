@@ -3,21 +3,19 @@
   "homepage": "https://helloajmal007-commits.github.io/livesocer.com",
   "version": "0.1.0",
   "private": true,
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint",
-  "clean:cache": "rimraf .gh-pages-cache node_modules/.cache/gh-pages",
-  
-  "deploy:flash": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
-  
-  "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git gh-pages"
-},
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "clean:cache": "rimraf .gh-pages-cache node_modules/.cache/gh-pages",
+    "deploy:flash": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
+    "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git gh-pages"
+  },
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.554.0",
-    "next": "16.0.4",
+    "next": "16.0.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwind-merge": "^3.4.0"
