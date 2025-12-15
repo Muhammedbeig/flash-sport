@@ -9,7 +9,7 @@ const basePath = repoName ? `/${repoName}` : "";
 
 const nextConfig: NextConfig = {
   // Required for GitHub Pages (Static Export)
-  output: "export",
+  // output: "export",
 
   // Required: Next.js Image Optimization doesn't work with static export
   images: {
