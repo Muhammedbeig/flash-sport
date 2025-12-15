@@ -7,22 +7,18 @@ type ChangeFreq = MetadataRoute.Sitemap[number]["changeFrequency"];
 const SPORTS = ["football", "basketball", "baseball", "hockey", "rugby", "nfl", "volleyball"] as const;
 const FEED_TABS = ["all", "live", "today", "finished", "scheduled"] as const;
 
-// If you ever add more match tabs, sitemap can still just include "summary" as canonical.
 const DEFAULT_MATCH_TAB = "summary";
 
-export function getSiteUrl(): string {
-  // Prefer an explicit env (best for SEO)
-  const explicit =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.SITE_URL;
+// ✅ keep as literal as well (no 60 * 30)
+const FETCH_REVALIDATE_SECONDS = 1800;
 
+export function getSiteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
   if (explicit && explicit.trim()) return explicit.replace(/\/+$/, "");
 
-  // Vercel provides this at runtime
   const vercel = process.env.VERCEL_URL;
   if (vercel && vercel.trim()) return `https://${vercel.replace(/\/+$/, "")}`;
 
-  // Local dev fallback
   return "http://localhost:3000";
 }
 
@@ -35,9 +31,17 @@ function safeDate(value: any): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
-function page(url: string, opts?: { lastModified?: Date; changeFrequency?: ChangeFreq; priority?: number }) {
+function withSlash(url: string) {
+  // Your next.config has trailingSlash: true, so keep URLs consistent
+  return url.endsWith("/") ? url : `${url}/`;
+}
+
+function page(
+  url: string,
+  opts?: { lastModified?: Date; changeFrequency?: ChangeFreq; priority?: number }
+) {
   const out: MetadataRoute.Sitemap[number] = {
-    url,
+    url: withSlash(url),
     lastModified: opts?.lastModified ?? new Date(),
     changeFrequency: opts?.changeFrequency,
     priority: opts?.priority,
@@ -45,7 +49,10 @@ function page(url: string, opts?: { lastModified?: Date; changeFrequency?: Chang
   return out;
 }
 
-async function fetchTodayMatchEntriesForSport(sport: (typeof SPORTS)[number], baseUrl: string) {
+async function fetchTodayMatchEntriesForSport(
+  sport: (typeof SPORTS)[number],
+  baseUrl: string
+) {
   const endpointPath = sport === "football" ? "fixtures" : "games";
 
   const params = new URLSearchParams();
@@ -55,12 +62,16 @@ async function fetchTodayMatchEntriesForSport(sport: (typeof SPORTS)[number], ba
   const { url, headers } = buildApiRequest(sport, endpointPath, params);
 
   try {
-    const res = await fetch(url, { headers, next: { revalidate: 60 * 30 } });
-    const json = await res.json();
+    const res = await fetch(url, {
+      headers,
+      next: { revalidate: FETCH_REVALIDATE_SECONDS },
+    });
 
+    if (!res.ok) return [];
+
+    const json = await res.json();
     const list: any[] = Array.isArray(json?.response) ? json.response : [];
 
-    // Extract IDs + dates across API-Sports shapes (football vs others)
     const items = list
       .map((item) => {
         const id =
@@ -75,14 +86,10 @@ async function fetchTodayMatchEntriesForSport(sport: (typeof SPORTS)[number], ba
 
         if (id === undefined || id === null) return null;
 
-        return {
-          id: String(id),
-          lastModified: safeDate(date),
-        };
+        return { id: String(id), lastModified: safeDate(date) };
       })
       .filter(Boolean) as { id: string; lastModified: Date }[];
 
-    // Dedup IDs just in case
     const seen = new Set<string>();
     const deduped = items.filter((x) => {
       if (seen.has(x.id)) return false;
@@ -90,7 +97,6 @@ async function fetchTodayMatchEntriesForSport(sport: (typeof SPORTS)[number], ba
       return true;
     });
 
-    // Build canonical match URLs
     return deduped.map((m) =>
       page(`${baseUrl}/match/${sport}/${m.id}/${DEFAULT_MATCH_TAB}`, {
         lastModified: m.lastModified,
@@ -99,7 +105,6 @@ async function fetchTodayMatchEntriesForSport(sport: (typeof SPORTS)[number], ba
       })
     );
   } catch {
-    // If API is down/rate-limited, sitemap still works for static URLs
     return [];
   }
 }
@@ -110,13 +115,13 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
 
   const entries: MetadataRoute.Sitemap = [];
 
-  // ---- Core static pages
+  // Core static pages
   entries.push(page(`${baseUrl}/`, { lastModified: now, changeFrequency: "hourly", priority: 1 }));
   entries.push(page(`${baseUrl}/contact`, { lastModified: now, changeFrequency: "monthly", priority: 0.3 }));
   entries.push(page(`${baseUrl}/privacy-policy`, { lastModified: now, changeFrequency: "yearly", priority: 0.2 }));
   entries.push(page(`${baseUrl}/terms-of-service`, { lastModified: now, changeFrequency: "yearly", priority: 0.2 }));
 
-  // ---- Main multi-sport feeds
+  // Multi-sport feeds
   for (const sport of SPORTS) {
     for (const tab of FEED_TABS) {
       entries.push(
@@ -129,11 +134,10 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // ---- Football SEO league routes (your existing slug system)
-  // /football/{slug}
-  // /football/{slug}/{tab}
+  // Football SEO slug routes
   const footballLeagueSlugs = Object.keys(FOOTBALL_ROUTES.leagues || {});
-  const footballTabs = ["summary", "fixtures", "results", "standings"]; // keep this conservative
+  const footballTabs = ["summary", "fixtures", "results", "standings"];
+
   for (const slug of footballLeagueSlugs) {
     entries.push(page(`${baseUrl}/football/${slug}`, { lastModified: now, changeFrequency: "daily", priority: 0.7 }));
     for (const t of footballTabs) {
@@ -141,7 +145,7 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // ---- Today match pages (auto-updated)
+  // Today match pages (auto-updated)
   const matchEntries = await Promise.all(SPORTS.map((s) => fetchTodayMatchEntriesForSport(s, baseUrl)));
   entries.push(...matchEntries.flat());
 
