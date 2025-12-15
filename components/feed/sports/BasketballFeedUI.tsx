@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,6 +12,21 @@ import { NormalizedGame, NormalizedLeague } from "../utils";
 const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "SUSP", "AWD", "ABD", "Final"];
 const SCHEDULED_CODES = ["NS", "TBD"];
 const LIVE_CODES = ["Q1", "Q2", "Q3", "Q4", "OT", "BT", "HT"];
+
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+function gameYMD(d: unknown) {
+  if (typeof d === "string" && d.length >= 10) return d.slice(0, 10);
+  try {
+    return new Date(d as any).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
 
 type BasketballFeedUIProps = {
   games: NormalizedGame[];
@@ -73,7 +88,7 @@ const BasketballLeagueGroup = ({
             : "";
 
           const displayStatus = isLive
-            ? (game.status.elapsed ? `${game.status.short} ${game.status.elapsed}'` : game.status.short)
+            ? (game.status.elapsed ? `${game.status.short} ${game.status.elapsed}` : game.status.short)
             : (SCHEDULED_CODES.includes(game.status.short) ? time : game.status.short);
 
           return (
@@ -118,29 +133,22 @@ const BasketballLeagueGroup = ({
 
 export default function BasketballFeedUI({ games, loading, leagueId, initialTab }: BasketballFeedUIProps) {
   const { theme } = useTheme();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isDark = theme === "dark";
 
-  const activeTab = initialTab || "all";
+  const today = useMemo(() => utcTodayYMD(), []);
+  const urlDate = searchParams.get("date");
+  const hasUrlDate = isValidYMD(urlDate);
 
-  const filteredGames = games.filter((g) => {
-    const s = g.status.short;
-    if (activeTab === "finished") return FINISHED_CODES.includes(s);
-    if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
-    if (activeTab === "live") return LIVE_CODES.includes(s);
-    return true;
-  });
+  const activeTab = (initialTab || "all").toLowerCase();
 
-  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>((groups, game) => {
-    const key = `${game.league.country || "World"}-${game.league.name}`;
-    if (!groups[key]) groups[key] = { meta: game.league, games: [] };
-    groups[key].games.push(game);
-    return groups;
-  }, {});
+  // Today ignores url date
+  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
 
-  const liveCount = games.filter((g) => LIVE_CODES.includes(g.status.short)).length;
-
-  if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
+  // Pending date requires Apply (prevents auto-refresh when navigating calendar)
+  const [pendingDate, setPendingDate] = useState(effectiveDate);
+  const showApply = pendingDate !== effectiveDate;
 
   const getTabStyle = (tab: string) => {
     const isActive = activeTab === tab;
@@ -155,37 +163,135 @@ export default function BasketballFeedUI({ games, loading, leagueId, initialTab 
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
-  // ✅ Path-based tabs + keep other query params (e.g. view=favorites), remove legacy routing params
+  const dateInputClass = isDark
+    ? "bg-slate-800 text-slate-300 border-slate-700"
+    : "bg-gray-100 text-slate-600 border-gray-200";
+
+  const basePathForTab = (tabId: string) => {
+    return leagueId ? `/sports/basketball/${tabId}/league/${leagueId}` : `/sports/basketball/${tabId}`;
+  };
+
+  // Tabs:
+  // - Today must NOT show date in URL (but keep other query params)
+  // - other tabs keep ?date only if it already exists
   const getTabUrl = (tabId: string) => {
-    const base = leagueId ? `/sports/basketball/${tabId}/league/${leagueId}` : `/sports/basketball/${tabId}`;
+    const base = basePathForTab(tabId);
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
 
+    if (tabId === "today") params.delete("date"); // remove date from URL on Today
+
+    // Only keep date if it existed
+    if (tabId !== "today" && hasUrlDate) params.set("date", urlDate as string);
+    if (tabId !== "today" && !hasUrlDate) params.delete("date");
+
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
   };
 
+  const applyDateFilter = () => {
+    if (!pendingDate) return;
+
+    // If selecting today via calendar => remove date param (clean URL)
+    if (pendingDate === today) {
+      router.push(basePathForTab(activeTab === "today" ? "today" : activeTab));
+      return;
+    }
+
+    // If currently on Today and applying another date => switch to All + ?date
+    const nextTab = activeTab === "today" ? "all" : activeTab;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("sport");
+    params.delete("league");
+    params.set("date", pendingDate);
+
+    router.push(`${basePathForTab(nextTab)}?${params.toString()}`);
+  };
+
+  // Date filtering (this makes calendar actually work, even if API returns extra dates)
+  const dateFilteredGames = useMemo(() => {
+    if (activeTab === "today") return games.filter((g) => gameYMD(g.date) === today);
+    if (hasUrlDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
+    return games;
+  }, [activeTab, games, hasUrlDate, today, urlDate]);
+
+  // Tab filtering
+  const filteredGames = dateFilteredGames.filter((g) => {
+    const s = g.status.short;
+
+    if (activeTab === "today") {
+      // Today: only LIVE + FINISHED (no scheduled)
+      return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
+    }
+    if (activeTab === "finished") return FINISHED_CODES.includes(s);
+    if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
+    if (activeTab === "live") return LIVE_CODES.includes(s);
+    return true;
+  });
+
+  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>(
+    (groups, game) => {
+      const key = `${game.league.country || "World"}-${game.league.name}`;
+      if (!groups[key]) groups[key] = { meta: game.league, games: [] };
+      groups[key].games.push(game);
+      return groups;
+    },
+    {}
+  );
+
+  const liveCount = games.filter((g) => LIVE_CODES.includes(g.status.short)).length;
+
+  if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
+
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center gap-2 pb-2 overflow-x-auto no-scrollbar">
-        {[
-          { id: "all", label: "All" },
-          { id: "live", label: `Live (${liveCount})`, hasDot: true },
-          { id: "finished", label: "Finished" },
-          { id: "scheduled", label: "Scheduled" },
-        ].map((tab) => (
-          <Link
-            key={tab.id}
-            href={getTabUrl(tab.id)}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(tab.id)}`}
-          >
-            {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-            {tab.label}
-          </Link>
-        ))}
+      {/* Tabs + Calendar (same style) */}
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { id: "all", label: "All" },
+            { id: "live", label: `Live (${liveCount})`, hasDot: true },
+            { id: "today", label: "Today" },
+            { id: "finished", label: "Finished" },
+            { id: "scheduled", label: "Scheduled" },
+          ].map((tab) => (
+            <Link
+              key={tab.id}
+              href={getTabUrl(tab.id)}
+              prefetch={false}
+              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                tab.id
+              )}`}
+            >
+              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <input
+            type="date"
+            value={pendingDate}
+            onChange={(e) => setPendingDate(e.target.value)}
+            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
+          />
+
+          {showApply && (
+            <button
+              type="button"
+              onClick={applyDateFilter}
+              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
+                "__apply__"
+              )}`}
+            >
+              Apply
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">
@@ -200,7 +306,9 @@ export default function BasketballFeedUI({ games, loading, leagueId, initialTab 
           />
         ))}
 
-        {filteredGames.length === 0 && <div className="p-8 text-center text-secondary">No matches found for this category today.</div>}
+        {filteredGames.length === 0 && (
+          <div className="p-8 text-center text-secondary">No matches found for this category today.</div>
+        )}
       </div>
     </div>
   );

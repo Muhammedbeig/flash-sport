@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import BaseballFeedUI from "./BaseballFeedUI";
 import { NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
+
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
 
 const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
   try {
@@ -20,12 +28,11 @@ const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
     return {
       id,
       date,
-      // FIX: 'elapsed' must be undefined, not null
-      status: { 
-        short: status.short, 
-        long: status.long, 
-        elapsed: undefined 
-      }, 
+      status: {
+        short: status.short,
+        long: status.long,
+        elapsed: undefined, // keep as before
+      },
       league: {
         id: league.id,
         name: league.name,
@@ -39,12 +46,27 @@ const normalizeBaseballGame = (rawItem: any): NormalizedGame | null => {
       },
       scores: { home: homeScore, away: awayScore },
     };
-  } catch (e) {
+  } catch {
     return null;
   }
 };
 
-export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: string, initialTab?: string }) {
+export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: string; initialTab?: string }) {
+  const searchParams = useSearchParams();
+
+  const today = useMemo(() => utcTodayYMD(), []);
+  const activeTab = (initialTab || "all").toLowerCase();
+
+  const urlDate = searchParams.get("date");
+  const hasUrlDate = isValidYMD(urlDate);
+
+  // For Today tab always force current date. Otherwise allow calendar date.
+  const selectedDate = useMemo(() => {
+    if (activeTab === "today") return today;
+    if (hasUrlDate) return urlDate as string;
+    return today; // default (clean URL, still shows today)
+  }, [activeTab, hasUrlDate, today, urlDate]);
+
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,18 +76,26 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
       try {
         const cdnUrl = process.env.NEXT_PUBLIC_CDN_BASEBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const host = "v1.baseball.api-sports.io"; 
-        
+        const host = "v1.baseball.api-sports.io";
+
         const params = new URLSearchParams();
         params.set("timezone", "UTC");
 
-        // Strategy: Season for League view, Date for Main view
+        // Always fetch by selected date for main feed (no league),
+        // and also allow date fetch when leagueId + calendar is used.
         if (leagueId) {
-           params.set("league", leagueId);
-           params.set("season", "2024");
+          params.set("league", leagueId);
+
+          // Keep your old behavior when no calendar date is used:
+          // league view = season 2024.
+          if (hasUrlDate || activeTab === "today") {
+            params.set("date", selectedDate);
+            params.set("season", selectedDate.slice(0, 4));
+          } else {
+            params.set("season", "2024");
+          }
         } else {
-           const utcDate = new Date().toISOString().split("T")[0];
-           params.set("date", utcDate);
+          params.set("date", selectedDate);
         }
 
         let url = "";
@@ -78,19 +108,20 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
           headers = { "x-rapidapi-host": host, "x-rapidapi-key": apiKey || "" };
         }
 
-        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const res = await fetch(url, { headers } as any);
         const json = await res.json();
         const rawList = Array.isArray(json?.response) ? json.response : [];
-        
+
         const cleanList = rawList
           .map(normalizeBaseballGame)
           .filter((g: any): g is NormalizedGame => g !== null);
 
-        // Sort by Date
-        cleanList.sort((a: NormalizedGame, b: NormalizedGame) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Sort by Date (keep your old behavior)
+        cleanList.sort(
+          (a: NormalizedGame, b: NormalizedGame) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
 
         setGames(cleanList);
-
       } catch (err) {
         console.error("Baseball Feed Error:", err);
         setGames([]);
@@ -98,8 +129,9 @@ export default function BaseballFeed({ leagueId, initialTab }: { leagueId?: stri
         setLoading(false);
       }
     }
+
     fetchBaseball();
-  }, [leagueId]);
+  }, [leagueId, activeTab, hasUrlDate, selectedDate]);
 
   if (loading) return <GameFeedSkeleton />;
 

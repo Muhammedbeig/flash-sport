@@ -1,12 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import FeedUI from "@/components/feed/FeedUI";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import FeedUI from "../FeedUI";
 import { normalizeGame, NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
 
-// FIX: Added initialTab to props
-export default function FootballFeed({ leagueId, initialTab }: { leagueId?: string, initialTab?: string }) {
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+export default function FootballFeed({ leagueId, initialTab }: { leagueId?: string; initialTab?: string }) {
+  const searchParams = useSearchParams();
+
+  const today = useMemo(() => utcTodayYMD(), []);
+  const tab = (initialTab || "all").toLowerCase();
+
+  const urlDate = searchParams.get("date");
+  const selectedDate = useMemo(() => {
+    if (tab === "today") return today;              // Today = real today only
+    if (isValidYMD(urlDate)) return urlDate as string; // calendar filter
+    return today;                                  // default
+  }, [tab, today, urlDate]);
+
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,15 +35,13 @@ export default function FootballFeed({ leagueId, initialTab }: { leagueId?: stri
       try {
         const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        // Fetch matches for "Today" (UTC)
-        const utcDate = new Date().toISOString().split("T")[0]; 
-        
+
+        const params = new URLSearchParams();
+        params.set("date", selectedDate);
+        if (leagueId) params.set("league", leagueId);
+
         let url = "";
         let headers: Record<string, string> = {};
-        
-        const params = new URLSearchParams();
-        params.set("date", utcDate);
-        if (leagueId) params.set("league", leagueId);
 
         if (cdnUrl) {
           url = `${cdnUrl.replace(/\/$/, "")}/fixtures?${params.toString()}`;
@@ -47,10 +64,11 @@ export default function FootballFeed({ leagueId, initialTab }: { leagueId?: stri
         setLoading(false);
       }
     }
-    fetchFootball();
-  }, [leagueId]);
 
-  // Pass initialTab down to the UI
+    fetchFootball();
+  }, [leagueId, selectedDate]);
+
   if (loading) return <GameFeedSkeleton />;
+
   return <FeedUI games={games} loading={loading} sport="football" leagueId={leagueId} initialTab={initialTab} />;
 }

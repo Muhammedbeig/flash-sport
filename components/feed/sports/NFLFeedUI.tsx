@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -10,6 +11,21 @@ import { NormalizedGame, NormalizedLeague } from "@/components/feed/utils";
 const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "ABD", "AWD", "Final"];
 const SCHEDULED_CODES = ["NS", "TBD"];
 const LIVE_CODES = ["Q1", "Q2", "Q3", "Q4", "OT", "LIVE"];
+
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+function gameYMD(d: unknown) {
+  if (typeof d === "string" && d.length >= 10) return d.slice(0, 10);
+  try {
+    return new Date(d as any).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
 
 type NFLFeedUIProps = {
   games: NormalizedGame[];
@@ -48,6 +64,7 @@ const LeagueGroup = ({
         {games.map((game: NormalizedGame) => {
           const isLive = LIVE_CODES.includes(game.status.short);
           const statusColor = isLive ? "text-[#dc2626]" : "text-secondary";
+
           const dateObj = new Date(game.date);
           const time = !isNaN(dateObj.getTime())
             ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -86,7 +103,10 @@ const LeagueGroup = ({
 
           if (!matchHref) {
             return (
-              <div key={safeId || `${game.teams.home.id}-${game.teams.away.id}-${game.date}`} className={`${matchRowBase} ${matchRowInactive}`}>
+              <div
+                key={safeId || `${game.teams.home.id}-${game.teams.away.id}-${game.date}`}
+                className={`${matchRowBase} ${matchRowInactive}`}
+              >
                 {row}
               </div>
             );
@@ -113,10 +133,100 @@ const LeagueGroup = ({
 export default function NFLFeedUI({ games, loading, leagueId, initialTab }: NFLFeedUIProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const activeTab = initialTab || "all";
 
-  const filteredGames = games.filter((g) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const today = useMemo(() => utcTodayYMD(), []);
+  const urlDate = searchParams.get("date");
+  const hasUrlDate = isValidYMD(urlDate);
+
+  const activeTab = (initialTab || "all").toLowerCase();
+
+  // Today ignores url date
+  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
+
+  // Prevent auto refresh while navigating calendar: require Apply
+  const [pendingDate, setPendingDate] = useState(effectiveDate);
+  const showApply = pendingDate !== effectiveDate;
+
+  const getTabStyle = (tab: string) => {
+    const isActive = activeTab === tab;
+    if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
+    if (isActive) return "bg-[#0f80da] text-white shadow-sm";
+    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
+  };
+
+  const matchRowBase =
+    "flex items-center justify-between px-3 py-3 rounded-lg text-sm border-l-4 transition-all duration-200 group cursor-pointer";
+  const matchRowInactive = isDark
+    ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
+    : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
+
+  const dateInputClass = isDark
+    ? "bg-slate-800 text-slate-300 border-slate-700"
+    : "bg-gray-100 text-slate-600 border-gray-200";
+
+  const basePathForTab = (tabId: string) => {
+    if (leagueId) return `/sports/nfl/${tabId}/league/${leagueId}`;
+    return `/sports/nfl/${tabId}`;
+  };
+
+  // Today must NOT show date in URL.
+  // Date should remain only when calendar is applied (?date exists).
+  const getTabUrl = (tabId: string) => {
+    const base = basePathForTab(tabId);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("sport");
+    params.delete("league");
+
+    if (tabId === "today") {
+      params.delete("date");
+    } else {
+      if (hasUrlDate) params.set("date", urlDate as string);
+      else params.delete("date");
+    }
+
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
+  const applyDateFilter = () => {
+    if (!pendingDate) return;
+
+    // If selecting today's date => clean URL (remove date)
+    if (pendingDate === today) {
+      router.push(basePathForTab(activeTab === "today" ? "today" : activeTab));
+      return;
+    }
+
+    // If on Today and applying another date => switch to All + ?date
+    const nextTab = activeTab === "today" ? "all" : activeTab;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("sport");
+    params.delete("league");
+    params.set("date", pendingDate);
+
+    router.push(`${basePathForTab(nextTab)}?${params.toString()}`);
+  };
+
+  // Date filter so calendar actually works even if API returns extras
+  const dateFilteredGames = useMemo(() => {
+    if (activeTab === "today") return games.filter((g) => gameYMD(g.date) === today);
+    if (hasUrlDate) return games.filter((g) => gameYMD(g.date) === (urlDate as string));
+    return games;
+  }, [activeTab, games, hasUrlDate, today, urlDate]);
+
+  // Tab filter
+  const filteredGames = dateFilteredGames.filter((g) => {
     const s = g.status.short;
+
+    if (activeTab === "today") {
+      // Today: only LIVE + FINISHED (no scheduled)
+      return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
+    }
     if (activeTab === "finished") return FINISHED_CODES.includes(s);
     if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
     if (activeTab === "live") return LIVE_CODES.includes(s);
@@ -134,45 +244,52 @@ export default function NFLFeedUI({ games, loading, leagueId, initialTab }: NFLF
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
-  const getTabStyle = (tab: string) => {
-    const isActive = activeTab === tab;
-    if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
-    if (isActive) return "bg-[#0f80da] text-white shadow-sm";
-    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
-  };
-
-  const matchRowBase =
-    "flex items-center justify-between px-3 py-3 rounded-lg text-sm border-l-4 transition-all duration-200 group cursor-pointer";
-  const matchRowInactive = isDark
-    ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
-    : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
-
-  const getTabUrl = (tabId: string) => {
-    if (leagueId) return `/sports/nfl/${tabId}/league/${leagueId}`;
-    return `/sports/nfl/${tabId}`;
-  };
-
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center gap-2 pb-2 overflow-x-auto no-scrollbar">
-        {[
-          { id: "all", label: "All" },
-          { id: "live", label: `Live (${liveCount})`, hasDot: true },
-          { id: "finished", label: "Finished" },
-          { id: "scheduled", label: "Scheduled" },
-        ].map((tab) => (
-          <Link
-            key={tab.id}
-            href={getTabUrl(tab.id)}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
-              tab.id
-            )}`}
-          >
-            {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-            {tab.label}
-          </Link>
-        ))}
+      {/* Tabs + Calendar (same styling pattern) */}
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { id: "all", label: "All" },
+            { id: "live", label: `Live (${liveCount})`, hasDot: true },
+            { id: "today", label: "Today" },
+            { id: "finished", label: "Finished" },
+            { id: "scheduled", label: "Scheduled" },
+          ].map((tab) => (
+            <Link
+              key={tab.id}
+              href={getTabUrl(tab.id)}
+              prefetch={false}
+              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                tab.id
+              )}`}
+            >
+              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <input
+            type="date"
+            value={pendingDate}
+            onChange={(e) => setPendingDate(e.target.value)}
+            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
+          />
+
+          {showApply && (
+            <button
+              type="button"
+              onClick={applyDateFilter}
+              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
+                "__apply__"
+              )}`}
+            >
+              Apply
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">

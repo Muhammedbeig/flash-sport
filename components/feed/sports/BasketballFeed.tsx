@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 // FIX: Relative imports to prevent module resolution errors
 import BasketballFeedUI from "./BasketballFeedUI";
 import { NormalizedGame } from "../utils";
 import { GameFeedSkeleton } from "@/components/match/skeletons/GameFeedSkeleton";
+
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
 
 // --- BASKETBALL NORMALIZER ---
 const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
@@ -14,8 +22,6 @@ const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
     let homeScore = null;
     let awayScore = null;
 
-    // Basketball API returns scores as objects sometimes (e.g. { quarter_1: 10, total: 50 })
-    // We must extract the 'total' or fallback to null safely.
     if (scores?.home) {
       if (typeof scores.home === "object") {
         homeScore = scores.home.total ?? null;
@@ -33,12 +39,12 @@ const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
     }
 
     return {
-      id: id,
-      date: date,
+      id,
+      date,
       status: {
-        short: status.short, 
+        short: status.short,
         long: status.long,
-        elapsed: status.timer // API-Basketball uses 'timer' field
+        elapsed: status.timer, // API-Basketball uses 'timer'
       },
       league: {
         id: league.id,
@@ -62,7 +68,7 @@ const normalizeBasketballGame = (rawItem: any): NormalizedGame | null => {
         },
       },
       scores: {
-        home: homeScore, 
+        home: homeScore,
         away: awayScore,
       },
     };
@@ -78,6 +84,21 @@ type BasketballFeedProps = {
 };
 
 export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedProps) {
+  const searchParams = useSearchParams();
+
+  const today = useMemo(() => utcTodayYMD(), []);
+  const tab = (initialTab || "all").toLowerCase();
+
+  const urlDate = searchParams.get("date");
+  const hasUrlDate = isValidYMD(urlDate);
+
+  // Today tab always forces current date (ignores ?date)
+  const selectedDate = useMemo(() => {
+    if (tab === "today") return today;
+    if (hasUrlDate) return urlDate as string;
+    return today;
+  }, [tab, today, hasUrlDate, urlDate]);
+
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,20 +106,16 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
     async function fetchBasketball() {
       setLoading(true);
       try {
-        const cdnUrl = process.env.NEXT_PUBLIC_CDN_BASKETBALL_URL; 
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_BASKETBALL_URL;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        const host = "v1.basketball.api-sports.io"; 
-        
-        // Fetch Today's games
-        const utcDate = new Date().toISOString().split("T")[0]; 
+        const host = "v1.basketball.api-sports.io";
 
         const params = new URLSearchParams();
-        params.set("date", utcDate);
+        params.set("date", selectedDate);
         params.set("timezone", "UTC");
-        
-        if (leagueId) {
-            params.set("league", leagueId);
-        }
+
+        // league filter still supported (keeps existing behavior)
+        if (leagueId) params.set("league", leagueId);
 
         let url = "";
         let headers: Record<string, string> = {};
@@ -106,24 +123,22 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
         if (cdnUrl) {
           url = `${cdnUrl.replace(/\/$/, "")}/games?${params.toString()}`;
         } else {
-          url = `https://${host}/games?${params.toString()}`; 
+          url = `https://${host}/games?${params.toString()}`;
           headers = {
             "x-rapidapi-host": host,
             "x-rapidapi-key": apiKey || "",
           };
         }
 
-        const res = await fetch(url, { headers, next: { revalidate: 60 } });
+        const res = await fetch(url, { headers } as any);
         const json = await res.json();
         const rawList = Array.isArray(json?.response) ? json.response : [];
-        
-        // Filter out nulls safely
+
         const cleanList = rawList
           .map(normalizeBasketballGame)
           .filter((g: any): g is NormalizedGame => g !== null);
 
         setGames(cleanList);
-
       } catch (err) {
         console.error("Basketball feed error:", err);
         setGames([]);
@@ -133,14 +148,14 @@ export default function BasketballFeed({ leagueId, initialTab }: BasketballFeedP
     }
 
     fetchBasketball();
-  }, [leagueId]);
+  }, [leagueId, selectedDate]);
 
   if (loading) return <GameFeedSkeleton />;
-  
+
   return (
-    <BasketballFeedUI 
-      games={games} 
-      loading={loading} 
+    <BasketballFeedUI
+      games={games}
+      loading={loading}
       leagueId={leagueId}
       initialTab={initialTab}
     />

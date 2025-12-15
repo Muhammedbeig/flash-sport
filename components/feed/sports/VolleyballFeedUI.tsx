@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, AlertCircle } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -12,6 +12,21 @@ import { NormalizedGame, NormalizedLeague } from "../utils";
 const FINISHED_CODES = ["FT", "AOT", "POST", "CANC", "ABD", "AWD", "Finished"];
 const SCHEDULED_CODES = ["NS", "TBD"];
 const LIVE_CODES = ["S1", "S2", "S3", "S4", "S5"];
+
+function utcTodayYMD() {
+  return new Date().toISOString().split("T")[0];
+}
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+function gameYMD(d: unknown) {
+  if (typeof d === "string" && d.length >= 10) return d.slice(0, 10);
+  try {
+    return new Date(d as any).toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
 
 type VolleyballFeedUIProps = {
   games?: NormalizedGame[];
@@ -117,28 +132,23 @@ const VolleyballLeagueGroup = ({
 
 export default function VolleyballFeedUI({ games = [], loading, error, leagueId, initialTab }: VolleyballFeedUIProps) {
   const { theme } = useTheme();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isDark = theme === "dark";
-  const activeTab = initialTab || "all";
 
   const safeGames = Array.isArray(games) ? games : [];
+  const today = useMemo(() => utcTodayYMD(), []);
+  const urlDate = searchParams.get("date");
+  const hasUrlDate = isValidYMD(urlDate);
 
-  const filteredGames = safeGames.filter((g) => {
-    const s = g.status.short;
-    if (activeTab === "finished") return FINISHED_CODES.includes(s);
-    if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
-    if (activeTab === "live") return LIVE_CODES.includes(s);
-    return true;
-  });
+  const activeTab = (initialTab || "all").toLowerCase();
 
-  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>((groups, game) => {
-    const key = `${game.league.country || "World"}-${game.league.name}`;
-    if (!groups[key]) groups[key] = { meta: game.league, games: [] };
-    groups[key].games.push(game);
-    return groups;
-  }, {});
+  // Today ignores url date
+  const effectiveDate = activeTab === "today" ? today : hasUrlDate ? (urlDate as string) : today;
 
-  const liveCount = safeGames.filter((g) => LIVE_CODES.includes(g.status.short)).length;
+  // Apply behavior (prevents auto filtering while navigating date picker)
+  const [pendingDate, setPendingDate] = useState(effectiveDate);
+  const showApply = pendingDate !== effectiveDate;
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
@@ -164,34 +174,128 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
     ? "text-secondary hover:bg-slate-800/50 hover:text-slate-200 border-transparent"
     : "text-secondary hover:bg-slate-100 hover:text-primary border-transparent";
 
+  const dateInputClass = isDark
+    ? "bg-slate-800 text-slate-300 border-slate-700"
+    : "bg-gray-100 text-slate-600 border-gray-200";
+
+  const basePathForTab = (tabId: string) => {
+    return leagueId ? `/sports/volleyball/${tabId}/league/${leagueId}` : `/sports/volleyball/${tabId}`;
+  };
+
+  // Today must NOT include ?date. Date exists only when applied with calendar.
   const getTabUrl = (tabId: string) => {
-    const base = leagueId ? `/sports/volleyball/${tabId}/league/${leagueId}` : `/sports/volleyball/${tabId}`;
+    const base = basePathForTab(tabId);
+
     const params = new URLSearchParams(searchParams.toString());
     params.delete("sport");
     params.delete("league");
+
+    if (tabId === "today") {
+      params.delete("date");
+    } else {
+      if (hasUrlDate) params.set("date", urlDate as string);
+      else params.delete("date");
+    }
+
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
   };
 
+  const applyDateFilter = () => {
+    if (!pendingDate) return;
+
+    // selecting today => clean URL (remove date)
+    if (pendingDate === today) {
+      router.push(basePathForTab(activeTab === "today" ? "today" : activeTab));
+      return;
+    }
+
+    // if on Today and applying another date => go to all + ?date
+    const nextTab = activeTab === "today" ? "all" : activeTab;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("sport");
+    params.delete("league");
+    params.set("date", pendingDate);
+
+    router.push(`${basePathForTab(nextTab)}?${params.toString()}`);
+  };
+
+  // date filtering (calendar actually works)
+  const dateFilteredGames = useMemo(() => {
+    if (activeTab === "today") return safeGames.filter((g) => gameYMD(g.date) === today);
+    if (hasUrlDate) return safeGames.filter((g) => gameYMD(g.date) === (urlDate as string));
+    return safeGames;
+  }, [activeTab, hasUrlDate, safeGames, today, urlDate]);
+
+  // tab filtering
+  const filteredGames = dateFilteredGames.filter((g) => {
+    const s = g.status.short;
+
+    if (activeTab === "today") {
+      // Today: only live + finished (no scheduled)
+      return LIVE_CODES.includes(s) || FINISHED_CODES.includes(s);
+    }
+    if (activeTab === "finished") return FINISHED_CODES.includes(s);
+    if (activeTab === "scheduled") return SCHEDULED_CODES.includes(s);
+    if (activeTab === "live") return LIVE_CODES.includes(s);
+    return true;
+  });
+
+  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>((groups, game) => {
+    const key = `${game.league.country || "World"}-${game.league.name}`;
+    if (!groups[key]) groups[key] = { meta: game.league, games: [] };
+    groups[key].games.push(game);
+    return groups;
+  }, {});
+
+  const liveCount = safeGames.filter((g) => LIVE_CODES.includes(g.status.short)).length;
+
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center gap-2 pb-2 overflow-x-auto no-scrollbar">
-        {[
-          { id: "all", label: "All" },
-          { id: "live", label: `Live (${liveCount})`, hasDot: true },
-          { id: "finished", label: "Finished" },
-          { id: "scheduled", label: "Scheduled" },
-        ].map((tab) => (
-          <Link
-            key={tab.id}
-            href={getTabUrl(tab.id)}
-            prefetch={false}
-            className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(tab.id)}`}
-          >
-            {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-            {tab.label}
-          </Link>
-        ))}
+      {/* Tabs + Calendar */}
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { id: "all", label: "All" },
+            { id: "live", label: `Live (${liveCount})`, hasDot: true },
+            { id: "today", label: "Today" },
+            { id: "finished", label: "Finished" },
+            { id: "scheduled", label: "Scheduled" },
+          ].map((tab) => (
+            <Link
+              key={tab.id}
+              href={getTabUrl(tab.id)}
+              prefetch={false}
+              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                tab.id
+              )}`}
+            >
+              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <input
+            type="date"
+            value={pendingDate}
+            onChange={(e) => setPendingDate(e.target.value)}
+            className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors focus:outline-none ${dateInputClass}`}
+          />
+          {showApply && (
+            <button
+              type="button"
+              onClick={applyDateFilter}
+              className={`h-9 px-4 rounded-md text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${getTabStyle(
+                "__apply__"
+              )}`}
+            >
+              Apply
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="theme-bg rounded-xl border theme-border overflow-hidden shadow-sm">
@@ -206,7 +310,9 @@ export default function VolleyballFeedUI({ games = [], loading, error, leagueId,
           />
         ))}
 
-        {filteredGames.length === 0 && <div className="p-8 text-center text-secondary">No matches found for this category today.</div>}
+        {filteredGames.length === 0 && (
+          <div className="p-8 text-center text-secondary">No matches found for this category today.</div>
+        )}
       </div>
     </div>
   );
