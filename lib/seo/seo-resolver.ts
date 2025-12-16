@@ -56,21 +56,21 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
-/** ✅ Used by landing/home */
+/** ✅ Home */
 export function resolveHomeSeo() {
   const canonicalPath = "/";
   const entry: SeoEntry = { ...SEO_HOME, canonical: canonicalPath };
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/** ✅ Your app/layout.tsx imports this */
+/** ✅ Used by app/layout.tsx */
 export function resolveRootSeo(): Metadata {
   return resolveHomeSeo().metadata;
 }
 
 /**
  * ✅ Static pages
- * Works with:
+ * Supports:
  *  - resolveStaticPageSeo("contact", "/contact")
  *  - resolveStaticPageSeo("privacy-policy", "/privacy-policy")
  *  - resolveStaticPageSeo("privacyPolicy")
@@ -102,19 +102,38 @@ export function resolveStaticPageSeo(
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/**
- * ✅ /sports/[sport]/[tab]
- * MUST exist (your sports layout imports resolveSportsTabSeo)
- * Keep sync: layouts don’t need await.
- */
-export function resolveSportsTabSeo(rawSport: string, rawTab: string) {
-  const sport = normalizeSport(rawSport);
-  const tab = (rawTab || "all").toLowerCase();
+/* -----------------------------
+   SPORTS TAB SEO (sync)
+   Supports BOTH:
+   - resolveSportsTabSeo(sport, tab)
+   - resolveSportsTabSeo({ sport, tab, pathname? })
+------------------------------ */
+type SportsTabArgs = { sport: string; tab: string; pathname?: string };
+
+export function resolveSportsTabSeo(rawSport: string, rawTab: string): {
+  entry: SeoEntry;
+  metadata: Metadata;
+  canonicalPath: string;
+};
+export function resolveSportsTabSeo(args: SportsTabArgs): {
+  entry: SeoEntry;
+  metadata: Metadata;
+  canonicalPath: string;
+};
+export function resolveSportsTabSeo(
+  arg1: string | SportsTabArgs,
+  arg2?: string
+) {
+  const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
+  const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
+
+  const canonicalPath =
+    typeof arg1 === "string"
+      ? `/sports/${sport}/${tab}`
+      : arg1.pathname || `/sports/${sport}/${tab}`;
 
   const sportName = SPORT_LABELS[sport] || sport;
   const tabLabel = SPORTS_TAB_LABELS[tab] || "Today";
-
-  const canonicalPath = `/sports/${sport}/${tab}`;
 
   const base: SeoEntry = {
     title: `Live ${sportName} Scores – ${tabLabel} | ${SEO_BRAND.siteName}`,
@@ -134,20 +153,39 @@ export function resolveSportsTabSeo(rawSport: string, rawTab: string) {
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/**
- * ✅ /sports/[sport]/[tab]/league/[leagueId]
- * Keep sync.
- */
+/* -----------------------------
+   LEAGUE SEO (sync)
+   Supports BOTH:
+   - resolveSportsLeagueSeo(sport, tab, leagueId, pathname?)
+   - resolveSportsLeagueSeo({ sport, tab, leagueId, pathname? })
+------------------------------ */
+type LeagueArgs = { sport: string; tab: string; leagueId: string; pathname?: string };
+
 export function resolveSportsLeagueSeo(
   rawSport: string,
   rawTab: string,
   leagueId: string,
   pathname?: string
+): { entry: SeoEntry; metadata: Metadata; canonicalPath: string };
+export function resolveSportsLeagueSeo(args: LeagueArgs): {
+  entry: SeoEntry;
+  metadata: Metadata;
+  canonicalPath: string;
+};
+export function resolveSportsLeagueSeo(
+  arg1: string | LeagueArgs,
+  arg2?: string,
+  arg3?: string,
+  arg4?: string
 ) {
-  const sport = normalizeSport(rawSport);
-  const tab = (rawTab || "all").toLowerCase();
+  const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
+  const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
+  const leagueId = typeof arg1 === "string" ? (arg3 || "") : arg1.leagueId;
 
-  const canonicalPath = pathname || `/sports/${sport}/${tab}/league/${leagueId}`;
+  const canonicalPath =
+    typeof arg1 === "string"
+      ? arg4 || `/sports/${sport}/${tab}/league/${leagueId}`
+      : arg1.pathname || `/sports/${sport}/${tab}/league/${leagueId}`;
 
   const { entry: baseEntry } = resolveSportsTabSeo(sport, tab);
 
@@ -167,11 +205,29 @@ export function resolveSportsLeagueSeo(
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/**
- * ✅ Match SEO
- * MUST exist (your match layout imports resolveMatchSeo)
- * Uses API via buildMatchSeo to fetch REAL team names.
- */
-export async function resolveMatchSeo(sport: string, id: string, tab?: string) {
-  return buildMatchSeo({ sport, id, tab });
+/* -----------------------------
+   MATCH SEO (async)
+   Supports BOTH:
+   - resolveMatchSeo(sport, id, tab?)
+   - resolveMatchSeo({ sport, id, tab? })
+------------------------------ */
+type MatchArgs = { sport: string; id: string; tab?: string };
+
+export async function resolveMatchSeo(sport: string, id: string, tab?: string): Promise<{
+  entry: SeoEntry;
+  metadata: Metadata;
+}>;
+export async function resolveMatchSeo(args: MatchArgs): Promise<{
+  entry: SeoEntry;
+  metadata: Metadata;
+}>;
+export async function resolveMatchSeo(
+  arg1: string | MatchArgs,
+  arg2?: string,
+  arg3?: string
+) {
+  if (typeof arg1 === "string") {
+    return buildMatchSeo({ sport: arg1, id: String(arg2 || ""), tab: arg3 });
+  }
+  return buildMatchSeo({ sport: arg1.sport, id: String(arg1.id), tab: arg1.tab });
 }
