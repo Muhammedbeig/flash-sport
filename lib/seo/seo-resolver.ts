@@ -56,44 +56,56 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
-/** ✅ Home (sync) */
+/** ✅ Used by landing/home */
 export function resolveHomeSeo() {
   const canonicalPath = "/";
   const entry: SeoEntry = { ...SEO_HOME, canonical: canonicalPath };
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/** ✅ Backward-compatible export (your app/layout.tsx imports this) */
+/** ✅ Your app/layout.tsx imports this */
 export function resolveRootSeo(): Metadata {
   return resolveHomeSeo().metadata;
 }
 
 /**
- * ✅ Static pages (sync)
- * FIX: supports optional pathname (2nd argument) to match your layout usage:
- *   resolveStaticPageSeo("contact", "/contact")
+ * ✅ Static pages
+ * Works with:
+ *  - resolveStaticPageSeo("contact", "/contact")
+ *  - resolveStaticPageSeo("privacy-policy", "/privacy-policy")
+ *  - resolveStaticPageSeo("privacyPolicy")
  */
 export function resolveStaticPageSeo(
-  pageKey: "contact" | "privacyPolicy",
+  pageKey: "contact" | "privacyPolicy" | "privacy-policy",
   pathname?: string
 ) {
-  const base = SEO_PAGES[pageKey];
+  const normalizedKey: "contact" | "privacyPolicy" =
+    pageKey === "privacy-policy" ? "privacyPolicy" : pageKey;
 
-  const defaultPath = pageKey === "contact" ? "/contact" : "/privacy-policy";
+  const base = SEO_PAGES[normalizedKey];
+
+  const defaultPath = normalizedKey === "contact" ? "/contact" : "/privacy-policy";
   const canonicalPath = pathname || defaultPath;
 
   const override =
+    SEO_ADMIN_OVERRIDES[`page:${normalizedKey}`] ||
+    SEO_ADMIN_OVERRIDES[normalizedKey] ||
     SEO_ADMIN_OVERRIDES[`page:${pageKey}`] ||
     SEO_ADMIN_OVERRIDES[pageKey] ||
     undefined;
 
   const entry: SeoEntry = { ...base, ...override, canonical: canonicalPath };
+
+  entry.title = clamp(entry.title, 60);
+  entry.description = clamp(entry.description, 155);
+
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
 /**
- * ✅ /sports/[sport]/[tab] (sync)
- * IMPORTANT: keep sync so existing layouts don’t need await.
+ * ✅ /sports/[sport]/[tab]
+ * MUST exist (your sports layout imports resolveSportsTabSeo)
+ * Keep sync: layouts don’t need await.
  */
 export function resolveSportsTabSeo(rawSport: string, rawTab: string) {
   const sport = normalizeSport(rawSport);
@@ -116,7 +128,6 @@ export function resolveSportsTabSeo(rawSport: string, rawTab: string) {
   const key = `sports:${sport}:${tab}`;
   const entry: SeoEntry = { ...base, ...(SEO_ADMIN_OVERRIDES[key] || {}) };
 
-  // enforce limits after overrides
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
 
@@ -124,8 +135,8 @@ export function resolveSportsTabSeo(rawSport: string, rawTab: string) {
 }
 
 /**
- * ✅ /sports/[sport]/[tab]/league/[leagueId] (sync)
- * Supports optional pathname if you want, but not required.
+ * ✅ /sports/[sport]/[tab]/league/[leagueId]
+ * Keep sync.
  */
 export function resolveSportsLeagueSeo(
   rawSport: string,
@@ -157,8 +168,9 @@ export function resolveSportsLeagueSeo(
 }
 
 /**
- * ✅ Match SEO (async)
- * Uses API in buildMatchSeo() to fetch REAL team names per match id.
+ * ✅ Match SEO
+ * MUST exist (your match layout imports resolveMatchSeo)
+ * Uses API via buildMatchSeo to fetch REAL team names.
  */
 export async function resolveMatchSeo(sport: string, id: string, tab?: string) {
   return buildMatchSeo({ sport, id, tab });

@@ -78,6 +78,7 @@ async function fetchJsonWithTimeout(url: string, init: NextFetchInit, timeoutMs:
   }
 }
 
+// ✅ Cached per request (metadata + layout both calling won’t double hit API)
 const getMatchApiData = cache(async (sportRaw: string, id: string): Promise<MatchApiData | null> => {
   const sport = normalizeSport(sportRaw);
   const cfg = SPORT_API[sport];
@@ -103,7 +104,6 @@ const getMatchApiData = cache(async (sportRaw: string, id: string): Promise<Matc
 
   const core = item.fixture || item.game || item;
   const teams = item.teams || core.teams || {};
-
   const homeRaw = teams.home || teams.local || {};
   const awayRaw = teams.away || teams.visitors || teams.visitor || {};
 
@@ -175,6 +175,7 @@ export async function buildMatchSeo(args: { sport: string; id: string; tab?: str
 
   const data = await getMatchApiData(sport, matchId);
 
+  // ✅ REAL team names from API
   const home = data?.home || "Match";
   const away = data?.away || `#${matchId}`;
 
@@ -231,7 +232,7 @@ export async function buildMatchSeo(args: { sport: string; id: string; tab?: str
     };
   }
 
-  // admin overrides: per match + per tab
+  // ✅ admin overrides: per match + per tab
   const baseKey = `match:${sport}:${matchId}`;
   const tabKey = `match:${sport}:${matchId}:${tab}`;
   entry = { ...entry, ...(SEO_ADMIN_OVERRIDES[baseKey] || {}), ...(SEO_ADMIN_OVERRIDES[tabKey] || {}) };
@@ -242,4 +243,5 @@ export async function buildMatchSeo(args: { sport: string; id: string; tab?: str
   return { entry, metadata: toMetadata(entry, canonicalPath) };
 }
 
+// Legacy alias if any old file expects it
 export const resolveDynamicMatchSeoBundle = buildMatchSeo;
