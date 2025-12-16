@@ -138,9 +138,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <div className="flex items-center h-full mr-6">
           <Link href="/" className="flex items-center gap-3">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm ${logoBgClass}`}
-            >
-              F
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ${logoBgClass}`}>
+              <img
+                src="/brand/logo.svg"
+                alt="LiveSocceRR Scores"
+                className="w-6 h-6"
+                loading="eager"
+                decoding="async"
+              />
             </div>
             <h1 className={`text-2xl font-bold tracking-tight ${logoTextClass}`}>
               Live Score

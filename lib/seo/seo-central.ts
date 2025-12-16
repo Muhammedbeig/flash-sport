@@ -132,15 +132,15 @@ export const SEO_MATCH = {
   primaryKeyword: "live score",
 
   titlePatterns: [
-    "LIVE: {home} vs {away} – Score, Lineups & Stats",
-    "LIVE: {home} vs {away} – Score & Lineups",
+    "MATCH: {home} vs {away} – Score, Lineups & Stats",
+    "MATCH: {home} vs {away} – Score & Lineups",
     "{home} vs {away} Live Score",
   ] as const,
 
   descriptionPattern:
     "Watch live score updates of {home} vs {away} with goals, lineups, news & match timeline. Fast updates on {brand}.",
 
-  h1Pattern: "LIVE: {home} vs {away} – Live Score",
+  h1Pattern: "MATCH: {home} vs {away} – Live Score",
 
   og: {
     useDynamicBanner: true,
