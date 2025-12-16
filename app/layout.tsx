@@ -1,24 +1,17 @@
 import "./globals.css";
-import { SEO_CONTENT } from "@/lib/seo-config";
+import type { Metadata } from "next";
+import { resolveRootSeo } from "@/lib/seo/seo-resolver";
+
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import HtmlThemeSync from "@/components/HtmlThemeSync";
 import WidgetThemeConfig from "@/components/WidgetThemeConfig";
 import AppShell from "@/components/layout/AppShell";
 
-// 1. Dynamic Metadata from SEO Config
-export const metadata = {
-  title: {
-    default: SEO_CONTENT.home.metadata.title,
-    template: `%s | ${SEO_CONTENT.global.siteName}`,
-  },
-  description: SEO_CONTENT.home.metadata.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return resolveRootSeo();
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const API_KEY = process.env.NEXT_PUBLIC_API_SPORTS_KEY ?? "";
   const SHOW_ERRORS = process.env.NEXT_PUBLIC_WIDGET_SHOW_ERRORS === "true";
 
@@ -26,18 +19,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body>
-        {/* 2. Load API-Sports Script 
-            We load this globally so it's available for the 'dangerouslySetInnerHTML' widgets.
-            The Sidebar/WidgetScriptLoader handles re-triggering if necessary.
-        */}
-        <script
-          type="module"
-          src="https://widgets.api-sports.io/3.1.0/widgets.js"
-        />
+        <script type="module" src="https://widgets.api-sports.io/3.1.0/widgets.js" />
 
-        {/* 3. Global Widget Configuration 
-            This hidden widget sets the API Key for all other widgets on the site.
-        */}
         {API_KEY && (
           <div
             dangerouslySetInnerHTML={{
@@ -54,7 +37,6 @@ export default function RootLayout({
           />
         )}
 
-        {/* 4. Providers & Shell */}
         <ThemeProvider>
           <HtmlThemeSync />
           <WidgetThemeConfig />
