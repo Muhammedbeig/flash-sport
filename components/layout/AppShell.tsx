@@ -4,7 +4,7 @@ import { ReactNode, useState, Suspense } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
-import Footer from "./Footer"; 
+import Footer from "./Footer";
 import { X } from "lucide-react";
 
 type AppShellProps = {
@@ -13,7 +13,9 @@ type AppShellProps = {
 
 // Fallback for navigation parts (invisible or simple loader)
 function NavFallback() {
-  return <div className="animate-pulse bg-slate-200 dark:bg-slate-800 h-full w-full opacity-50" />;
+  return (
+    <div className="animate-pulse bg-slate-200 dark:bg-slate-800 h-full w-full opacity-50" />
+  );
 }
 
 export default function AppShell({ children }: AppShellProps) {
@@ -21,7 +23,6 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex flex-col min-h-screen theme-bg transition-colors duration-200">
-
       {/* HEADER (Uses searchParams, needs Suspense) */}
       <Suspense fallback={<div className="h-16 border-b theme-border theme-bg" />}>
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
@@ -29,34 +30,31 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex flex-col w-full max-w-7xl mx-auto theme-bg relative">
-        
         <div className="flex flex-1 items-start">
-          
           {/* SIDEBAR (DESKTOP) (Uses searchParams, needs Suspense) */}
           <aside className="hidden lg:block w-64 min-h-screen pb-4 theme-border border-r">
-             <Suspense fallback={<NavFallback />}>
-                <Sidebar className="h-full" />
-             </Suspense>
+            <Suspense fallback={<NavFallback />}>
+              <Sidebar className="h-full" />
+            </Suspense>
           </aside>
 
           {/* MAIN FEED */}
           <main className="flex-1 min-w-0 w-full p-0 md:p-6 theme-bg">
-            <div className="theme-bg rounded-xl min-h-[60vh]">
-              {children}
-            </div>
+            <div className="theme-bg rounded-xl min-h-[60vh]">{children}</div>
           </main>
         </div>
-
       </div>
 
       {/* FOOTER */}
       <div className="w-full theme-bg theme-border border-t relative z-20 mt-auto">
-         <Footer />
+        <Footer />
       </div>
 
-      {/* MOBILE NAV (Uses searchParams, needs Suspense) */}
+      {/* MOBILE NAV (MOBILE ONLY) (Uses searchParams, needs Suspense) */}
       <Suspense fallback={null}>
-        <MobileNav />
+        <div className="lg:hidden">
+          <MobileNav />
+        </div>
       </Suspense>
 
       {/* MOBILE MENU DRAWER */}
@@ -91,8 +89,8 @@ export default function AppShell({ children }: AppShellProps) {
           <div className="h-full">
             {/* SIDEBAR INSIDE MOBILE DRAWER (Uses searchParams, needs Suspense) */}
             <Suspense fallback={<div className="p-4 text-sm text-secondary">Loading menu...</div>}>
-              <Sidebar 
-                className="w-full h-auto static border-none shadow-none pb-20" 
+              <Sidebar
+                className="w-full h-auto static border-none shadow-none pb-20"
                 onLinkClick={() => setMobileMenuOpen(false)}
               />
             </Suspense>

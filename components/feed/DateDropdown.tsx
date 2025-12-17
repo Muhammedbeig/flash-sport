@@ -33,10 +33,12 @@ export default function DateDropdown({
   valueYMD,
   todayYMD,
   onSelect,
+  fullWidth = false,
 }: {
   valueYMD: string;
   todayYMD: string;
   onSelect: (ymd: string) => void;
+  fullWidth?: boolean;
 }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -55,7 +57,6 @@ export default function DateDropdown({
   const [viewY, setViewY] = useState(initial.y);
   const [viewM, setViewM] = useState(initial.m);
 
-  // Only sync displayed month when dropdown closes or external value changes
   useEffect(() => {
     if (!open) {
       setViewY(initial.y);
@@ -113,22 +114,35 @@ export default function DateDropdown({
   };
 
   return (
-    <div ref={rootRef} className="relative">
-      {/* Whole control clickable */}
+    <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : ""}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors flex items-center gap-2 ${buttonClass}`}
+        className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors flex items-center gap-2 ${
+          fullWidth ? "w-full justify-between" : ""
+        } ${buttonClass}`}
       >
-        <CalendarDays size={16} className="opacity-90" />
-        <span className="whitespace-nowrap">{formatDDMMWeekday(safeValue)}</span>
-        <ChevronDown size={16} className={`opacity-80 transition-transform ${open ? "rotate-180" : ""}`} />
+        <span className="flex items-center gap-2">
+          <CalendarDays size={16} className="opacity-90" />
+          <span className="whitespace-nowrap">{formatDDMMWeekday(safeValue)}</span>
+        </span>
+        <ChevronDown
+          size={16}
+          className={`opacity-80 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
-        <div className={`absolute right-0 mt-2 w-52 rounded-lg border shadow-lg overflow-hidden z-50 ${panelClass}`}>
-          {/* Changing month DOES NOT apply filter */}
-          <div className={`flex items-center justify-between px-2 py-2 border-b ${isDark ? "border-slate-800" : "border-gray-200"}`}>
+        <div
+          className={`absolute right-0 mt-2 rounded-lg border shadow-lg overflow-hidden z-50 ${
+            fullWidth ? "w-full" : "w-52"
+          } ${panelClass}`}
+        >
+          <div
+            className={`flex items-center justify-between px-2 py-2 border-b ${
+              isDark ? "border-slate-800" : "border-gray-200"
+            }`}
+          >
             <button
               type="button"
               onClick={gotoPrevMonth}
@@ -152,7 +166,6 @@ export default function DateDropdown({
             </button>
           </div>
 
-          {/* Selecting a date DOES apply immediately */}
           <div className="max-h-72 overflow-y-auto">
             <button
               type="button"

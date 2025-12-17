@@ -28,7 +28,7 @@ export type SportKey =
 
 /** Brand (site-wide SEO) */
 export const SEO_BRAND = {
-  siteName: "LiveSoccerR",
+  siteName: "LiveSocceRR",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://livesoccerr.com",
   tagline: "Soccer Scores. Right Now.",
   logoTitle: "LiveSocceRR Scores",

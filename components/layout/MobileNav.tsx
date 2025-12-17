@@ -1,80 +1,140 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams, usePathname } from "next/navigation";
-import { Clock, Search, Star, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Home, Clock, Activity, Search } from "lucide-react";
+
+import MobileSearch from "../search/MobileSearch";
+
+type SportKey = string;
+
+function getSportFromPathname(pathname: string): SportKey | null {
+  const sportsMatch = pathname.match(/^\/sports\/([^/]+)(\/|$)/);
+  if (sportsMatch?.[1]) return sportsMatch[1].toLowerCase();
+
+  const matchMatch = pathname.match(/^\/match\/([^/]+)(\/|$)/);
+  if (matchMatch?.[1]) return matchMatch[1].toLowerCase();
+
+  return null;
+}
+
+function getTabFromPathname(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+  const idx = parts.indexOf("sports");
+  if (idx !== -1 && parts[idx + 2]) return parts[idx + 2].toLowerCase();
+  return null;
+}
 
 export default function MobileNav() {
-  const searchParams = useSearchParams();
   const pathname = usePathname();
-  const currentView = searchParams.get("view");
+  const searchParams = useSearchParams();
 
-  const isFavorites = currentView === "favorites";
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  // Treat all sports + match pages as "Matches" section (so highlight is correct)
-  const isMatchesSection =
-    (!isFavorites && pathname === "/") ||
-    pathname.startsWith("/sports") ||
-    pathname.startsWith("/match");
+  // Legacy query fallback: ?sport=football/live
+  const rawSport = searchParams.get("sport") || "football";
+  const [sportFromQuery, tabFromQuery] = rawSport.split("/");
 
-  // Keep user on current sports tab if already on /sports/*, otherwise go to default feed route
-  const matchesHref = pathname.startsWith("/sports") ? pathname : "/sports/football/all";
+  const sportFromPath = useMemo(() => getSportFromPathname(pathname), [pathname]);
+  const tabFromPath = useMemo(() => getTabFromPathname(pathname), [pathname]);
 
-  const navItems = [
-    {
-      label: "Matches",
-      icon: Clock,
-      href: matchesHref,
-      isActive: isMatchesSection,
-    },
-    {
-      label: "Search",
-      icon: Search,
-      href: "#",
-      isActive: false,
-    },
-    {
-      label: "Favourites",
-      icon: Star,
-      href: "/?view=favorites",
-      isActive: isFavorites,
-    },
-    {
-      label: "Profile",
-      icon: User,
-      href: "#",
-      isActive: false,
-    },
-  ];
+  const currentSport = (sportFromPath || sportFromQuery || "football").toLowerCase();
+  const currentTab = (tabFromPath || tabFromQuery || "all").toLowerCase();
+
+  const inSportsRoutes = pathname.startsWith("/sports/");
+
+  const todayYMD = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const currentDateYMD = searchParams.get("date") || todayYMD;
+
+  const buildHref = (tab: "all" | "live" | "today", dateYMD?: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    // Keep date for All (so DateDropdown on page can control it),
+    // but force TODAY date for Today and Live (Live works like Today).
+    if (dateYMD) params.set("date", dateYMD);
+
+    if (inSportsRoutes) {
+      const qs = params.toString();
+      return qs ? `/sports/${currentSport}/${tab}/?${qs}` : `/sports/${currentSport}/${tab}/`;
+    }
+
+    // Fallback to legacy home routing
+    const sportParam = tab === "all" ? currentSport : `${currentSport}/${tab}`;
+    params.set("sport", sportParam);
+
+    const qs = params.toString();
+    return `/?${qs}`;
+  };
+
+  // ✅ All keeps selected date
+  const allHref = buildHref("all", currentDateYMD);
+
+  // ✅ Live behaves like Today -> force today's date
+  const liveHref = buildHref("live", todayYMD);
+
+  // ✅ Today forces today's date
+  const todayHref = buildHref("today", todayYMD);
+
+  const isAllActive =
+    currentTab === "all" ||
+    (!["live", "today"].includes(currentTab) && inSportsRoutes);
+
+  const isLiveActive = currentTab === "live";
+  const isTodayActive = currentTab === "today";
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 theme-bg border-t theme-border h-16 pb-safe transition-colors duration-200">
-      <div className="grid grid-cols-4 h-full">
-        {navItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 transition-colors relative",
-              item.isActive
-                ? "text-blue-600 dark:text-blue-500"
-                : "text-secondary hover:text-primary"
-            )}
-          >
-            {item.isActive && (
-              <span className="absolute top-0 w-8 h-0.5 bg-blue-600 rounded-b-md" />
-            )}
+    <>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 theme-bg theme-border border-t">
+        <div className="mx-auto max-w-7xl px-2 pb-[env(safe-area-inset-bottom)]">
+          {/* Bottom Nav ONLY (NO DateDropdown here) */}
+          <nav className="grid grid-cols-4 py-2">
+            <Link
+              href={allHref}
+              prefetch={false}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 ${
+                isAllActive ? "theme-accent" : "opacity-90"
+              }`}
+            >
+              <Home className="h-5 w-5" />
+              <span className="text-[11px] font-medium">All</span>
+            </Link>
 
-            <item.icon
-              size={20}
-              className={item.isActive ? "fill-current" : ""}
-              strokeWidth={item.isActive ? 2.5 : 2}
-            />
-            <span className="text-[10px] font-medium">{item.label}</span>
-          </Link>
-        ))}
+            <Link
+              href={liveHref}
+              prefetch={false}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 ${
+                isLiveActive ? "theme-accent" : "opacity-90"
+              }`}
+            >
+              <Activity className="h-5 w-5" />
+              <span className="text-[11px] font-medium">Live</span>
+            </Link>
+
+            <Link
+              href={todayHref}
+              prefetch={false}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 ${
+                isTodayActive ? "theme-accent" : "opacity-90"
+              }`}
+            >
+              <Clock className="h-5 w-5" />
+              <span className="text-[11px] font-medium">Today</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="flex flex-col items-center justify-center gap-1 rounded-xl py-2 opacity-90"
+            >
+              <Search className="h-5 w-5" />
+              <span className="text-[11px] font-medium">Search</span>
+            </button>
+          </nav>
+        </div>
       </div>
-    </div>
+
+      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </>
   );
 }
