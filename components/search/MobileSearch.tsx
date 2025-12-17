@@ -33,7 +33,15 @@ function buildHeaders(host: string, apiKey: string) {
 
 type LeagueHit = { sport: SportId; id: number; name: string; country?: string; logo?: string };
 type TeamHit = { sport: SportId; id: number; name: string; country?: string; logo?: string };
-type PlayerHit = { sport: SportId; id: number; name: string; nationality?: string; photo?: string; teamName?: string; teamLogo?: string };
+type PlayerHit = {
+  sport: SportId;
+  id: number;
+  name: string;
+  nationality?: string;
+  photo?: string;
+  teamName?: string;
+  teamLogo?: string;
+};
 type MatchHit = {
   sport: SportId;
   id: number;
@@ -140,10 +148,13 @@ function normMatch(sport: SportId, item: any): MatchHit | null {
 function parseVsQuery(q: string): { a: string; b: string } | null {
   const raw = q.toLowerCase().replace(/\s+/g, " ").trim();
   const m =
-    raw.split(" vs ").length === 2 ? raw.split(" vs ") :
-    raw.split(" v ").length === 2 ? raw.split(" v ") :
-    raw.split(" vs. ").length === 2 ? raw.split(" vs. ") :
-    null;
+    raw.split(" vs ").length === 2
+      ? raw.split(" vs ")
+      : raw.split(" v ").length === 2
+        ? raw.split(" v ")
+        : raw.split(" vs. ").length === 2
+          ? raw.split(" vs. ")
+          : null;
 
   if (!m) return null;
   const a = m[0].trim();
@@ -218,7 +229,6 @@ export default function MobileSearch({
       const next: ResultBundle = { leagues: [], teams: [], players: [], matches: [] };
 
       try {
-        // Run sport searches in parallel, but keep each sport’s requests small.
         await Promise.all(
           sportsToSearch.map(async (sId) => {
             const def = SPORT_DEFS[sId];
@@ -235,7 +245,6 @@ export default function MobileSearch({
               return res.json();
             };
 
-            // Leagues + Teams always
             const [leaguesJson, teamsJson] = await Promise.all([
               doFetch(`leagues?search=${encodeURIComponent(query)}`),
               doFetch(`teams?search=${encodeURIComponent(query)}`),
@@ -248,11 +257,9 @@ export default function MobileSearch({
               ...asArr(teamsJson?.response).map((x) => normTeam(sId, x)).filter(Boolean) as TeamHit[]
             );
 
-            // Players (only when query is a bit longer)
             if (query.length >= 3) {
               let playersJson: any = null;
 
-              // Try seasoned football first; fallback to no-season / other sports
               const tryPaths =
                 sId === "football"
                   ? [
@@ -281,9 +288,7 @@ export default function MobileSearch({
               }
             }
 
-            // Matches (best-effort): only for "A vs B" style queries, and only for football reliably
             if (vs && sId === "football") {
-              // find best team IDs
               const teamSearchA = await doFetch(`teams?search=${encodeURIComponent(vs.a)}`);
               const teamSearchB = await doFetch(`teams?search=${encodeURIComponent(vs.b)}`);
 
@@ -291,7 +296,6 @@ export default function MobileSearch({
               const b0 = (asArr(teamSearchB?.response).map((x) => normTeam(sId, x)).filter(Boolean) as TeamHit[])[0];
 
               if (a0?.id && b0?.id) {
-                // football head-to-head endpoint
                 let h2hJson: any = null;
                 try {
                   h2hJson = await doFetch(
@@ -311,7 +315,6 @@ export default function MobileSearch({
           })
         );
 
-        // de-dup + cap for mobile
         const uniq = <T extends { sport: SportId; id: number }>(arr: T[]) => {
           const seen = new Set<string>();
           const out: T[] = [];
@@ -347,30 +350,19 @@ export default function MobileSearch({
 
   if (!open) return null;
 
-  const hasAny =
-    data.leagues.length || data.teams.length || data.players.length || data.matches.length;
+  const hasAny = data.leagues.length || data.teams.length || data.players.length || data.matches.length;
 
   return (
     <div className="fixed inset-0 z-50">
       {/* backdrop */}
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/40"
-        aria-label="Close search"
-      />
+      <button type="button" onClick={onClose} className="absolute inset-0 bg-black/40" aria-label="Close search" />
 
       {/* sheet */}
       <div className="absolute bottom-0 left-0 right-0 theme-bg theme-border border-t rounded-t-2xl shadow-xl">
         <div className="mx-auto max-w-2xl px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
           <div className="flex items-center justify-between gap-3">
             <div className="text-base font-semibold text-primary">Search</div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-lg hover:theme-soft"
-              aria-label="Close"
-            >
+            <button type="button" onClick={onClose} className="p-2 rounded-lg hover:theme-soft" aria-label="Close">
               <X size={18} />
             </button>
           </div>
@@ -422,9 +414,7 @@ export default function MobileSearch({
               />
               {loading ? <Loader2 className="animate-spin" size={18} /> : null}
             </div>
-            <div className="mt-2 text-[11px] text-secondary">
-              All results open in a new tab.
-            </div>
+            <div className="mt-2 text-[11px] text-secondary">All results open in a new tab.</div>
           </div>
 
           {/* results */}
@@ -455,7 +445,9 @@ export default function MobileSearch({
                             {m.homeName || "Home"} vs {m.awayName || "Away"}
                           </div>
                           <div className="text-[11px] text-secondary truncate">
-                            {(m.leagueName ? m.leagueName : "Match")}{m.status ? ` • ${m.status}` : ""}{m.date ? ` • ${new Date(m.date).toLocaleString()}` : ""}
+                            {(m.leagueName ? m.leagueName : "Match")}
+                            {m.status ? ` • ${m.status}` : ""}
+                            {m.date ? ` • ${new Date(m.date).toLocaleString()}` : ""}
                           </div>
                         </div>
                       </a>
@@ -470,7 +462,8 @@ export default function MobileSearch({
               <Section title="Players">
                 <div className="divide-y theme-border border rounded-xl overflow-hidden">
                   {data.players.map((p) => {
-                    const href = `/player?id=${encodeURIComponent(String(p.id))}&sport=${encodeURIComponent(p.sport)}`;
+                    // ✅ ONLY CHANGE: players now use path routing
+                    const href = `/player/${encodeURIComponent(p.sport)}/${encodeURIComponent(String(p.id))}`;
                     return (
                       <a
                         key={`${p.sport}-player-${p.id}`}
