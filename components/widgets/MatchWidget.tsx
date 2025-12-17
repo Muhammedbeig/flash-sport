@@ -83,7 +83,9 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
   const [loading, setLoading] = useState(true);
 
   const validTabs: TabId[] = ["summary", "stats", "lineups", "h2h"];
-  const defaultTab = validTabs.includes((initialTab || "") as TabId) ? (initialTab as TabId) : "summary";
+  const defaultTab = validTabs.includes((initialTab || "") as TabId)
+    ? (initialTab as TabId)
+    : "summary";
   const [tab, setTab] = useState<TabId>(defaultTab);
 
   useEffect(() => {
@@ -161,7 +163,8 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
   const { teams, goals, league, status } = match;
   const isLive = ["1H", "HT", "2H", "ET", "P", "BT"].includes(status.short);
 
-  const tabBase = "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
+  const tabBase =
+    "px-4 py-2 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors";
   const activeClass = "border-blue-500 text-blue-600 dark:text-blue-400";
   const inactiveClass = "border-transparent text-secondary hover:text-primary";
 
@@ -237,7 +240,9 @@ export default function MatchWidget({ matchId, sport, initialTab }: MatchWidgetP
 
       {/* CONTENT */}
       <div className="min-h-[300px]">
-        {tab === "summary" && <MatchSummary events={match.events} homeId={teams.home.id} awayId={teams.away.id} sport="football" />}
+        {tab === "summary" && (
+          <MatchSummary events={match.events} homeId={teams.home.id} awayId={teams.away.id} sport="football" />
+        )}
         {tab === "stats" && <MatchStats stats={match.statistics} />}
         {tab === "lineups" && <MatchLineups matchId={matchIdStr} sport="football" widgetTheme={widgetTheme} />}
         {tab === "h2h" && <MatchH2H teamOneId={teams.home.id} teamTwoId={teams.away.id} sport="football" />}

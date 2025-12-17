@@ -11,16 +11,12 @@ type LeagueWidgetProps = {
 export default function LeagueWidget({ leagueId, sport }: LeagueWidgetProps) {
   const { theme } = useTheme();
 
-  // 1. Force the script to re-run whenever this component mounts
-  // This fixes the "Blank Page" issue on navigation
   useEffect(() => {
     const scriptId = "api-sports-script-force-reload";
-    
-    // Remove existing script to reset the engine
+
     const existing = document.getElementById(scriptId);
     if (existing) existing.remove();
 
-    // Re-add the script
     const script = document.createElement("script");
     script.id = scriptId;
     script.src = "https://widgets.api-sports.io/3.1.0/widgets.js";
@@ -28,12 +24,11 @@ export default function LeagueWidget({ leagueId, sport }: LeagueWidgetProps) {
     script.async = true;
     document.body.appendChild(script);
 
-    // Cleanup
     return () => {
       const s = document.getElementById(scriptId);
       if (s) s.remove();
     };
-  }, [leagueId, sport]); // Re-run if league changes
+  }, [leagueId, sport]);
 
   const widgetTheme = theme === "dark" ? "flash-dark" : "flash-light";
 
@@ -49,7 +44,6 @@ export default function LeagueWidget({ leagueId, sport }: LeagueWidgetProps) {
   ];
 
   const widgetSport = SUPPORTED_SPORTS.includes(sport) ? sport : "football";
-  // Dynamically set season to current year or previous if early in the year
   const season = new Date().getFullYear();
 
   const html = `

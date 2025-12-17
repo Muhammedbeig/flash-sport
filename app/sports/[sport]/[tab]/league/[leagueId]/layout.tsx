@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
 import { resolveSportsLeagueSeo } from "@/lib/seo/seo-resolver";
 
+type LeagueParams = { sport: string; tab: string; leagueId: string };
+
 export async function generateMetadata({
   params,
 }: {
-  params: { sport: string; tab: string; leagueId: string };
+  params: Promise<LeagueParams>;
 }): Promise<Metadata> {
+  const { sport, tab, leagueId } = await params;
+
   const seo = await resolveSportsLeagueSeo({
-    sport: params.sport,
-    tab: params.tab,
-    leagueId: params.leagueId,
-    pathname: `/sports/${params.sport}/${params.tab}/league/${params.leagueId}`,
+    sport,
+    tab,
+    leagueId,
+    pathname: `/sports/${sport}/${tab}/league/${leagueId}`,
   });
+
   return seo.metadata;
 }
 

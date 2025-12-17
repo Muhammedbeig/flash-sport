@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, ChevronRight, Globe } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -15,6 +15,8 @@ const SPORT_HOSTS: Record<string, string> = {
   volleyball: "v1.volleyball.api-sports.io",
 };
 
+const VALID_TABS = ["all", "live", "today", "finished", "scheduled"] as const;
+
 type League = { id: number; name: string; logo: string };
 type CountryData = {
   name: string;
@@ -22,18 +24,34 @@ type CountryData = {
   leagues: League[];
 };
 
+function normalizeSport(s: string) {
+  const sport = (s || "football").toLowerCase();
+  return SPORT_HOSTS[sport] ? sport : "football";
+}
+
+function normalizeTab(t?: string) {
+  const tab = (t || "all").toLowerCase();
+  return (VALID_TABS as readonly string[]).includes(tab) ? tab : "all";
+}
+
 export default function SidebarCountries({
   currentSport,
+  currentTab,
   onLinkClick,
 }: {
   currentSport: string;
+  currentTab?: string;
   onLinkClick?: () => void;
 }) {
+  const sportSafe = useMemo(() => normalizeSport(currentSport), [currentSport]);
+  const tabSafe = useMemo(() => normalizeTab(currentTab), [currentTab]);
+
   const [data, setData] = useState<CountryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const { theme } = useTheme();
+
   const VISIBLE_COUNT = 15;
 
   useEffect(() => {
@@ -42,12 +60,11 @@ export default function SidebarCountries({
     async function fetchLeagues() {
       setLoading(true);
       try {
-        const host = SPORT_HOSTS[currentSport] || SPORT_HOSTS.football;
+        const host = SPORT_HOSTS[sportSafe] || SPORT_HOSTS.football;
         const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-        
+
         if (!apiKey) return;
 
-        // Keep the robust error handling
         const response = await fetch(`https://${host}/leagues`, {
           method: "GET",
           headers: {
@@ -56,15 +73,12 @@ export default function SidebarCountries({
           },
         }).catch((err) => {
           console.warn("Sidebar Fetch Failed:", err);
-          return null; 
+          return null;
         });
 
-        if (!response || !response.ok) {
-           return;
-        }
+        if (!response || !response.ok) return;
 
         const json = await response.json();
-        
         if (!isMounted) return;
         if (!json.response || !Array.isArray(json.response)) return;
 
@@ -96,14 +110,22 @@ export default function SidebarCountries({
         if (isMounted) setLoading(false);
       }
     }
+
     fetchLeagues();
+    return () => {
+      isMounted = false;
+    };
+  }, [sportSafe]);
 
-    return () => { isMounted = false; };
-  }, [currentSport]);
+  const toggleCountry = (name: string) =>
+    setExpandedCountry(expandedCountry === name ? null : name);
 
-  const toggleCountry = (name: string) => setExpandedCountry(expandedCountry === name ? null : name);
-
-  if (loading) return <div className="p-4 text-xs text-secondary text-center animate-pulse">Loading...</div>;
+  if (loading)
+    return (
+      <div className="p-4 text-xs text-secondary text-center animate-pulse">
+        Loading...
+      </div>
+    );
 
   const visibleCountries = showAll ? data : data.slice(0, VISIBLE_COUNT);
 
@@ -112,7 +134,6 @@ export default function SidebarCountries({
       {visibleCountries.map((country) => {
         const isExpanded = expandedCountry === country.name;
 
-        // RESTORED: Original Design Classes
         const activeClass =
           theme === "dark"
             ? "bg-slate-800 text-blue-400"
@@ -132,13 +153,28 @@ export default function SidebarCountries({
           <div key={country.name} className="border-b theme-border last:border-0">
             <button
               onClick={() => toggleCountry(country.name)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors duration-200 ${isExpanded ? activeClass : inactiveClass}`}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+                isExpanded ? activeClass : inactiveClass
+              }`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
-                {country.flag ? <img src={country.flag} alt={country.name} className="w-4 h-4 object-contain shrink-0" /> : <Globe size={16} className="shrink-0" />}
+                {country.flag ? (
+                  <img
+                    src={country.flag}
+                    alt={country.name}
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
+                ) : (
+                  <Globe size={16} className="shrink-0" />
+                )}
                 <span className="truncate">{country.name}</span>
               </div>
-              {isExpanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+
+              {isExpanded ? (
+                <ChevronDown size={14} className="shrink-0" />
+              ) : (
+                <ChevronRight size={14} className="shrink-0" />
+              )}
             </button>
 
             {isExpanded && (
@@ -146,7 +182,7 @@ export default function SidebarCountries({
                 {country.leagues.map((league) => (
                   <Link
                     key={league.id}
-                    href={`/?sport=${currentSport}&league=${league.id}`}
+                    href={`/sports/${sportSafe}/${tabSafe}/league/${league.id}`}
                     onClick={onLinkClick}
                     className={`
                       block px-8 py-2.5 text-xs transition-colors border-l-2 border-transparent
@@ -165,10 +201,25 @@ export default function SidebarCountries({
           </div>
         );
       })}
-      
+
       {data.length > VISIBLE_COUNT && (
-        <button onClick={() => setShowAll(!showAll)} className={`w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider border-t theme-border mt-2 transition-colors ${theme === 'dark' ? "text-blue-400 hover:bg-slate-800" : "text-blue-600 hover:bg-blue-50"}`}>
-          {showAll ? <>View Less <ChevronUp size={14} /></> : <>View All ({data.length}) <ChevronDown size={14} /></>}
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className={`w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider border-t theme-border mt-2 transition-colors ${
+            theme === "dark"
+              ? "text-blue-400 hover:bg-slate-800"
+              : "text-blue-600 hover:bg-blue-50"
+          }`}
+        >
+          {showAll ? (
+            <>
+              View Less <ChevronUp size={14} />
+            </>
+          ) : (
+            <>
+              View All ({data.length}) <ChevronDown size={14} />
+            </>
+          )}
         </button>
       )}
     </div>

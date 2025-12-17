@@ -41,7 +41,18 @@ const TABS_LIVE = [
 ] as const;
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "P", "BT", "LIVE", "INT", "BREAK"]);
-const COMPLETED_STATUSES = new Set(["FT", "AET", "PEN", "FT_PEN", "AP", "END", "AWD", "WO", "CANC", "ABD"]);
+const COMPLETED_STATUSES = new Set([
+  "FT",
+  "AET",
+  "PEN",
+  "FT_PEN",
+  "AP",
+  "END",
+  "AWD",
+  "WO",
+  "CANC",
+  "ABD",
+]);
 const UPCOMING_STATUSES = new Set(["NS", "TBD", "PST", "SUSP", "DELAYED"]);
 
 // ==========================================
@@ -55,7 +66,7 @@ const normalizeGame = (raw: any): NormalizedGame => {
   const home = teams.home || raw.home || {};
   const away = teams.away || raw.away || {};
   const goals = raw.goals || raw.score || raw.scores || {};
-  
+
   let scoresHome: any = goals.home ?? goals.home?.total ?? null;
   let scoresAway: any = goals.away ?? goals.away?.total ?? null;
 
@@ -78,10 +89,14 @@ const normalizeGame = (raw: any): NormalizedGame => {
 };
 
 // Central Fetcher
-async function fetchGames(leagueId: string, sport: string, queryParams: string): Promise<NormalizedGame[]> {
+async function fetchGames(
+  leagueId: string,
+  sport: string,
+  queryParams: string
+): Promise<NormalizedGame[]> {
   const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
   const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-  
+
   // Host mapping
   const hosts: Record<string, string> = {
     football: "v3.football.api-sports.io",
@@ -93,23 +108,22 @@ async function fetchGames(leagueId: string, sport: string, queryParams: string):
     nfl: "v1.american-football.api-sports.io",
   };
   const host = hosts[sport] || hosts.football;
-  
+
   const season = new Date().getFullYear();
   const endpoint = sport === "football" ? "fixtures" : "games";
-  
+
   // Construct Query
   const query = `league=${leagueId}&season=${season}&${queryParams}`;
-  
-  const url = cdnUrl 
-    ? `${cdnUrl}/${endpoint}?${query}` 
+
+  const url = cdnUrl
+    ? `${cdnUrl}/${endpoint}?${query}`
     : `https://${host}/${endpoint}?${query}`;
-    
-  // FIX: Explicitly defined as Record<string, string> to satisfy TypeScript
+
   let headers: Record<string, string> = {};
   if (!cdnUrl) {
     headers = {
       "x-rapidapi-host": host,
-      "x-rapidapi-key": apiKey || ""
+      "x-rapidapi-key": apiKey || "",
     };
   }
 
@@ -128,30 +142,38 @@ async function fetchGames(leagueId: string, sport: string, queryParams: string):
 // 3. SUB-COMPONENTS
 // ==========================================
 
-function GameRow({ game }: { game: NormalizedGame }) {
+function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const isLive = LIVE_STATUSES.has(game.statusShort);
-  
+
   const cardBg = isDark ? "bg-slate-900/60 hover:bg-slate-800" : "bg-white hover:bg-slate-50";
   const statusColor = isLive ? "text-red-500 font-bold" : "text-secondary";
   const scoreColor = isLive ? "text-red-500 font-bold" : "text-primary font-bold";
 
+  const sportKey = (sport || "football").toLowerCase().trim();
+  const matchHref = `/match/${encodeURIComponent(sportKey)}/${encodeURIComponent(
+    String(game.id)
+  )}/summary/`;
+
   return (
-    <Link 
-      href={`/match?id=${game.id}&sport=football`} 
-      target="_blank" 
-      prefetch={false} 
+    <Link
+      href={matchHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      prefetch={false}
       className={`flex items-center justify-between px-3 py-3 rounded-xl border theme-border ${cardBg} mb-2 transition-colors cursor-pointer group`}
     >
       {/* Time / Status */}
       <div className="flex flex-col gap-1 w-20 shrink-0 border-r theme-border pr-2">
         <span className={`text-[10px] ${statusColor}`}>
-          {isLive ? "LIVE" : new Date(game.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          {isLive
+            ? "LIVE"
+            : new Date(game.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
         {!isLive && (
           <span className="text-[9px] text-secondary">
-            {new Date(game.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+            {new Date(game.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </span>
         )}
       </div>
@@ -160,19 +182,23 @@ function GameRow({ game }: { game: NormalizedGame }) {
       <div className="flex-1 px-3 flex flex-col gap-1">
         {/* Home */}
         <div className="flex justify-between items-center">
-           <div className="flex items-center gap-2 overflow-hidden">
-             {game.homeTeam.logo && <img src={game.homeTeam.logo} className="w-4 h-4 object-contain shrink-0"/>}
-             <span className="text-xs text-primary truncate">{game.homeTeam.name}</span>
-           </div>
-           <span className={`text-xs ${scoreColor}`}>{game.homeScore ?? "-"}</span>
+          <div className="flex items-center gap-2 overflow-hidden">
+            {game.homeTeam.logo && (
+              <img src={game.homeTeam.logo} className="w-4 h-4 object-contain shrink-0" />
+            )}
+            <span className="text-xs text-primary truncate">{game.homeTeam.name}</span>
+          </div>
+          <span className={`text-xs ${scoreColor}`}>{game.homeScore ?? "-"}</span>
         </div>
         {/* Away */}
         <div className="flex justify-between items-center">
-           <div className="flex items-center gap-2 overflow-hidden">
-             {game.awayTeam.logo && <img src={game.awayTeam.logo} className="w-4 h-4 object-contain shrink-0"/>}
-             <span className="text-xs text-primary truncate">{game.awayTeam.name}</span>
-           </div>
-           <span className={`text-xs ${scoreColor}`}>{game.awayScore ?? "-"}</span>
+          <div className="flex items-center gap-2 overflow-hidden">
+            {game.awayTeam.logo && (
+              <img src={game.awayTeam.logo} className="w-4 h-4 object-contain shrink-0" />
+            )}
+            <span className="text-xs text-primary truncate">{game.awayTeam.name}</span>
+          </div>
+          <span className={`text-xs ${scoreColor}`}>{game.awayScore ?? "-"}</span>
         </div>
       </div>
 
@@ -185,17 +211,18 @@ function GameRow({ game }: { game: NormalizedGame }) {
 }
 
 // Generic List for Results/Fixtures/Live
-function GenericList({ leagueId, sport, type }: { leagueId: string, sport: string, type: string }) {
+function GenericList({ leagueId, sport, type }: { leagueId: string; sport: string; type: string }) {
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       setLoading(true);
       try {
         let q = "";
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split("T")[0];
 
         // --- QUERY LOGIC ---
         if (type === "live") {
@@ -210,12 +237,12 @@ function GenericList({ leagueId, sport, type }: { leagueId: string, sport: strin
         }
 
         const data = await fetchGames(leagueId, sport, q);
-        
+
         // --- CLIENT-SIDE FILTERING (Extra Safety) ---
         let final = data;
-        if (type === "finished") final = data.filter(g => COMPLETED_STATUSES.has(g.statusShort));
-        if (type === "scheduled") final = data.filter(g => UPCOMING_STATUSES.has(g.statusShort));
-        
+        if (type === "finished") final = data.filter((g) => COMPLETED_STATUSES.has(g.statusShort));
+        if (type === "scheduled") final = data.filter((g) => UPCOMING_STATUSES.has(g.statusShort));
+
         // Sort by date: Newest first for results, Oldest first for fixtures
         if (type === "finished") {
           final.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -230,12 +257,22 @@ function GenericList({ leagueId, sport, type }: { leagueId: string, sport: strin
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [leagueId, sport, type]);
 
-  if (loading) return <div className="p-4 space-y-2">{[1,2,3].map(i=><Skeleton key={i} className="h-16 w-full"/>)}</div>;
-  
+  if (loading)
+    return (
+      <div className="p-4 space-y-2">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-16 w-full" />
+        ))}
+      </div>
+    );
+
   if (games.length === 0) {
     return (
       <div className="p-10 text-center text-secondary text-sm">
@@ -246,13 +283,15 @@ function GenericList({ leagueId, sport, type }: { leagueId: string, sport: strin
 
   return (
     <div className="p-2">
-      {games.map(g => <GameRow key={g.id} game={g} />)}
+      {games.map((g) => (
+        <GameRow key={g.id} game={g} sport={sport} />
+      ))}
     </div>
   );
 }
 
 // Standard Summary (Shows "Upcoming" + "Results" in one view)
-function StandardSummary({ leagueId, sport }: { leagueId: string, sport: string }) {
+function StandardSummary({ leagueId, sport }: { leagueId: string; sport: string }) {
   // We fetch Next 5 and Last 5 for the summary view
   const [fixtures, setFixtures] = useState<NormalizedGame[]>([]);
   const [results, setResults] = useState<NormalizedGame[]>([]);
@@ -260,14 +299,15 @@ function StandardSummary({ leagueId, sport }: { leagueId: string, sport: string 
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       setLoading(true);
       try {
         const [nextData, lastData] = await Promise.all([
           fetchGames(leagueId, sport, "next=5"),
-          fetchGames(leagueId, sport, "last=5")
+          fetchGames(leagueId, sport, "last=5"),
         ]);
-        
+
         if (!cancelled) {
           setFixtures(nextData);
           setResults(lastData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -276,25 +316,44 @@ function StandardSummary({ leagueId, sport }: { leagueId: string, sport: string 
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [leagueId, sport]);
 
-  if (loading) return <div className="p-4 space-y-3"><Skeleton className="h-6 w-32"/><Skeleton className="h-20 w-full"/><Skeleton className="h-6 w-32"/><Skeleton className="h-20 w-full"/></div>;
+  if (loading)
+    return (
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
 
   return (
     <div className="space-y-6 p-2">
       {fixtures.length > 0 && (
         <div>
-          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">Upcoming</div>
-          {fixtures.map(g => <GameRow key={g.id} game={g} />)}
+          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">
+            Upcoming
+          </div>
+          {fixtures.map((g) => (
+            <GameRow key={g.id} game={g} sport={sport} />
+          ))}
         </div>
       )}
-      
+
       {results.length > 0 && (
         <div>
-          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">Recent Results</div>
-          {results.map(g => <GameRow key={g.id} game={g} />)}
+          <div className="px-2 mb-2 text-xs font-bold text-secondary uppercase tracking-widest">
+            Recent Results
+          </div>
+          {results.map((g) => (
+            <GameRow key={g.id} game={g} sport={sport} />
+          ))}
         </div>
       )}
 
@@ -322,7 +381,7 @@ export default function LeagueTabs({
 }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  
+
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [checkingLive, setCheckingLive] = useState(true);
   const [localTab, setLocalTab] = useState(initialTab);
@@ -339,14 +398,16 @@ export default function LeagueTabs({
         if (!cancelled && liveData.length > 0) {
           setIsLiveMode(true);
         }
-      } catch(e) {
+      } catch (e) {
         console.warn("Live check failed", e);
       } finally {
         if (!cancelled) setCheckingLive(false);
       }
     }
     check();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [leagueId, sport]);
 
   if (!leagueId) return null;
@@ -358,27 +419,26 @@ export default function LeagueTabs({
   // 3. Resolve Active Tab
   let activeTab = leagueSlug ? initialTab : localTab;
 
-  // Fallback Logic: If we are in Live Mode but URL asks for "summary" (which doesn't exist in live mode),
-  // switch to "all". Same for results -> finished.
+  // Fallback Logic
   if (isLiveMode) {
     if (activeTab === "summary") activeTab = "all";
     if (activeTab === "results") activeTab = "finished";
     if (activeTab === "fixtures") activeTab = "scheduled";
   } else {
-    // If Standard mode but URL asks for "live" (maybe user refreshed), fallback to summary
     if (activeTab === "all" || activeTab === "live") activeTab = "summary";
   }
 
   // 4. Styling Helper
   const getTabStyle = (id: string) => {
     const isActive = id === activeTab;
-    const base = "px-4 py-2 text-xs font-semibold uppercase tracking-widest border rounded-md transition-colors whitespace-nowrap";
-    
+    const base =
+      "px-4 py-2 text-xs font-semibold uppercase tracking-widest border rounded-md transition-colors whitespace-nowrap";
+
     // Live Tab Highlight
     if (id === "live") {
-       return isActive 
-         ? "bg-red-600 text-white border-red-600 animate-pulse px-6" 
-         : "text-red-500 border-red-200 bg-red-50 hover:bg-red-100 px-6";
+      return isActive
+        ? "bg-red-600 text-white border-red-600 animate-pulse px-6"
+        : "text-red-500 border-red-200 bg-red-50 hover:bg-red-100 px-6";
     }
 
     if (isActive) return `${base} bg-[#0f80da] text-white border-transparent`;
@@ -397,11 +457,12 @@ export default function LeagueTabs({
     if (isLiveMode) {
       return <GenericList leagueId={String(leagueId)} sport={sport} type={activeTab} />;
     }
-    
+
     // Standard Mode Content
     if (activeTab === "summary") {
       return <StandardSummary leagueId={String(leagueId)} sport={sport} />;
     }
+
     // Results / Fixtures
     return <GenericList leagueId={String(leagueId)} sport={sport} type={activeTab} />;
   };
@@ -411,32 +472,32 @@ export default function LeagueTabs({
       {/* TABS HEADER */}
       <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b theme-border overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
-          const targetId = tab.id; 
-          
+          const targetId = tab.id;
+
           if (leagueSlug) {
-             return (
-               <Link
-                 key={tab.id}
-                 href={`/football/${leagueSlug}/${targetId}`}
-                 className={getTabStyle(tab.id)}
-                 prefetch={false}
-               >
-                 {tab.id === "live" && <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block"/>}
-                 {tab.label}
-               </Link>
-             );
-          } else {
-             return (
-               <button
-                 key={tab.id}
-                 className={getTabStyle(tab.id)}
-                 onClick={() => setLocalTab(targetId)}
-               >
-                 {tab.id === "live" && <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block"/>}
-                 {tab.label}
-               </button>
-             );
+            return (
+              <Link
+                key={tab.id}
+                href={`/football/${leagueSlug}/${targetId}`}
+                className={getTabStyle(tab.id)}
+                prefetch={false}
+              >
+                {tab.id === "live" && (
+                  <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block" />
+                )}
+                {tab.label}
+              </Link>
+            );
           }
+
+          return (
+            <button key={tab.id} className={getTabStyle(tab.id)} onClick={() => setLocalTab(targetId)}>
+              {tab.id === "live" && (
+                <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block" />
+              )}
+              {tab.label}
+            </button>
+          );
         })}
       </div>
 
