@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
 function isValidYMD(v: string) {
@@ -10,6 +10,16 @@ function isValidYMD(v: string) {
 
 function ymdToUTCDate(ymd: string) {
   return new Date(`${ymd}T00:00:00.000Z`);
+}
+
+function utcDateToYMD(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function addDaysUTC(ymd: string, deltaDays: number) {
+  const d = ymdToUTCDate(ymd);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return utcDateToYMD(d);
 }
 
 function formatDDMMWeekday(ymd: string) {
@@ -57,6 +67,7 @@ export default function DateDropdown({
   const [viewY, setViewY] = useState(initial.y);
   const [viewM, setViewM] = useState(initial.m);
 
+  // When dropdown closes, reset month view to current selected date's month
   useEffect(() => {
     if (!open) {
       setViewY(initial.y);
@@ -64,6 +75,7 @@ export default function DateDropdown({
     }
   }, [open, initial.y, initial.m]);
 
+  // Close on outside click
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!rootRef.current) return;
@@ -73,6 +85,7 @@ export default function DateDropdown({
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
+  // Scroll selected into view when opening
   useEffect(() => {
     if (open) selectedRef.current?.scrollIntoView({ block: "center" });
   }, [open, viewY, viewM, safeValue]);
@@ -88,9 +101,12 @@ export default function DateDropdown({
     return items;
   }, [viewY, viewM]);
 
-  const buttonClass = isDark
-    ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
-    : "bg-gray-100 text-slate-700 border-gray-200 hover:bg-gray-200";
+  const wrapperClass = isDark
+    ? "bg-slate-800 text-slate-300 border-slate-700"
+    : "bg-gray-100 text-slate-700 border-gray-200";
+
+  const hoverClass = isDark ? "hover:bg-slate-700" : "hover:bg-gray-200";
+  const dividerClass = isDark ? "divide-slate-700" : "divide-gray-200";
 
   const panelClass = isDark ? "bg-slate-900 border-slate-700" : "bg-white border-gray-200";
 
@@ -113,31 +129,63 @@ export default function DateDropdown({
     } else setViewM(m);
   };
 
+  const selectPrevDay = () => {
+    const prev = addDaysUTC(safeValue, -1);
+    onSelect(prev);
+  };
+
+  const selectNextDay = () => {
+    const next = addDaysUTC(safeValue, 1);
+    onSelect(next);
+  };
+
   return (
     <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : ""}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={`h-9 px-3 rounded-md text-xs font-bold border transition-colors flex items-center gap-2 ${
-          fullWidth ? "w-full justify-between" : ""
-        } ${buttonClass}`}
+      {/* Top control: Prev day | Date (opens dropdown) | Next day */}
+      <div
+        className={`h-9 rounded-md border overflow-hidden inline-flex items-stretch divide-x ${dividerClass} ${
+          fullWidth ? "w-full" : ""
+        } ${wrapperClass}`}
       >
-        <span className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={selectPrevDay}
+          className={`h-full px-2 flex items-center justify-center transition-colors ${hoverClass}`}
+          aria-label="Previous day"
+        >
+          <ChevronLeft size={16} className="opacity-90" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={`h-full px-3 flex items-center gap-2 text-xs font-bold transition-colors ${
+            fullWidth ? "flex-1 justify-center" : ""
+          } ${hoverClass}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
           <CalendarDays size={16} className="opacity-90" />
           <span className="whitespace-nowrap">{formatDDMMWeekday(safeValue)}</span>
-        </span>
-        <ChevronDown
-          size={16}
-          className={`opacity-80 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
+        </button>
+
+        <button
+          type="button"
+          onClick={selectNextDay}
+          className={`h-full px-2 flex items-center justify-center transition-colors ${hoverClass}`}
+          aria-label="Next day"
+        >
+          <ChevronRight size={16} className="opacity-90" />
+        </button>
+      </div>
 
       {open && (
         <div
-          className={`absolute right-0 mt-2 rounded-lg border shadow-lg overflow-hidden z-50 ${
+          className={`absolute left-0 mt-2 rounded-lg border shadow-lg overflow-hidden z-50 ${
             fullWidth ? "w-full" : "w-52"
           } ${panelClass}`}
         >
+          {/* Month header (ONLY changes month view; DOES NOT auto-select/filter) */}
           <div
             className={`flex items-center justify-between px-2 py-2 border-b ${
               isDark ? "border-slate-800" : "border-gray-200"
