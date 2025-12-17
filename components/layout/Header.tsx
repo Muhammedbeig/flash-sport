@@ -35,18 +35,12 @@ type HeaderProps = {
 function getSportFromPathname(pathname: string | null | undefined): string | null {
   if (!pathname) return null;
 
-  // New canonical routes:
-  // /sports/:sport/:tab
-  // /sports/:sport/:tab/league/:leagueId
   const sportsMatch = pathname.match(/^\/sports\/([^/]+)(\/|$)/);
   if (sportsMatch?.[1]) return sportsMatch[1].toLowerCase();
 
-  // Match routes:
-  // /match/:sport/:id
   const matchMatch = pathname.match(/^\/match\/([^/]+)(\/|$)/);
   if (matchMatch?.[1]) return matchMatch[1].toLowerCase();
 
-  // Legacy football routes you already had (path-based)
   if (pathname.startsWith("/football")) return "football";
 
   return null;
@@ -56,13 +50,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // ✅ PATH-based sport detection (primary)
   const sportFromPath = getSportFromPathname(pathname);
-
-  // ✅ Legacy query fallback only (secondary)
-  const sportFromQuery = (searchParams.get("sport") || "")
-    .split("/")[0]
-    ?.toLowerCase();
+  const sportFromQuery = (searchParams.get("sport") || "").split("/")[0]?.toLowerCase();
 
   const currentSport =
     sportFromPath || (pathname === "/" && sportFromQuery ? sportFromQuery : null) || "football";
@@ -76,7 +65,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
-  // --- LOGIC FOR SPLITTING LISTS ---
   const desktopVisible = ALL_SPORTS.slice(0, 6);
   const desktopHidden = ALL_SPORTS.slice(6);
   const isDesktopHiddenActive = desktopHidden.some((s) => s.id === currentSport);
@@ -84,7 +72,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const mobileHidden = ALL_SPORTS.filter((s) => !MOBILE_TOP_SPORTS.some((m) => m.id === s.id));
   const isMobileHiddenActive = mobileHidden.some((s) => s.id === currentSport);
 
-  // --- STYLES ---
   const headerClass = isDark ? "theme-bg theme-border border-b" : "bg-[#0f80da] border-none";
 
   const logoTextClass = isDark ? "text-primary" : "text-white";
@@ -127,7 +114,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <header className={`${headerClass} sticky top-0 z-30 shadow-sm transition-colors duration-200`}>
         {/* DESKTOP HEADER */}
         <div className="hidden lg:flex h-16 px-6 justify-between w-full max-w-7xl mx-auto">
-          {/* LEFT: logo (✅ fixed: no wrap / no contraction) */}
+          {/* LEFT: logo (no wrap / no contraction) */}
           <div className="flex items-center h-full mr-6 shrink-0">
             <Link href="/" className="flex items-center gap-3 whitespace-nowrap">
               <div
@@ -135,16 +122,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
               >
                 <img
                   src="/brand/logo.svg"
-                  alt="LiveSocceRR Scores"
+                  alt="Live Score"
                   className="w-6 h-6"
                   loading="eager"
                   decoding="async"
                 />
               </div>
 
-              <h1
-                className={`text-2xl font-bold tracking-tight leading-none whitespace-nowrap ${logoTextClass}`}
-              >
+              <h1 className={`text-2xl font-bold tracking-tight leading-none whitespace-nowrap ${logoTextClass}`}>
                 Live Score
               </h1>
             </Link>
@@ -263,17 +248,21 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <div className="lg:hidden flex flex-col w-full">
           {/* Top Row */}
           <div
-            className={`flex items-center justify-between px-4 h-14 w-full ${
-              isDark ? "theme-bg" : "bg-[#0f80da]"
-            }`}
+            className={`flex items-center justify-between px-4 h-14 w-full ${isDark ? "theme-bg" : "bg-[#0f80da]"}`}
           >
+            {/* ✅ Updated mobile logo to match your old header (icon + Live Score) */}
             <Link href="/" className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-sm ${logoBgClass}`}
-              >
-                F
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${logoBgClass}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/brand/logo.svg"
+                  alt="Live Score"
+                  className="w-5 h-5"
+                  loading="eager"
+                  decoding="async"
+                />
               </div>
-              <span className={`text-lg font-bold tracking-tight ${logoTextClass}`}>FlashSport</span>
+              <span className={`text-lg font-bold tracking-tight ${logoTextClass}`}>Live Score</span>
             </Link>
 
             <div className="flex items-center gap-1">
@@ -329,7 +318,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               })}
             </div>
 
-            {/* More Button (Fixed Width) */}
+            {/* More Button */}
             {mobileHidden.length > 0 && (
               <div className="relative h-8 shrink-0">
                 <button
