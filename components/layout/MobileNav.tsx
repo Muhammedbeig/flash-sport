@@ -9,7 +9,9 @@ import MobileSearch from "../search/MobileSearch";
 
 type SportKey = string;
 
-function getSportFromPathname(pathname: string): SportKey | null {
+function getSportFromPathname(pathname: string | null | undefined): SportKey | null {
+  if (!pathname) return null;
+
   const sportsMatch = pathname.match(/^\/sports\/([^/]+)(\/|$)/);
   if (sportsMatch?.[1]) return sportsMatch[1].toLowerCase();
 
@@ -50,8 +52,6 @@ export default function MobileNav() {
   const buildHref = (tab: "all" | "live" | "today", dateYMD?: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    // Keep date for All (so DateDropdown on page can control it),
-    // but force TODAY date for Today and Live (Live works like Today).
     if (dateYMD) params.set("date", dateYMD);
 
     if (inSportsRoutes) {
@@ -59,7 +59,6 @@ export default function MobileNav() {
       return qs ? `/sports/${currentSport}/${tab}/?${qs}` : `/sports/${currentSport}/${tab}/`;
     }
 
-    // Fallback to legacy home routing
     const sportParam = tab === "all" ? currentSport : `${currentSport}/${tab}`;
     params.set("sport", sportParam);
 
@@ -67,19 +66,17 @@ export default function MobileNav() {
     return `/?${qs}`;
   };
 
-  // ✅ All keeps selected date
+  // All keeps selected date
   const allHref = buildHref("all", currentDateYMD);
 
-  // ✅ Live behaves like Today -> force today's date
+  // Live behaves like Today -> force today's date
   const liveHref = buildHref("live", todayYMD);
 
-  // ✅ Today forces today's date
+  // Today forces today's date
   const todayHref = buildHref("today", todayYMD);
 
   const isAllActive =
-    currentTab === "all" ||
-    (!["live", "today"].includes(currentTab) && inSportsRoutes);
-
+    currentTab === "all" || (!["live", "today"].includes(currentTab) && inSportsRoutes);
   const isLiveActive = currentTab === "live";
   const isTodayActive = currentTab === "today";
 
@@ -134,7 +131,12 @@ export default function MobileNav() {
         </div>
       </div>
 
-      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {/* ✅ FIX: pass required prop */}
+      <MobileSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        initialSport={currentSport}
+      />
     </>
   );
 }
