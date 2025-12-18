@@ -102,7 +102,9 @@ const LeagueGroup = ({
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />}
+                    {game.teams.home.logo && (
+                      <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />
+                    )}
                     <span className="text-sm font-medium text-secondary">{game.teams.home.name}</span>
                   </div>
                   <span className="text-sm font-bold text-primary">{game.scores.home ?? "-"}</span>
@@ -110,7 +112,9 @@ const LeagueGroup = ({
 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />}
+                    {game.teams.away.logo && (
+                      <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />
+                    )}
                     <span className="text-sm font-medium text-secondary">{game.teams.away.name}</span>
                   </div>
                   <span className="text-sm font-bold text-primary">{game.scores.away ?? "-"}</span>
@@ -171,7 +175,9 @@ export default function NFLFeedUI({ games, loading, leagueId, initialTab }: NFLF
     const isActive = activeTab === tab;
     if (isActive && tab === "live") return "bg-[#dc2626] text-white shadow-sm";
     if (isActive) return "bg-[#0f80da] text-white shadow-sm";
-    return isDark ? "bg-slate-800 text-slate-400 hover:bg-slate-700" : "bg-gray-100 text-slate-600 hover:bg-gray-200";
+    return isDark
+      ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
+      : "bg-gray-100 text-slate-600 hover:bg-gray-200";
   };
 
   const matchRowBase =
@@ -261,31 +267,39 @@ export default function NFLFeedUI({ games, loading, leagueId, initialTab }: NFLF
   return (
     <div className="w-full space-y-4">
       {/* Tabs sequence: All / Live / Today / Finished / Scheduled */}
-      <div className="flex items-center justify-between gap-3 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {[
-            { id: "all", label: "All" },
-            { id: "live", label: `Live (${liveCount})`, hasDot: true },
-            { id: "today", label: "Today" },
-            { id: "finished", label: "Finished" },
-            { id: "scheduled", label: "Scheduled" },
-          ].map((tab) => (
-            <Link
-              key={tab.id}
-              href={getTabUrl(tab.id)}
-              prefetch={false}
-              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
-                tab.id
-              )}`}
-            >
-              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-              {tab.label}
-            </Link>
-          ))}
+      <div className="pb-2 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {[
+              { id: "all", label: "All" },
+              { id: "live", label: `Live (${liveCount})`, hasDot: true },
+              { id: "today", label: "Today" },
+              { id: "finished", label: "Finished" },
+              { id: "scheduled", label: "Scheduled" },
+            ].map((tab) => (
+              <Link
+                key={tab.id}
+                href={getTabUrl(tab.id)}
+                prefetch={false}
+                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                  tab.id
+                )}`}
+              >
+                {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop/tablet: unchanged */}
+          <div className="hidden md:block shrink-0">
+            <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+          </div>
         </div>
 
-        <div className="shrink-0">
-          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+        {/* Mobile only: full-width DateDropdown BELOW tabs */}
+        <div className="md:hidden w-full">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} fullWidth />
         </div>
       </div>
 

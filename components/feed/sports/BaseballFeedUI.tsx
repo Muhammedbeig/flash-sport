@@ -259,31 +259,39 @@ export default function BaseballFeedUI({ games, loading, leagueId, initialTab }:
   return (
     <div className="w-full space-y-4">
       {/* Tabs sequence: All / Live / Today / Finished / Scheduled */}
-      <div className="flex items-center justify-between gap-3 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {[
-            { id: "all", label: "All" },
-            { id: "live", label: `Live (${liveCount})`, hasDot: true },
-            { id: "today", label: "Today" },
-            { id: "finished", label: "Finished" },
-            { id: "scheduled", label: "Scheduled" },
-          ].map((tab) => (
-            <Link
-              key={tab.id}
-              href={getTabUrl(tab.id)}
-              prefetch={false}
-              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
-                tab.id
-              )}`}
-            >
-              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-              {tab.label}
-            </Link>
-          ))}
+      <div className="pb-2 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {[
+              { id: "all", label: "All" },
+              { id: "live", label: `Live (${liveCount})`, hasDot: true },
+              { id: "today", label: "Today" },
+              { id: "finished", label: "Finished" },
+              { id: "scheduled", label: "Scheduled" },
+            ].map((tab) => (
+              <Link
+                key={tab.id}
+                href={getTabUrl(tab.id)}
+                prefetch={false}
+                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                  tab.id
+                )}`}
+              >
+                {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop/tablet: unchanged */}
+          <div className="hidden md:block shrink-0">
+            <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+          </div>
         </div>
 
-        <div className="shrink-0">
-          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+        {/* Mobile only: full-width DateDropdown BELOW tabs */}
+        <div className="md:hidden w-full">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} fullWidth />
         </div>
       </div>
 

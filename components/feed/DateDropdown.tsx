@@ -143,8 +143,8 @@ export default function DateDropdown({
     <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : ""}`}>
       {/* Top control: Prev day | Date (opens dropdown) | Next day */}
       <div
-        className={`h-9 rounded-md border overflow-hidden inline-flex items-stretch divide-x ${dividerClass} ${
-          fullWidth ? "w-full" : ""
+        className={`h-9 rounded-md border overflow-hidden items-stretch divide-x ${dividerClass} ${
+          fullWidth ? "flex w-full" : "inline-flex"
         } ${wrapperClass}`}
       >
         <button

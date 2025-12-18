@@ -112,7 +112,9 @@ const LeagueGroup = ({
               <div className="flex-1 px-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.home.logo && <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />}
+                    {game.teams.home.logo && (
+                      <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />
+                    )}
                     <span
                       className={`text-sm ${
                         game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -126,7 +128,9 @@ const LeagueGroup = ({
 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {game.teams.away.logo && <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />}
+                    {game.teams.away.logo && (
+                      <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />
+                    )}
                     <span
                       className={`text-sm ${
                         game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"
@@ -263,16 +267,18 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
     return true;
   });
 
-  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>((groups, game) => {
-    const key = `${game.league.country || "World"}-${game.league.name}`;
-    if (!groups[key]) groups[key] = { meta: game.league, games: [] };
-    groups[key].games.push(game);
-    return groups;
-  }, {});
+  const grouped = filteredGames.reduce<Record<string, { meta: NormalizedLeague; games: NormalizedGame[] }>>(
+    (groups, game) => {
+      const key = `${game.league.country || "World"}-${game.league.name}`;
+      if (!groups[key]) groups[key] = { meta: game.league, games: [] };
+      groups[key].games.push(game);
+      return groups;
+    },
+    {}
+  );
 
-  const liveCount = games.filter(
-    (g) => !finishedCodes.includes(g.status.short) && !scheduledCodes.includes(g.status.short)
-  ).length;
+  const liveCount = games.filter((g) => !finishedCodes.includes(g.status.short) && !scheduledCodes.includes(g.status.short))
+    .length;
 
   if (loading) return <Skeleton className="w-full h-96 rounded-xl bg-skeleton" />;
 
@@ -291,31 +297,41 @@ export default function FeedUI({ games, loading, sport, leagueId, initialTab }: 
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between gap-3 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {[
-            { id: "all", label: "All" },
-            { id: "live", label: `Live (${liveCount})`, hasDot: true },
-            { id: "today", label: "Today" },
-            { id: "finished", label: "Finished" },
-            { id: "scheduled", label: "Scheduled" },
-          ].map((tab) => (
-            <Link
-              key={tab.id}
-              href={getTabUrl(tab.id)}
-              prefetch={false}
-              className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
-                tab.id
-              )}`}
-            >
-              {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-              {tab.label}
-            </Link>
-          ))}
+      {/* ✅ Order: Tabs row -> Mobile DateDropdown row -> Matches list */}
+      <div className="pb-2 space-y-2">
+        {/* Tabs row (All / Live / Today / Finished / Scheduled) */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {[
+              { id: "all", label: "All" },
+              { id: "live", label: `Live (${liveCount})`, hasDot: true },
+              { id: "today", label: "Today" },
+              { id: "finished", label: "Finished" },
+              { id: "scheduled", label: "Scheduled" },
+            ].map((tab) => (
+              <Link
+                key={tab.id}
+                href={getTabUrl(tab.id)}
+                prefetch={false}
+                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-2 whitespace-nowrap ${getTabStyle(
+                  tab.id
+                )}`}
+              >
+                {tab.hasDot && activeTab === "live" && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop/tablet: keep DateDropdown on the right (unchanged) */}
+          <div className="hidden md:block shrink-0">
+            <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+          </div>
         </div>
 
-        <div className="shrink-0">
-          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} />
+        {/* Mobile only: full width DateDropdown BELOW tabs */}
+        <div className="md:hidden w-full">
+          <DateDropdown valueYMD={pickerDate} todayYMD={today} onSelect={applyCalendarDate} fullWidth />
         </div>
       </div>
 
