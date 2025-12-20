@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Menu, Moon, Sun, Search } from "lucide-react";
@@ -65,6 +65,25 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
+  // ✅ NEW: logo from Global Settings (fallback stays the same)
+  const [brandLogo, setBrandLogo] = useState<string>("/brand/logo.svg");
+
+  useEffect(() => {
+    let alive = true;
+
+    fetch("/api/public/seo-brand", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive) return;
+        if (j?.logoUrl && typeof j.logoUrl === "string") setBrandLogo(j.logoUrl);
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const desktopVisible = ALL_SPORTS.slice(0, 6);
   const desktopHidden = ALL_SPORTS.slice(6);
   const isDesktopHiddenActive = desktopHidden.some((s) => s.id === currentSport);
@@ -121,7 +140,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0 ${logoBgClass}`}
               >
                 <img
-                  src="/brand/logo.svg"
+                  src={brandLogo}
                   alt="Live Score"
                   className="w-6 h-6"
                   loading="eager"
@@ -255,7 +274,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${logoBgClass}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/brand/logo.svg"
+                  src={brandLogo}
                   alt="Live Score"
                   className="w-5 h-5"
                   loading="eager"

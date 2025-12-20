@@ -1,51 +1,13 @@
 // lib/seo/seo-resolver.ts
 import type { Metadata } from "next";
-import {
-  SEO_ADMIN_OVERRIDES,
-  SEO_BRAND,
-  SEO_HOME,
-  SEO_PAGES,
-  SPORT_LABELS,
-  SPORTS_TAB_LABELS,
-  type SeoEntry,
-} from "./seo-central";
 import { buildMatchSeo } from "./match-seo";
+import type { SeoEntry } from "./seo-central";
+import { getSeoStoreSync } from "./seo-store";
 
 function clamp(s: string, max: number) {
   if (!s) return s;
   if (s.length <= max) return s;
   return s.slice(0, max - 1).trimEnd() + "…";
-}
-
-function fullUrl(path: string) {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || SEO_BRAND.siteUrl).replace(/\/+$/, "");
-  const clean = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${clean}`;
-}
-
-function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
-  const canonicalUrl = fullUrl(entry.canonical || canonicalPath);
-  const title = clamp(entry.title, 60);
-  const description = clamp(entry.description, 155);
-  const ogImage = entry.ogImage || SEO_BRAND.defaultOgImage;
-
-  return {
-    title,
-    description,
-    keywords: entry.keywords,
-    alternates: { canonical: canonicalUrl },
-    openGraph: {
-      type: "website",
-      siteName: SEO_BRAND.siteName,
-      title,
-      description,
-      url: canonicalUrl,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: entry.h1 }],
-      locale: SEO_BRAND.locale,
-    },
-    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
-    robots: { index: true, follow: true },
-  };
 }
 
 function normalizeSport(raw?: string) {
@@ -56,10 +18,75 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
+function fullUrl(baseUrl: string, path: string) {
+  const base = (baseUrl || "").replace(/\/+$/, "");
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${clean}`;
+}
+
+function applyTitleDecorations(rawTitle: string, brand: { siteName: string; titlePrefix: string; titleSuffix: string }) {
+  let t = rawTitle || "";
+
+  const prefix = brand.titlePrefix || "";
+  const suffix = brand.titleSuffix || "";
+
+  if (prefix && !t.startsWith(prefix)) t = `${prefix}${t}`;
+
+  // avoid obvious duplication if suffix contains siteName and title already has siteName
+  const tLower = t.toLowerCase();
+  const siteLower = (brand.siteName || "").toLowerCase();
+  const suffixLower = suffix.toLowerCase();
+
+  const wouldDuplicateSiteName =
+    suffix &&
+    siteLower &&
+    suffixLower.includes(siteLower) &&
+    tLower.includes(siteLower) &&
+    !tLower.endsWith(suffixLower);
+
+  if (suffix && !t.endsWith(suffix) && !wouldDuplicateSiteName) t = `${t}${suffix}`;
+
+  return t;
+}
+
+function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
+  const store = getSeoStoreSync();
+  const brand = store.brand;
+
+  const canonicalUrl = fullUrl(brand.siteUrl, entry.canonical || canonicalPath);
+
+  const rawTitle = entry.title || brand.siteName;
+  const title = clamp(applyTitleDecorations(rawTitle, brand), 60);
+
+  const descRaw = entry.description || brand.defaultMetaDescription || "";
+  const description = clamp(descRaw, 155);
+
+  const ogImage = entry.ogImage || brand.defaultOgImage;
+
+  return {
+    title,
+    description,
+    keywords: entry.keywords,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "website",
+      siteName: brand.siteName,
+      title,
+      description,
+      url: canonicalUrl,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: entry.h1 }],
+      locale: brand.locale,
+    },
+    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
+    robots: { index: true, follow: true },
+  };
+}
+
 /** ✅ Home */
 export function resolveHomeSeo() {
+  const store = getSeoStoreSync();
   const canonicalPath = "/";
-  const entry: SeoEntry = { ...SEO_HOME, canonical: canonicalPath };
+  const entry: SeoEntry = { ...store.home, canonical: canonicalPath };
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
@@ -68,46 +95,35 @@ export function resolveRootSeo(): Metadata {
   return resolveHomeSeo().metadata;
 }
 
-/**
- * ✅ Static pages
- * Supports:
- *  - resolveStaticPageSeo("contact", "/contact")
- *  - resolveStaticPageSeo("privacy-policy", "/privacy-policy")
- *  - resolveStaticPageSeo("privacyPolicy")
- */
+/** ✅ Static pages */
 export function resolveStaticPageSeo(
   pageKey: "contact" | "privacyPolicy" | "privacy-policy",
   pathname?: string
 ) {
+  const store = getSeoStoreSync();
+
   const normalizedKey: "contact" | "privacyPolicy" =
     pageKey === "privacy-policy" ? "privacyPolicy" : pageKey;
 
-  const base = SEO_PAGES[normalizedKey];
-
+  const base = store.pages[normalizedKey];
   const defaultPath = normalizedKey === "contact" ? "/contact" : "/privacy-policy";
   const canonicalPath = pathname || defaultPath;
 
   const override =
-    SEO_ADMIN_OVERRIDES[`page:${normalizedKey}`] ||
-    SEO_ADMIN_OVERRIDES[normalizedKey] ||
-    SEO_ADMIN_OVERRIDES[`page:${pageKey}`] ||
-    SEO_ADMIN_OVERRIDES[pageKey] ||
+    store.overrides[`page:${normalizedKey}`] ||
+    store.overrides[normalizedKey] ||
+    store.overrides[`page:${pageKey}`] ||
+    store.overrides[pageKey] ||
     undefined;
 
   const entry: SeoEntry = { ...base, ...override, canonical: canonicalPath };
-
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
 
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/* -----------------------------
-   SPORTS TAB SEO (sync)
-   Supports BOTH:
-   - resolveSportsTabSeo(sport, tab)
-   - resolveSportsTabSeo({ sport, tab, pathname? })
------------------------------- */
+/* ----------------------------- SPORTS TAB SEO ------------------------------ */
 type SportsTabArgs = { sport: string; tab: string; pathname?: string };
 
 export function resolveSportsTabSeo(rawSport: string, rawTab: string): {
@@ -120,10 +136,10 @@ export function resolveSportsTabSeo(args: SportsTabArgs): {
   metadata: Metadata;
   canonicalPath: string;
 };
-export function resolveSportsTabSeo(
-  arg1: string | SportsTabArgs,
-  arg2?: string
-) {
+export function resolveSportsTabSeo(arg1: string | SportsTabArgs, arg2?: string) {
+  const store = getSeoStoreSync();
+  const brand = store.brand;
+
   const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
   const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
 
@@ -132,12 +148,12 @@ export function resolveSportsTabSeo(
       ? `/sports/${sport}/${tab}`
       : arg1.pathname || `/sports/${sport}/${tab}`;
 
-  const sportName = SPORT_LABELS[sport] || sport;
-  const tabLabel = SPORTS_TAB_LABELS[tab] || "Today";
+  const sportName = store.labels.sportLabels[sport] || sport;
+  const tabLabel = store.labels.sportsTabLabels[tab] || "Today";
 
   const base: SeoEntry = {
-    title: `Live ${sportName} Scores – ${tabLabel} | ${SEO_BRAND.siteName}`,
-    description: `See ${tabLabel.toLowerCase()} ${sportName.toLowerCase()} scores with match stats, lineups, results and fixtures. Fast updates on ${SEO_BRAND.siteName}.`,
+    title: `Live ${sportName} Scores – ${tabLabel} | ${brand.siteName}`,
+    description: `See ${tabLabel.toLowerCase()} ${sportName.toLowerCase()} scores with match stats, lineups, results and fixtures. Fast updates on ${brand.siteName}.`,
     h1: `Live ${sportName} Scores – ${tabLabel}`,
     primaryKeyword: `live ${sportName.toLowerCase()} scores`,
     keywords: [`live ${sportName.toLowerCase()} scores`, "live scores", "fixtures", "results"],
@@ -145,7 +161,7 @@ export function resolveSportsTabSeo(
   };
 
   const key = `sports:${sport}:${tab}`;
-  const entry: SeoEntry = { ...base, ...(SEO_ADMIN_OVERRIDES[key] || {}) };
+  const entry: SeoEntry = { ...base, ...(store.overrides[key] || {}) };
 
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
@@ -153,12 +169,7 @@ export function resolveSportsTabSeo(
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/* -----------------------------
-   LEAGUE SEO (sync)
-   Supports BOTH:
-   - resolveSportsLeagueSeo(sport, tab, leagueId, pathname?)
-   - resolveSportsLeagueSeo({ sport, tab, leagueId, pathname? })
------------------------------- */
+/* ----------------------------- LEAGUE SEO --------------------------------- */
 type LeagueArgs = { sport: string; tab: string; leagueId: string; pathname?: string };
 
 export function resolveSportsLeagueSeo(
@@ -178,6 +189,8 @@ export function resolveSportsLeagueSeo(
   arg3?: string,
   arg4?: string
 ) {
+  const store = getSeoStoreSync();
+
   const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
   const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
   const leagueId = typeof arg1 === "string" ? (arg3 || "") : arg1.leagueId;
@@ -197,7 +210,7 @@ export function resolveSportsLeagueSeo(
   };
 
   const key = `league:${sport}:${leagueId}:${tab}`;
-  const entry: SeoEntry = { ...base, ...(SEO_ADMIN_OVERRIDES[key] || {}) };
+  const entry: SeoEntry = { ...base, ...(store.overrides[key] || {}) };
 
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
@@ -205,12 +218,7 @@ export function resolveSportsLeagueSeo(
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/* -----------------------------
-   MATCH SEO (async)
-   Supports BOTH:
-   - resolveMatchSeo(sport, id, tab?)
-   - resolveMatchSeo({ sport, id, tab? })
------------------------------- */
+/* ----------------------------- MATCH SEO (async) --------------------------- */
 type MatchArgs = { sport: string; id: string; tab?: string };
 
 export async function resolveMatchSeo(sport: string, id: string, tab?: string): Promise<{
@@ -221,13 +229,7 @@ export async function resolveMatchSeo(args: MatchArgs): Promise<{
   entry: SeoEntry;
   metadata: Metadata;
 }>;
-export async function resolveMatchSeo(
-  arg1: string | MatchArgs,
-  arg2?: string,
-  arg3?: string
-) {
-  if (typeof arg1 === "string") {
-    return buildMatchSeo({ sport: arg1, id: String(arg2 || ""), tab: arg3 });
-  }
+export async function resolveMatchSeo(arg1: string | MatchArgs, arg2?: string, arg3?: string) {
+  if (typeof arg1 === "string") return buildMatchSeo({ sport: arg1, id: String(arg2 || ""), tab: arg3 });
   return buildMatchSeo({ sport: arg1.sport, id: String(arg1.id), tab: arg1.tab });
 }

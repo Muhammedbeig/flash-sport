@@ -21,48 +21,51 @@ export default function FootballFeed({ leagueId, initialTab }: { leagueId?: stri
 
   const urlDate = searchParams.get("date");
   const selectedDate = useMemo(() => {
-    if (tab === "today") return today; // Today = real today only
+    if (tab === "today") return today;              // Today = real today only
     if (isValidYMD(urlDate)) return urlDate as string; // calendar filter
-    return today; // default
+    return today;                                  // default
   }, [tab, today, urlDate]);
 
   const [games, setGames] = useState<NormalizedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-
     async function fetchFootball() {
       setLoading(true);
       try {
+        const cdnUrl = process.env.NEXT_PUBLIC_CDN_FOOTBALL_URL;
+        const apiKey = process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+
         const params = new URLSearchParams();
         params.set("date", selectedDate);
         if (leagueId) params.set("league", leagueId);
 
-        // ✅ IMPORTANT: Fetch through our server proxy (avoids CORS + hides direct upstream)
-        const res = await fetch(`/api/feed/football?${params.toString()}`, { cache: "no-store" });
+        let url = "";
+        let headers: Record<string, string> = {};
 
-        if (!res.ok) {
-          throw new Error(`Football feed HTTP ${res.status}`);
+        if (cdnUrl) {
+          url = `${cdnUrl.replace(/\/$/, "")}/fixtures?${params.toString()}`;
+        } else {
+          url = `https://v3.football.api-sports.io/fixtures?${params.toString()}`;
+          headers = {
+            "x-rapidapi-host": "v3.football.api-sports.io",
+            "x-rapidapi-key": apiKey || "",
+          };
         }
 
+        const res = await fetch(url, { headers });
         const json = await res.json();
         const rawList = Array.isArray(json?.response) ? json.response : [];
-        const normalized = rawList.map(normalizeGame).filter((g: any) => g !== null);
-
-        if (!cancelled) setGames(normalized);
+        setGames(rawList.map(normalizeGame).filter((g: any) => g !== null));
       } catch (err) {
         console.error("Football feed error", err);
-        if (!cancelled) setGames([]);
+        setGames([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     }
 
     fetchFootball();
-    return () => {
-      cancelled = true;
-    };
   }, [leagueId, selectedDate]);
 
   if (loading) return <GameFeedSkeleton />;

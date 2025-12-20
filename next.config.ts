@@ -1,33 +1,30 @@
 import type { NextConfig } from "next";
 
-/**
- * DEPLOY_TARGET:
- *  - (default) hostinger / node: SSR with `output: "standalone"`
- *  - gh-pages: static export with basePath + assetPrefix
- */
-const DEPLOY_TARGET = process.env.DEPLOY_TARGET || "hostinger";
-const isGhPages = DEPLOY_TARGET === "gh-pages";
+// 1. Get the Repo Name from the environment variable (defined in your package.json scripts)
+const repoName = process.env.NEXT_PUBLIC_REPO_NAME || "";
 
-const repoName = isGhPages ? process.env.NEXT_PUBLIC_REPO_NAME || "" : "";
-const basePath = isGhPages && repoName ? `/${repoName}` : "";
+// 2. Set the Base Path
+// If deployed, it becomes "/livesocer.com". In dev (npm run dev), it stays "" (empty).
+const basePath = repoName ? `/${repoName}` : "";
 
 const nextConfig: NextConfig = {
-  // ✅ Hostinger/Node SSR
-  // ✅ GH-Pages static export (only when DEPLOY_TARGET=gh-pages)
-  output: isGhPages ? "export" : "standalone",
+  // Required for GitHub Pages (Static Export)
+  // output: "export",
 
-  // For GH Pages we usually disable image optimization.
-  // For Hostinger SSR, keep it normal (optimized) unless you want unoptimized everywhere.
+  // Required: Next.js Image Optimization doesn't work with static export
   images: {
-    unoptimized: isGhPages,
+    unoptimized: true,
   },
 
-  // ✅ Only needed for GH Pages
-  basePath,
-  assetPrefix: isGhPages ? basePath : undefined,
+  // 3. Apply the dynamic configuration
+  // This tells Next.js to expect the app to run under a subdirectory
+  basePath: basePath,
+  
+  // This ensures CSS and JS files are loaded from the correct path
+  assetPrefix: basePath,
 
-  // ✅ Only needed for GH Pages static routing behavior
-  trailingSlash: isGhPages,
+  // Helps prevent 404s on page refresh by generating index.html for every route
+  trailingSlash: true,
 };
 
 export default nextConfig;

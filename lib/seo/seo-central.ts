@@ -1,19 +1,51 @@
 // lib/seo/seo-central.ts
 
+/** Robots meta for a page */
+export type SeoRobots = {
+  index?: boolean; // true => index
+  follow?: boolean; // true => follow
+};
+
+/** Breadcrumb item */
+export type SeoBreadcrumb = {
+  name: string;
+  url: string;
+};
+
+/** Image alt mapping */
+export type SeoImageAlt = {
+  src: string;
+  alt: string;
+};
+
 /** Single SEO entry for a page/route */
 export type SeoEntry = {
+  // REQUIRED
   title: string;
   description: string;
   h1: string;
 
+  // OPTIONAL (existing)
   primaryKeyword?: string;
   keywords?: string[];
 
-  ogImage?: string;     // "/og.png" or full URL
-  canonical?: string;   // "/match/football/123"
+  canonical?: string; // "/match/football/123"
   jsonLd?: Record<string, any>;
 
   internalLinks?: { label: string; href: string }[];
+
+  // ✅ NEW (needed by admin editor)
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string; // "/og.png" or full URL
+
+  robots?: SeoRobots;
+
+  breadcrumbs?: SeoBreadcrumb[];
+  imageAlts?: SeoImageAlt[];
+
+  headerScripts?: string;
+  footerScripts?: string;
 };
 
 /** ✅ used by lib/seo/api-sports.ts and other SEO modules */
@@ -28,11 +60,26 @@ export type SportKey =
 
 /** Brand (site-wide SEO) */
 export const SEO_BRAND = {
-  siteName: "LiveSocceRR",
+  siteName: "LiveScore",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://livesoccerr.com",
   tagline: "Soccer Scores. Right Now.",
   logoTitle: "LiveSocceRR Scores",
+
+  // ✅ NEW (for admin global settings + header logo)
+  logoUrl: "/brand/logo.svg", // can be replaced by admin (URL or dataURL)
+  titlePrefix: "",
+  titleSuffix: "",
+  defaultMetaDescription:
+    "Live scores, fixtures, results and standings across Football, Basketball, NFL, Hockey, Baseball, Rugby and Volleyball.",
   defaultOgImage: "/og.png",
+
+  // ✅ NEW (admin “auto-generation rules”)
+  auto: {
+    titlePattern: "{title}",
+    descriptionPattern: "{description}",
+    schema: true,
+  },
+
   locale: "en_US",
 } as const;
 
@@ -87,8 +134,7 @@ export const MATCH_TAB_LABELS: Record<string, string> = {
 
 /** ✅ Landing / Home */
 export const SEO_HOME: SeoEntry = {
-  title:
-    "Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – LiveSoccerR",
+  title: "Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – LiveSoccerR",
   description:
     "Get live scores, results, fixtures, and updates for football, basketball, NFL, baseball, hockey, rugby, volleyball, and more. Follow your favorite teams in real-time at LiveSoccerR.com!",
   h1: "Live Scores for Football, Basketball, NFL, Hockey, Rugby, Volleyball & More",
@@ -110,15 +156,13 @@ export const SEO_HOME: SeoEntry = {
 export const SEO_PAGES: Record<"contact" | "privacyPolicy", SeoEntry> = {
   contact: {
     title: "Contact LiveSoccerR | Support & Feedback",
-    description:
-      "Contact LiveSoccerR for support, feedback or partnerships. We respond fast and keep scores accurate.",
+    description: "Contact LiveSoccerR for support, feedback or partnerships. We respond fast and keep scores accurate.",
     h1: "Contact LiveSoccerR",
     primaryKeyword: "contact livesoccerr",
   },
   privacyPolicy: {
     title: "Privacy Policy | LiveSoccerR",
-    description:
-      "Read LiveSoccerR’s privacy policy to understand how we handle cookies, analytics and privacy across our live score pages.",
+    description: "Read LiveSoccerR’s privacy policy to understand how we handle cookies, analytics and privacy across our live score pages.",
     h1: "Privacy Policy",
     primaryKeyword: "privacy policy livesoccerr",
   },
@@ -151,10 +195,6 @@ export const SEO_MATCH = {
   schema: { enabled: true },
 } as const;
 
-/**
- * ✅ This is what lib/seo/seo-store.ts expects:
- * export { SEO_STORE_DEFAULT, SeoStore } from "./seo-central"
- */
 export type SeoStore = {
   brand: SeoBrand;
   home: SeoEntry;

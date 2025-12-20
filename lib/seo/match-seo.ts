@@ -1,14 +1,8 @@
 // lib/seo/match-seo.ts
 import type { Metadata } from "next";
 import { cache } from "react";
-import {
-  SEO_ADMIN_OVERRIDES,
-  SEO_BRAND,
-  SEO_MATCH,
-  MATCH_TAB_LABELS,
-  SPORT_LABELS,
-  type SeoEntry,
-} from "./seo-central";
+import type { SeoEntry } from "./seo-central";
+import { getSeoStoreSync } from "./seo-store";
 
 type NextFetchInit = RequestInit & { next?: { revalidate?: number } };
 
@@ -51,8 +45,8 @@ function fill(tpl: string, vars: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
-function fullUrl(path: string) {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || SEO_BRAND.siteUrl).replace(/\/+$/, "");
+function fullUrl(baseUrl: string, path: string) {
+  const base = (baseUrl || "").replace(/\/+$/, "");
   const clean = path.startsWith("/") ? path : `/${path}`;
   return `${base}${clean}`;
 }
@@ -60,7 +54,8 @@ function fullUrl(path: string) {
 function mapEventStatus(statusShort?: string | null) {
   const s = (statusShort || "").toUpperCase();
   if (["FT", "AET", "PEN", "FINAL", "FIN"].includes(s)) return "https://schema.org/EventCompleted";
-  if (["LIVE", "1H", "2H", "HT", "Q1", "Q2", "Q3", "Q4", "OT", "INP"].includes(s)) return "https://schema.org/EventInProgress";
+  if (["LIVE", "1H", "2H", "HT", "Q1", "Q2", "Q3", "Q4", "OT", "INP"].includes(s))
+    return "https://schema.org/EventInProgress";
   return "https://schema.org/EventScheduled";
 }
 
@@ -78,8 +73,8 @@ async function fetchJsonWithTimeout(url: string, init: NextFetchInit, timeoutMs:
   }
 }
 
-// ✅ Cached per request (metadata + layout both calling won’t double hit API)
 const getMatchApiData = cache(async (sportRaw: string, id: string): Promise<MatchApiData | null> => {
+  const store = getSeoStoreSync();
   const sport = normalizeSport(sportRaw);
   const cfg = SPORT_API[sport];
   if (!cfg) return null;
@@ -95,10 +90,10 @@ const getMatchApiData = cache(async (sportRaw: string, id: string): Promise<Matc
       "x-rapidapi-key": apiKey,
       "x-rapidapi-host": cfg.host,
     },
-    next: { revalidate: SEO_MATCH.revalidateSeconds },
+    next: { revalidate: store.match.revalidateSeconds },
   };
 
-  const json = await fetchJsonWithTimeout(url, init, SEO_MATCH.apiTimeoutMs);
+  const json = await fetchJsonWithTimeout(url, init, store.match.apiTimeoutMs);
   const item = json?.response?.[0];
   if (!item) return null;
 
@@ -142,10 +137,13 @@ const getMatchApiData = cache(async (sportRaw: string, id: string): Promise<Matc
 });
 
 function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
-  const canonicalUrl = fullUrl(entry.canonical || canonicalPath);
+  const store = getSeoStoreSync();
+  const brand = store.brand;
+
+  const canonicalUrl = fullUrl(brand.siteUrl, entry.canonical || canonicalPath);
   const title = clamp(entry.title, 60);
-  const description = clamp(entry.description, 155);
-  const ogImage = entry.ogImage || SEO_BRAND.defaultOgImage;
+  const description = clamp(entry.description || brand.defaultMetaDescription, 155);
+  const ogImage = entry.ogImage || brand.defaultOgImage;
 
   return {
     title,
@@ -154,12 +152,12 @@ function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
     alternates: { canonical: canonicalUrl },
     openGraph: {
       type: "website",
-      siteName: SEO_BRAND.siteName,
+      siteName: brand.siteName,
       title,
       description,
       url: canonicalUrl,
       images: [{ url: ogImage, width: 1200, height: 630, alt: entry.h1 }],
-      locale: SEO_BRAND.locale,
+      locale: brand.locale,
     },
     twitter: { card: "summary_large_image", title, description, images: [ogImage] },
     robots: { index: true, follow: true },
@@ -167,50 +165,52 @@ function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
 }
 
 export async function buildMatchSeo(args: { sport: string; id: string; tab?: string }) {
+  const store = getSeoStoreSync();
+  const brand = store.brand;
+
   const sport = normalizeSport(args.sport);
   const matchId = String(args.id || "");
   const tab = (args.tab || "summary").toLowerCase();
 
   const canonicalPath = `/match/${sport}/${matchId}`;
-
   const data = await getMatchApiData(sport, matchId);
 
-  // ✅ REAL team names from API
   const home = data?.home || "Match";
   const away = data?.away || `#${matchId}`;
 
-  const vars = { home, away, brand: SEO_BRAND.siteName, sport, id: matchId };
+  const vars = { home, away, brand: brand.siteName, sport, id: matchId };
 
-  let title = fill(SEO_MATCH.titlePatterns[0], vars);
-  const tabLabel = MATCH_TAB_LABELS[tab];
-  if (tab !== "summary" && tabLabel) title = `LIVE: ${home} vs ${away} – ${tabLabel}`;
+  // ✅ Uses Global Settings (first title pattern + desc pattern + schema enabled)
+  const titleTpl = store.match.titlePatterns?.[0] || "LIVE: {home} vs {away} – Score, Lineups & Stats";
+  const descriptionTpl = store.match.descriptionPattern || brand.defaultMetaDescription;
 
-  const description = clamp(fill(SEO_MATCH.descriptionPattern, vars), 155);
-  const h1 = fill(SEO_MATCH.h1Pattern, vars);
+  const title = fill(titleTpl, vars);
+  const description = clamp(fill(descriptionTpl, vars), 155);
+  const h1 = fill(store.match.h1Pattern || "LIVE: {home} vs {away} – Live Score", vars);
 
   const ogImage =
-    SEO_MATCH.og.useDynamicBanner
-      ? fullUrl(fill(SEO_MATCH.og.bannerPath, vars))
-      : fullUrl(SEO_MATCH.og.fallbackImage);
+    store.match.og.useDynamicBanner
+      ? fullUrl(brand.siteUrl, fill(store.match.og.bannerPath, vars))
+      : fullUrl(brand.siteUrl, store.match.og.fallbackImage);
 
   let entry: SeoEntry = {
-    title: clamp(`${title} | ${SEO_BRAND.siteName}`, 60),
+    title: clamp(title, 60),
     description,
     h1,
     canonical: canonicalPath,
     ogImage,
-    primaryKeyword: SEO_MATCH.primaryKeyword,
+    primaryKeyword: store.match.primaryKeyword,
     keywords: [
-      SEO_MATCH.primaryKeyword,
+      store.match.primaryKeyword,
       `${home} vs ${away}`,
-      `live ${SPORT_LABELS[sport] || sport} scores`,
+      `live ${store.labels.sportLabels[sport] || sport} scores`,
       "lineups",
       "match stats",
       "results",
     ],
   };
 
-  if (SEO_MATCH.schema.enabled) {
+  if (store.match.schema.enabled) {
     const scoreLine =
       typeof data?.homeScore === "number" && typeof data?.awayScore === "number"
         ? `${home} ${data.homeScore} - ${data.awayScore} ${away}`
@@ -220,22 +220,21 @@ export async function buildMatchSeo(args: { sport: string; id: string; tab?: str
       "@context": "https://schema.org",
       "@type": "SportsEvent",
       name: `${home} vs ${away}`,
-      url: fullUrl(canonicalPath),
+      url: fullUrl(brand.siteUrl, canonicalPath),
       startDate: data?.dateIso || undefined,
       eventStatus: mapEventStatus(data?.statusShort),
       description: scoreLine ? `Live score: ${scoreLine}. ${description}` : description,
-      sport: SPORT_LABELS[sport] || sport,
+      sport: store.labels.sportLabels[sport] || sport,
       homeTeam: { "@type": "SportsTeam", name: home, logo: data?.homeLogo || undefined },
       awayTeam: { "@type": "SportsTeam", name: away, logo: data?.awayLogo || undefined },
       image: [ogImage],
-      organizer: { "@type": "Organization", name: SEO_BRAND.siteName, url: SEO_BRAND.siteUrl },
+      organizer: { "@type": "Organization", name: brand.siteName, url: brand.siteUrl, logo: brand.logoUrl },
     };
   }
 
-  // ✅ admin overrides: per match + per tab
   const baseKey = `match:${sport}:${matchId}`;
   const tabKey = `match:${sport}:${matchId}:${tab}`;
-  entry = { ...entry, ...(SEO_ADMIN_OVERRIDES[baseKey] || {}), ...(SEO_ADMIN_OVERRIDES[tabKey] || {}) };
+  entry = { ...entry, ...(store.overrides[baseKey] || {}), ...(store.overrides[tabKey] || {}) };
 
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
@@ -243,5 +242,4 @@ export async function buildMatchSeo(args: { sport: string; id: string; tab?: str
   return { entry, metadata: toMetadata(entry, canonicalPath) };
 }
 
-// Legacy alias if any old file expects it
 export const resolveDynamicMatchSeoBundle = buildMatchSeo;

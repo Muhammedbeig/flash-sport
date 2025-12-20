@@ -1,0 +1,102 @@
+{
+  "brand": {
+    "siteName": "LiveSocceRR",
+    "siteUrl": "https://livesoccerr.com",
+    "tagline": "Soccer Scores. Right Now.",
+    "logoTitle": "LiveSocceRR Scores",
+    "titlePrefix": "",
+    "titleSuffix": "",
+    "defaultOgImage": "/og.png",
+    "defaultMetaDescription": "Live scores, results, fixtures and stats across football, basketball, NFL, hockey, rugby, volleyball and more.",
+    "locale": "en_US"
+  },
+  "auto": {
+    "autoTitlePattern": "{title} | {brand}",
+    "autoDescriptionPattern": "{description}",
+    "autoSchema": true
+  },
+  "home": {
+    "title": "Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – LiveSoccerR",
+    "description": "Get live scores, results, fixtures, and updates for football, basketball, NFL, baseball, hockey, rugby, volleyball, and more. Follow your favorite teams in real-time at LiveSoccerR.com!",
+    "h1": "Live Scores for Football, Basketball, NFL, Hockey, Rugby, Volleyball & More",
+    "primaryKeyword": "live soccer scores",
+    "keywords": [
+      "live scores",
+      "soccer scores",
+      "football live scores",
+      "basketball live scores",
+      "nfl live scores",
+      "hockey live scores",
+      "baseball live scores",
+      "rugby live scores",
+      "volleyball live scores"
+    ]
+  },
+  "pages": {
+    "contact": {
+      "title": "Contact LiveSoccerR | Support & Feedback",
+      "description": "Contact LiveSoccerR for support, feedback or partnerships. We respond fast and keep scores accurate.",
+      "h1": "Contact LiveSoccerR",
+      "primaryKeyword": "contact livesoccerr"
+    },
+    "privacyPolicy": {
+      "title": "Privacy Policy | LiveSoccerR",
+      "description": "Read LiveSoccerR’s privacy policy to understand how we handle cookies, analytics and privacy.",
+      "h1": "Privacy Policy",
+      "primaryKeyword": "privacy policy livesoccerr"
+    }
+  },
+  "overrides": {},
+  "labels": {
+    "sportLabels": {
+      "football": "Football",
+      "soccer": "Football",
+      "basketball": "Basketball",
+      "nfl": "NFL",
+      "american-football": "NFL",
+      "hockey": "Hockey",
+      "ice-hockey": "Hockey",
+      "baseball": "Baseball",
+      "rugby": "Rugby",
+      "volleyball": "Volleyball"
+    },
+    "sportsTabLabels": {
+      "all": "Today",
+      "today": "Today",
+      "live": "Live Now",
+      "finished": "Final Scores",
+      "scheduled": "Upcoming Fixtures"
+    },
+    "matchTabLabels": {
+      "summary": "Score, Lineups & Stats",
+      "stats": "Stats",
+      "statistics": "Stats",
+      "lineups": "Lineups",
+      "h2h": "Head-to-Head",
+      "standings": "Standings",
+      "odds": "Odds",
+      "results": "Result",
+      "fixtures": "Fixture"
+    }
+  },
+  "match": {
+    "revalidateSeconds": 60,
+    "apiTimeoutMs": 650,
+    "primaryKeyword": "live score",
+    "titlePatterns": [
+      "LIVE: {home} vs {away} – Score, Lineups & Stats",
+      "LIVE: {home} vs {away} – Score & Lineups",
+      "{home} vs {away} Live Score"
+    ],
+    "descriptionPattern": "Watch live score updates of {home} vs {away} with goals, lineups, news & match timeline. Fast updates on {brand}.",
+    "h1Pattern": "LIVE: {home} vs {away}",
+    "og": {
+      "useDynamicBanner": true,
+      "bannerPath": "/og/match/{sport}/{id}",
+      "fallbackImage": "/og.png"
+    },
+    "schema": {
+      "enabled": true
+    }
+  }
+}
