@@ -184,7 +184,8 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 overflow-hidden">
             {game.homeTeam.logo && (
-              <img src={game.homeTeam.logo} className="w-4 h-4 object-contain shrink-0" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={game.homeTeam.logo} alt={game.homeTeam.name} className="w-4 h-4 object-contain shrink-0" />
             )}
             <span className="text-xs text-primary truncate">{game.homeTeam.name}</span>
           </div>
@@ -194,7 +195,8 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 overflow-hidden">
             {game.awayTeam.logo && (
-              <img src={game.awayTeam.logo} className="w-4 h-4 object-contain shrink-0" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={game.awayTeam.logo} alt={game.awayTeam.name} className="w-4 h-4 object-contain shrink-0" />
             )}
             <span className="text-xs text-primary truncate">{game.awayTeam.name}</span>
           </div>
@@ -478,7 +480,8 @@ export default function LeagueTabs({
             return (
               <Link
                 key={tab.id}
-                href={`/football/${leagueSlug}/${targetId}`}
+                // ✅ FIX: Use dynamic {sport} instead of hardcoded "football"
+                href={`/${sport}/${leagueSlug}/${targetId}`}
                 className={getTabStyle(tab.id)}
                 prefetch={false}
               >

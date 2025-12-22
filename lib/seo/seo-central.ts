@@ -1,5 +1,9 @@
 // lib/seo/seo-central.ts
 
+/* -------------------------------------------------------------------------- */
+/* TYPES                                      */
+/* -------------------------------------------------------------------------- */
+
 /** Robots meta for a page */
 export type SeoRobots = {
   index?: boolean; // true => index
@@ -25,22 +29,21 @@ export type SeoEntry = {
   description: string;
   h1: string;
 
-  // OPTIONAL (existing)
+  // OPTIONAL
   primaryKeyword?: string;
   keywords?: string[];
 
-  canonical?: string; // "/match/football/123"
+  canonical?: string; // e.g. "/match/football/123"
   jsonLd?: Record<string, any>;
 
   internalLinks?: { label: string; href: string }[];
 
-  // ✅ NEW (needed by admin editor)
+  // Open Graph Overrides
   ogTitle?: string;
   ogDescription?: string;
-  ogImage?: string; // "/og.png" or full URL
+  ogImage?: string; // e.g. "/og.png" or full URL
 
   robots?: SeoRobots;
-
   breadcrumbs?: SeoBreadcrumb[];
   imageAlts?: SeoImageAlt[];
 
@@ -48,7 +51,7 @@ export type SeoEntry = {
   footerScripts?: string;
 };
 
-/** ✅ used by lib/seo/api-sports.ts and other SEO modules */
+/** Sport Keys used in the app */
 export type SportKey =
   | "football"
   | "basketball"
@@ -58,85 +61,42 @@ export type SportKey =
   | "rugby"
   | "volleyball";
 
-/** Brand (site-wide SEO) */
+/* -------------------------------------------------------------------------- */
+/* DEFAULTS                                   */
+/* -------------------------------------------------------------------------- */
+
+// ✅ HELPER: Determine Base URL Dynamically
+const getBaseUrl = () => {
+  if (process.env.NODE_ENV !== "production") {
+    return "http://localhost:3000";
+  }
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "");
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "https://livesoccerr.com";
+};
+
+// ✅ EXPORTED
 export const SEO_BRAND = {
-  siteName: "LiveScore",
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://livesoccerr.com",
+  siteName: "Live Score",
+  siteUrl: getBaseUrl(),
   tagline: "Soccer Scores. Right Now.",
   logoTitle: "LiveSocceRR Scores",
-
-  // ✅ NEW (for admin global settings + header logo)
-  logoUrl: "/brand/logo.svg", // can be replaced by admin (URL or dataURL)
   titlePrefix: "",
   titleSuffix: "",
-  defaultMetaDescription:
-    "Live scores, fixtures, results and standings across Football, Basketball, NFL, Hockey, Baseball, Rugby and Volleyball.",
   defaultOgImage: "/og.png",
-
-  // ✅ NEW (admin “auto-generation rules”)
-  auto: {
-    titlePattern: "{title}",
-    descriptionPattern: "{description}",
-    schema: true,
-  },
-
+  defaultMetaDescription:
+    "Live scores, results, fixtures and stats across football, basketball, NFL, hockey, rugby, volleyball and more.",
   locale: "en_US",
-} as const;
-
-/** handy aliases (prevents future missing-export errors) */
-export type SeoBrand = typeof SEO_BRAND;
-export type SeoOverrideMap = Record<string, Partial<SeoEntry>>;
-
-/**
- * ✅ Admin panel later:
- * Put DB values into this shape.
- * Keep keys same => no need to touch routes/pages later.
- */
-export const SEO_ADMIN_OVERRIDES: SeoOverrideMap = {
-  // "page:contact": { title: "...", description: "...", h1: "..." },
-  // "sports:football:live": { title: "...", description: "...", h1: "..." },
-  // "match:football:123456": { title: "...", description: "...", ogImage: "/og/custom.png" },
-  // "match:football:123456:lineups": { title: "... lineups ..." },
 };
 
-export const SPORT_LABELS: Record<string, string> = {
-  football: "Football",
-  soccer: "Football",
-  basketball: "Basketball",
-  nfl: "NFL",
-  "american-football": "NFL",
-  hockey: "Hockey",
-  "ice-hockey": "Hockey",
-  baseball: "Baseball",
-  rugby: "Rugby",
-  volleyball: "Volleyball",
-};
-
-export const SPORTS_TAB_LABELS: Record<string, string> = {
-  all: "Today",
-  today: "Today",
-  live: "Live Now",
-  finished: "Final Scores",
-  scheduled: "Upcoming Fixtures",
-};
-
-export const MATCH_TAB_LABELS: Record<string, string> = {
-  summary: "Score, Lineups & Stats",
-  stats: "Stats",
-  statistics: "Stats",
-  lineups: "Lineups",
-  h2h: "Head-to-Head",
-  standings: "Standings",
-  odds: "Odds",
-  results: "Result",
-  fixtures: "Fixture",
-};
-
-/** ✅ Landing / Home */
+// ✅ EXPORTED
 export const SEO_HOME: SeoEntry = {
-  title: "Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – LiveSoccerR",
-  description:
-    "Get live scores, results, fixtures, and updates for football, basketball, NFL, baseball, hockey, rugby, volleyball, and more. Follow your favorite teams in real-time at LiveSoccerR.com!",
+  title: `Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – ${SEO_BRAND.siteName}`,
+  description: `Get live scores, results, fixtures, and updates for football, basketball, NFL, baseball, hockey, rugby, volleyball, and more. Follow your favorite teams in real-time at ${SEO_BRAND.siteName}!`,
   h1: "Live Scores for Football, Basketball, NFL, Hockey, Rugby, Volleyball & More",
   primaryKeyword: "live soccer scores",
   keywords: [
@@ -150,50 +110,73 @@ export const SEO_HOME: SeoEntry = {
     "rugby live scores",
     "volleyball live scores",
   ],
+  canonical: "/",
 };
 
-/** ✅ Static pages */
-export const SEO_PAGES: Record<"contact" | "privacyPolicy", SeoEntry> = {
-  contact: {
-    title: "Contact LiveSoccerR | Support & Feedback",
-    description: "Contact LiveSoccerR for support, feedback or partnerships. We respond fast and keep scores accurate.",
-    h1: "Contact LiveSoccerR",
-    primaryKeyword: "contact livesoccerr",
-  },
-  privacyPolicy: {
-    title: "Privacy Policy | LiveSoccerR",
-    description: "Read LiveSoccerR’s privacy policy to understand how we handle cookies, analytics and privacy across our live score pages.",
-    h1: "Privacy Policy",
-    primaryKeyword: "privacy policy livesoccerr",
-  },
-};
-
-/** ✅ Match templates (dynamic team names filled at runtime) */
+// ✅ EXPORTED
 export const SEO_MATCH = {
   revalidateSeconds: 60,
   apiTimeoutMs: 650,
-
   primaryKeyword: "live score",
-
   titlePatterns: [
     "MATCH: {home} vs {away} – Score, Lineups & Stats",
     "MATCH: {home} vs {away} – Score & Lineups",
     "{home} vs {away} Live Score",
   ] as const,
-
   descriptionPattern:
     "Watch live score updates of {home} vs {away} with goals, lineups, news & match timeline. Fast updates on {brand}.",
-
   h1Pattern: "MATCH: {home} vs {away} – Live Score",
-
   og: {
     useDynamicBanner: true,
     bannerPath: "/og/match/{sport}/{id}",
     fallbackImage: "/og.png",
   },
-
   schema: { enabled: true },
-} as const;
+};
+
+// ✅ EXPORTED
+export const SEO_PLAYER = {
+  revalidateSeconds: 3600,
+  apiTimeoutMs: 1500,
+  primaryKeyword: "player profile",
+  titlePatterns: [
+    "{name} ({team}) – Profile, Stats & News",
+    "{name} Stats – {team} Player Profile",
+    "{name} – Career Stats & Goals",
+  ] as const,
+  descriptionPattern:
+    "{name} plays for {team}. View complete player profile, stats, goals, match history and market value on {brand}.",
+  h1Pattern: "{name} – Player Profile",
+  og: {
+    fallbackImage: "/og.png",
+  },
+  schema: { enabled: true },
+};
+
+// ✅ NEW: League SEO Templates
+export const SEO_LEAGUE = {
+  revalidateSeconds: 86400, // 24 hours
+  apiTimeoutMs: 2000,
+  primaryKeyword: "league table",
+  titlePatterns: [
+    "{name} ({country}) – Live Scores, Standings & Fixtures",
+    "{name} {season} Table & Results – {brand}",
+  ] as const,
+  descriptionPattern:
+    "Follow {name} ({season}) live scores, results, fixtures, and standings. Get real-time updates for {name} in {country} on {brand}.",
+  h1Pattern: "{name} – Live Scores & Standings",
+  og: {
+    fallbackImage: "/og.png",
+  },
+  schema: { enabled: true },
+};
+
+/* -------------------------------------------------------------------------- */
+/* STORE TYPE                                 */
+/* -------------------------------------------------------------------------- */
+
+export type SeoBrand = typeof SEO_BRAND;
+export type SeoOverrideMap = Record<string, Partial<SeoEntry>>;
 
 export type SeoStore = {
   brand: SeoBrand;
@@ -208,26 +191,73 @@ export type SeoStore = {
   };
 
   match: typeof SEO_MATCH;
+  player: typeof SEO_PLAYER;
+  league: typeof SEO_LEAGUE; // ✅ Added
 };
 
+/* -------------------------------------------------------------------------- */
+/* DEFAULT STORE                                  */
+/* -------------------------------------------------------------------------- */
+
+// ✅ EXPORTED
 export const SEO_STORE_DEFAULT: SeoStore = {
   brand: SEO_BRAND,
   home: SEO_HOME,
-  pages: SEO_PAGES,
-  overrides: SEO_ADMIN_OVERRIDES,
-  labels: {
-    sportLabels: SPORT_LABELS,
-    sportsTabLabels: SPORTS_TAB_LABELS,
-    matchTabLabels: MATCH_TAB_LABELS,
+  pages: {
+    "privacy-policy": {
+      title: `Privacy Policy | ${SEO_BRAND.siteName}`,
+      description: `Privacy Policy for ${SEO_BRAND.siteName}. Learn how we handle your data.`,
+      h1: "Privacy Policy",
+    },
+    "terms-of-service": {
+      title: `Terms of Service | ${SEO_BRAND.siteName}`,
+      description: `Terms and conditions for using ${SEO_BRAND.siteName}.`,
+      h1: "Terms of Service",
+    },
+    contact: {
+      title: `Contact Us | ${SEO_BRAND.siteName}`,
+      description: `Contact the ${SEO_BRAND.siteName} team for support or inquiries.`,
+      h1: "Contact Us",
+    },
   },
+  overrides: {},
+
+  labels: {
+    sportLabels: {
+      football: "Football",
+      soccer: "Football",
+      basketball: "Basketball",
+      nfl: "NFL",
+      "american-football": "NFL",
+      hockey: "Hockey",
+      "ice-hockey": "Hockey",
+      baseball: "Baseball",
+      rugby: "Rugby",
+      volleyball: "Volleyball",
+    },
+    sportsTabLabels: {
+      all: "Today",
+      today: "Today",
+      live: "Live Now",
+      finished: "Final Scores",
+      scheduled: "Upcoming Fixtures",
+    },
+    matchTabLabels: {
+      summary: "Score, Lineups & Stats",
+      stats: "Stats",
+      statistics: "Stats",
+      lineups: "Lineups",
+      h2h: "Head-to-Head",
+      standings: "Standings",
+      odds: "Odds",
+      results: "Result",
+      fixtures: "Fixture",
+    },
+  },
+
   match: SEO_MATCH,
+  player: SEO_PLAYER,
+  league: SEO_LEAGUE, // ✅ Added default
 };
 
-/** ✅ Legacy export (if anything still imports SEO_CONTENT) */
-export const SEO_CONTENT = {
-  global: SEO_BRAND,
-  home: {
-    metadata: { title: SEO_HOME.title, description: SEO_HOME.description },
-    headings: { h1: SEO_HOME.h1 },
-  },
-} as const;
+export const SEO_CONTENT = SEO_STORE_DEFAULT;

@@ -6,11 +6,12 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Menu, Moon, Sun, Search } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import type { CSSProperties } from "react";
-
-// ✅ Use SAME MobileSearch modal (no changes to it)
+import { SEO_CONTENT } from "@/lib/seo/seo-central";
 import MobileSearch from "@/components/search/MobileSearch";
 
-// Full list (No NBA)
+
+const brand = SEO_CONTENT?.brand || { siteName: "LiveSocceRR" };
+
 const ALL_SPORTS = [
   { name: "Football", id: "football", icon: "⚽" },
   { name: "Basketball", id: "basketball", icon: "🏀" },
@@ -149,7 +150,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </div>
 
               <h1 className={`text-2xl font-bold tracking-tight leading-none whitespace-nowrap ${logoTextClass}`}>
-                Live Score
+                {brand.siteName}
               </h1>
             </Link>
 

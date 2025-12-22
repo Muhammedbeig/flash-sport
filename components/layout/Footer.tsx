@@ -8,15 +8,15 @@ import {
   Facebook,
   Instagram,
   Youtube,
-  Globe,
 } from "lucide-react";
 import { SEO_CONTENT } from "@/lib/seo/seo-central";
 
 type FooterLink = { label: string; url: string };
 
 const FOOTER = {
+  // ✅ FIX: Use placeholder {siteName} instead of hardcoded string
   aboutText:
-    "LiveSocceRR delivers fast, real-time scores, fixtures, results, standings, and match stats across football, basketball, NFL, hockey, baseball, rugby, volleyball and more — all in one place.",
+    "{siteName} delivers fast, real-time scores, fixtures, results, standings, and match stats across football, basketball, NFL, hockey, baseball, rugby, volleyball and more — all in one place.",
 
   appLinks: [
     { name: "Google Play", url: "#", Icon: Play },
@@ -100,7 +100,12 @@ function SmartExternalLink({
 }
 
 export default function Footer() {
-  const brand = SEO_CONTENT.global;
+  // ✅ FIX: Robust fallback to prevent crashes if SEO_CONTENT is undefined during build
+  const brand = SEO_CONTENT?.brand || {
+    siteName: "LiveSocceRR",
+    logoTitle: "LiveSocceRR Scores",
+    tagline: "Soccer Scores. Right Now.",
+  };
 
   return (
     <footer className="w-full theme-bg theme-border border-t pt-16 pb-8 text-sm font-sans relative z-10">
@@ -113,9 +118,10 @@ export default function Footer() {
           <div className="lg:w-2/3 space-y-4">
             <Link href="/" prefetch={false} className="flex items-center gap-3 w-fit group">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm theme-border border bg-white/60 dark:bg-white/5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/brand/logo.svg"
-                  alt={brand.logoTitle}
+                  alt={brand.siteName} // ✅ FIX: Using siteName
                   className="w-6 h-6"
                   loading="eager"
                   decoding="async"
@@ -132,7 +138,8 @@ export default function Footer() {
             </Link>
 
             <p className="leading-relaxed text-secondary text-xs md:text-sm max-w-2xl">
-              {FOOTER.aboutText}
+              {/* ✅ FIX: Dynamically inject siteName into the text */}
+              {FOOTER.aboutText.replace("{siteName}", brand.siteName)}
             </p>
           </div>
 
@@ -150,9 +157,7 @@ export default function Footer() {
                   ariaLabel={name}
                   className="group"
                 >
-                  {/* High contrast both modes:
-                      light: dark button
-                      dark: light button */}
+                  {/* High contrast both modes */}
                   <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 border theme-border bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition-all shadow-sm">
                     <Icon size={20} className="opacity-90 group-hover:opacity-100 transition-opacity" />
                     <div className="text-left">
@@ -205,6 +210,7 @@ export default function Footer() {
         <div className="theme-border border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs">
           {/* COPYRIGHT */}
           <div className="text-secondary order-2 md:order-1">
+            {/* ✅ FIX: Dynamic Site Name */}
             &copy; {new Date().getFullYear()} {brand.siteName}. All rights reserved.
           </div>
 

@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { FOOTBALL_ROUTES } from "@/lib/seo-routes"; // <--- MUST MATCH FILE ABOVE
+import type { Metadata } from "next"; // ✅ Import Metadata type
+import { FOOTBALL_ROUTES } from "@/lib/seo-routes"; 
 import GameWidget from "@/components/widgets/GameWidget";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { resolveLeagueSeo } from "@/lib/seo/seo-resolver"; // ✅ Import Resolver
 
 // 1. Generate Static Params (Required for GitHub Pages)
 export function generateStaticParams() {
@@ -22,6 +24,22 @@ type Props = {
     slug: string;
   }>;
 };
+
+// 2. ✅ ADDED: SEO Metadata Generator
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+
+  // Case A: It's a League -> Fetch League SEO
+  if (slug in FOOTBALL_ROUTES.leagues) {
+    const { metadata } = await resolveLeagueSeo("football", slug);
+    return metadata;
+  }
+
+  // Case B: It's a generic page -> Simple Fallback
+  return {
+    title: `Football ${slug.replace(/-/g, " ")} | Live Score`,
+  };
+}
 
 export default async function FootballSeoPage({ params }: Props) {
   const { slug } = await params;

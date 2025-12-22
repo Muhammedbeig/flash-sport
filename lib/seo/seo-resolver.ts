@@ -1,8 +1,14 @@
 // lib/seo/seo-resolver.ts
 import type { Metadata } from "next";
 import { buildMatchSeo } from "./match-seo";
+import { buildPlayerSeo } from "./player-seo";
+import { buildLeagueSeo } from "./league-seo"; 
 import type { SeoEntry } from "./seo-central";
 import { getSeoStoreSync } from "./seo-store";
+
+/* -------------------------------------------------------------------------- */
+/* HELPERS                                                                    */
+/* -------------------------------------------------------------------------- */
 
 function clamp(s: string, max: number) {
   if (!s) return s;
@@ -32,7 +38,6 @@ function applyTitleDecorations(rawTitle: string, brand: { siteName: string; titl
 
   if (prefix && !t.startsWith(prefix)) t = `${prefix}${t}`;
 
-  // avoid obvious duplication if suffix contains siteName and title already has siteName
   const tLower = t.toLowerCase();
   const siteLower = (brand.siteName || "").toLowerCase();
   const suffixLower = suffix.toLowerCase();
@@ -82,6 +87,10 @@ function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* STATIC & ROOT RESOLVERS                                                    */
+/* -------------------------------------------------------------------------- */
+
 /** ✅ Home */
 export function resolveHomeSeo() {
   const store = getSeoStoreSync();
@@ -123,7 +132,9 @@ export function resolveStaticPageSeo(
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/* ----------------------------- SPORTS TAB SEO ------------------------------ */
+/* -------------------------------------------------------------------------- */
+/* SPORTS TAB SEO                                                             */
+/* -------------------------------------------------------------------------- */
 type SportsTabArgs = { sport: string; tab: string; pathname?: string };
 
 export function resolveSportsTabSeo(rawSport: string, rawTab: string): {
@@ -169,56 +180,67 @@ export function resolveSportsTabSeo(arg1: string | SportsTabArgs, arg2?: string)
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/* ----------------------------- LEAGUE SEO --------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* LEAGUE SEO (Country/Numeric IDs) - FIXED & UPGRADED                        */
+/* -------------------------------------------------------------------------- */
 type LeagueArgs = { sport: string; tab: string; leagueId: string; pathname?: string };
 
-export function resolveSportsLeagueSeo(
+// 1. Overloads (Now return Promise because we fetch data)
+export async function resolveSportsLeagueSeo(
   rawSport: string,
   rawTab: string,
   leagueId: string,
   pathname?: string
-): { entry: SeoEntry; metadata: Metadata; canonicalPath: string };
-export function resolveSportsLeagueSeo(args: LeagueArgs): {
+): Promise<{ entry: SeoEntry; metadata: Metadata; canonicalPath: string }>;
+
+export async function resolveSportsLeagueSeo(args: LeagueArgs): Promise<{
   entry: SeoEntry;
   metadata: Metadata;
   canonicalPath: string;
-};
-export function resolveSportsLeagueSeo(
+}>;
+
+// 2. Implementation
+export async function resolveSportsLeagueSeo(
   arg1: string | LeagueArgs,
   arg2?: string,
   arg3?: string,
   arg4?: string
 ) {
-  const store = getSeoStoreSync();
-
+  // A. Normalize Arguments
   const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
   const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
   const leagueId = typeof arg1 === "string" ? (arg3 || "") : arg1.leagueId;
+  const pathname = typeof arg1 === "string" ? arg4 : arg1.pathname;
 
-  const canonicalPath =
-    typeof arg1 === "string"
-      ? arg4 || `/sports/${sport}/${tab}/league/${leagueId}`
-      : arg1.pathname || `/sports/${sport}/${tab}/league/${leagueId}`;
+  // B. Fetch Real Data using the Builder
+  // We pass 'leagueId' (numeric string) as the 'league' argument.
+  // The builder handles fetching data by ID automatically.
+  const { entry: baseEntry } = await buildLeagueSeo({ 
+    sport, 
+    league: leagueId, 
+    tab: tab !== "all" ? tab : undefined 
+  });
 
-  const { entry: baseEntry } = resolveSportsTabSeo(sport, tab);
-
-  const base: SeoEntry = {
+  // C. Override Canonical URL
+  // The builder might default to "/football/premier-league", but we want to KEEP your structure:
+  // "/sports/football/all/league/906"
+  const finalCanonical = pathname || `/sports/${sport}/${tab}/league/${leagueId}`;
+  
+  // D. Create Final Entry with correct Canonical
+  const entry: SeoEntry = {
     ...baseEntry,
-    title: clamp(`${baseEntry.title} – League ${leagueId}`, 60),
-    h1: `${baseEntry.h1} – League ${leagueId}`,
-    canonical: canonicalPath,
+    canonical: finalCanonical,
   };
 
-  const key = `league:${sport}:${leagueId}:${tab}`;
-  const entry: SeoEntry = { ...base, ...(store.overrides[key] || {}) };
+  // E. Generate Metadata
+  const metadata = toMetadata(entry, finalCanonical);
 
-  entry.title = clamp(entry.title, 60);
-  entry.description = clamp(entry.description, 155);
-
-  return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
+  return { entry, metadata, canonicalPath: finalCanonical };
 }
 
-/* ----------------------------- MATCH SEO (async) --------------------------- */
+/* -------------------------------------------------------------------------- */
+/* MATCH SEO (async)                                                          */
+/* -------------------------------------------------------------------------- */
 type MatchArgs = { sport: string; id: string; tab?: string };
 
 export async function resolveMatchSeo(sport: string, id: string, tab?: string): Promise<{
@@ -230,6 +252,58 @@ export async function resolveMatchSeo(args: MatchArgs): Promise<{
   metadata: Metadata;
 }>;
 export async function resolveMatchSeo(arg1: string | MatchArgs, arg2?: string, arg3?: string) {
-  if (typeof arg1 === "string") return buildMatchSeo({ sport: arg1, id: String(arg2 || ""), tab: arg3 });
-  return buildMatchSeo({ sport: arg1.sport, id: String(arg1.id), tab: arg1.tab });
+  const sport = typeof arg1 === "string" ? arg1 : arg1.sport;
+  const id = String(typeof arg1 === "string" ? (arg2 || "") : arg1.id);
+  const tab = typeof arg1 === "string" ? arg3 : arg1.tab;
+
+  const { entry } = await buildMatchSeo({ sport, id, tab });
+
+  const cleanTab = (tab || "summary").toLowerCase();
+  const canonicalPath = entry.canonical || `/match/${normalizeSport(sport)}/${id}/${cleanTab}`;
+
+  const metadata = toMetadata(entry, canonicalPath);
+
+  return { entry, metadata };
+}
+
+/* -------------------------------------------------------------------------- */
+/* PLAYER SEO (async)                                                         */
+/* -------------------------------------------------------------------------- */
+type PlayerArgs = { sport: string; id: string };
+
+export async function resolvePlayerSeo(sport: string, id: string): Promise<{
+  entry: SeoEntry;
+  metadata: Metadata;
+}>;
+export async function resolvePlayerSeo(args: PlayerArgs): Promise<{
+  entry: SeoEntry;
+  metadata: Metadata;
+}>;
+export async function resolvePlayerSeo(arg1: string | PlayerArgs, arg2?: string) {
+  const sport = typeof arg1 === "string" ? arg1 : arg1.sport;
+  const id = String(typeof arg1 === "string" ? (arg2 || "") : arg1.id);
+
+  const { entry } = await buildPlayerSeo({ sport, id });
+
+  const canonicalPath = entry.canonical || `/player/${normalizeSport(sport)}/${id}`;
+
+  const metadata = toMetadata(entry, canonicalPath);
+
+  return { entry, metadata };
+}
+
+/* -------------------------------------------------------------------------- */
+/* LEAGUE SEO (Main/Slug Based)                                               */
+/* -------------------------------------------------------------------------- */
+export async function resolveLeagueSeo(sport: string, leagueIdOrSlug: string, tab?: string) {
+  // 1. Pass 'tab' to the builder
+  const { entry } = await buildLeagueSeo({ sport, league: leagueIdOrSlug, tab });
+  
+  // 2. Use the canonical path from the builder (which handles standard league URLs)
+  const canonicalPath = entry.canonical || `/${normalizeSport(sport)}/${leagueIdOrSlug}`;
+  
+  // 3. Generate Metadata
+  const metadata = toMetadata(entry, canonicalPath);
+  
+  return { entry, metadata };
 }

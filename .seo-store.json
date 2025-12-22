@@ -2,6 +2,7 @@
   "brand": {
     "siteName": "LiveSocceRR",
     "siteUrl": "https://livesoccerr.com",
+    "siteDomain": "livesoccerr.com",
     "tagline": "Soccer Scores. Right Now.",
     "logoTitle": "LiveSocceRR Scores",
     "titlePrefix": "",
@@ -14,6 +15,75 @@
     "autoTitlePattern": "{title} | {brand}",
     "autoDescriptionPattern": "{description}",
     "autoSchema": true
+  },
+  "content": {
+    "contact": {
+      "supportEmail": "service@livesoccerr.com",
+      "phone": "+92 300 0000000",
+      "whatsapp": "+92 300 0000000",
+      "addressLine1": "Your Company Address Line 1",
+      "addressLine2": "City, Country",
+      "supportHours": "Mon–Sun, 24/7"
+    },
+    "socials": {
+      "twitter": "https://twitter.com/livesoccerr",
+      "facebook": "https://facebook.com/livesoccerr",
+      "instagram": "https://instagram.com/livesoccerr",
+      "youtube": "https://youtube.com/livesoccerr"
+    },
+    "appDownloads": {
+      "googlePlayUrl": "#",
+      "appStoreUrl": "#"
+    },
+    "legal": {
+      "privacyPolicy": {
+        "h1": "Privacy Policy",
+        "lastUpdated": "December 17, 2025",
+        "intro": "This privacy policy concerns the products of LiveSocceRR...",
+        "sections": [
+          {
+            "title": "1. Privacy Policy of livesoccerr.com",
+            "blocks": [
+              { "type": "h3", "text": "1.1 Introduction" },
+              { "type": "p", "text": "This privacy policy concerns the products of LiveSocceRR..." },
+              { "type": "h3", "text": "1.2 Data Controller and Owner" },
+              { "type": "p", "text": "The owner of livesoccerr.com. You can contact us by e-mail at: service@livesoccerr.com" }
+            ]
+          },
+          {
+            "title": "2. Types of Data Collected",
+            "blocks": [
+              { "type": "h3", "text": "2.1 Collected Data" },
+              { "type": "p", "text": "Among the types of personal data that we collect... are: Email, Cookie, and Usage Data." }
+            ]
+          },
+          {
+            "title": "Contact Us",
+            "blocks": [
+              { "type": "p", "text": "If you have any questions about this Privacy Policy, please contact us at: service@livesoccerr.com" }
+            ]
+          }
+        ]
+      },
+      "termsOfService": {
+        "h1": "Terms of Service",
+        "lastUpdated": "December 17, 2025",
+        "sections": [
+          {
+            "title": "1. Introductory Provisions",
+            "blocks": [
+              { "type": "p", "text": "These terms of use govern the mutual rights and obligations between LiveSocceRR and third party individuals..." }
+            ]
+          },
+          {
+            "title": "2. Site Content",
+            "blocks": [
+              { "type": "p", "text": "The Site contains up-to-date information on sporting events..." }
+            ]
+          }
+        ]
+      }
+    }
   },
   "home": {
     "title": "Live Soccer & All Sports Scores | Football, Basketball, NFL, Hockey – LiveSoccerR",
@@ -30,7 +100,8 @@
       "baseball live scores",
       "rugby live scores",
       "volleyball live scores"
-    ]
+    ],
+    "canonical": "/"
   },
   "pages": {
     "contact": {
@@ -44,9 +115,14 @@
       "description": "Read LiveSoccerR’s privacy policy to understand how we handle cookies, analytics and privacy.",
       "h1": "Privacy Policy",
       "primaryKeyword": "privacy policy livesoccerr"
+    },
+    "termsOfService": {
+      "title": "Terms of Service | LiveSoccerR",
+      "description": "Read LiveSoccerR’s Terms of Service.",
+      "h1": "Terms of Service",
+      "primaryKeyword": "terms of service livesoccerr"
     }
   },
-  "overrides": {},
   "labels": {
     "sportLabels": {
       "football": "Football",
@@ -65,7 +141,10 @@
       "today": "Today",
       "live": "Live Now",
       "finished": "Final Scores",
-      "scheduled": "Upcoming Fixtures"
+      "scheduled": "Upcoming Fixtures",
+      "results": "Results",
+      "fixtures": "Fixtures",
+      "standings": "Standings"
     },
     "matchTabLabels": {
       "summary": "Score, Lineups & Stats",
@@ -77,6 +156,23 @@
       "odds": "Odds",
       "results": "Result",
       "fixtures": "Fixture"
+    }
+  },
+  "league": {
+    "revalidateSeconds": 86400,
+    "apiTimeoutMs": 2000,
+    "primaryKeyword": "league table",
+    "titlePatterns": [
+      "{name} ({country}) Live Scores, Results & Fixtures | {brand}",
+      "{name} {season} Table & Results – {brand}"
+    ],
+    "descriptionPattern": "Follow {name} ({country}) live scores, results, fixtures, and standings. Get real-time updates for {name} on {brand}.",
+    "h1Pattern": "{name} – Live Scores & Standings",
+    "og": {
+      "fallbackImage": "/og.png"
+    },
+    "schema": {
+      "enabled": true
     }
   },
   "match": {
@@ -98,5 +194,24 @@
     "schema": {
       "enabled": true
     }
-  }
+  },
+  "player": {
+    "revalidateSeconds": 3600,
+    "apiTimeoutMs": 1500,
+    "primaryKeyword": "player profile",
+    "titlePatterns": [
+      "{name} ({team}) – Profile, Stats & News",
+      "{name} Stats – {team} Player Profile",
+      "{name} – Career Stats & Goals"
+    ],
+    "descriptionPattern": "{name} plays for {team}. View complete player profile, stats, goals, match history and market value on {brand}.",
+    "h1Pattern": "{name} – Player Profile",
+    "og": {
+      "fallbackImage": "/og.png"
+    },
+    "schema": {
+      "enabled": true
+    }
+  },
+  "overrides": {}
 }
