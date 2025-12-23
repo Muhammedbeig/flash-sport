@@ -115,9 +115,7 @@ async function fetchGames(
   // Construct Query
   const query = `league=${leagueId}&season=${season}&${queryParams}`;
 
-  const url = cdnUrl
-    ? `${cdnUrl}/${endpoint}?${query}`
-    : `https://${host}/${endpoint}?${query}`;
+  const url = cdnUrl ? `${cdnUrl}/${endpoint}?${query}` : `https://${host}/${endpoint}?${query}`;
 
   let headers: Record<string, string> = {};
   if (!cdnUrl) {
@@ -141,6 +139,98 @@ async function fetchGames(
 // ==========================================
 // 3. SUB-COMPONENTS
 // ==========================================
+
+function GameRowSkeleton() {
+  return (
+    <div className="flex items-center justify-between px-3 py-3 rounded-xl border theme-border theme-bg mb-2">
+      {/* Time / Status */}
+      <div className="flex flex-col gap-2 w-20 shrink-0 border-r theme-border pr-2">
+        <Skeleton className="h-3 w-10" />
+        <Skeleton className="h-3 w-14" />
+      </div>
+
+      {/* Teams & Scores */}
+      <div className="flex-1 px-3 flex flex-col gap-2">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-3 w-44 max-w-[60%]" />
+          </div>
+          <Skeleton className="h-3 w-7" />
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-3 w-40 max-w-[60%]" />
+          </div>
+          <Skeleton className="h-3 w-7" />
+        </div>
+      </div>
+
+      {/* Short Status */}
+      <div className="w-12 text-right">
+        <Skeleton className="h-3 w-8 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
+function TabsHeaderSkeleton() {
+  return (
+    <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b theme-border overflow-x-auto no-scrollbar">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-9 w-24 rounded-md shrink-0" />
+      ))}
+    </div>
+  );
+}
+
+function LeagueTabsShellSkeleton() {
+  return (
+    <div className="mt-4 theme-bg rounded-xl border theme-border overflow-hidden shadow-sm min-h-[500px]">
+      <TabsHeaderSkeleton />
+      <div className="p-4 space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <GameRowSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GenericListSkeleton() {
+  return (
+    <div className="p-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <GameRowSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+function StandardSummarySkeleton() {
+  return (
+    <div className="space-y-6 p-2">
+      <div>
+        <div className="px-2 mb-2">
+          <Skeleton className="h-4 w-28 rounded" />
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <GameRowSkeleton key={`up-${i}`} />
+        ))}
+      </div>
+
+      <div>
+        <div className="px-2 mb-2">
+          <Skeleton className="h-4 w-36 rounded" />
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <GameRowSkeleton key={`rs-${i}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
   const { theme } = useTheme();
@@ -185,7 +275,11 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
           <div className="flex items-center gap-2 overflow-hidden">
             {game.homeTeam.logo && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={game.homeTeam.logo} alt={game.homeTeam.name} className="w-4 h-4 object-contain shrink-0" />
+              <img
+                src={game.homeTeam.logo}
+                alt={game.homeTeam.name}
+                className="w-4 h-4 object-contain shrink-0"
+              />
             )}
             <span className="text-xs text-primary truncate">{game.homeTeam.name}</span>
           </div>
@@ -196,7 +290,11 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
           <div className="flex items-center gap-2 overflow-hidden">
             {game.awayTeam.logo && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={game.awayTeam.logo} alt={game.awayTeam.name} className="w-4 h-4 object-contain shrink-0" />
+              <img
+                src={game.awayTeam.logo}
+                alt={game.awayTeam.name}
+                className="w-4 h-4 object-contain shrink-0"
+              />
             )}
             <span className="text-xs text-primary truncate">{game.awayTeam.name}</span>
           </div>
@@ -205,9 +303,7 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
       </div>
 
       {/* Short Status (FT, 65', etc) */}
-      <div className="w-12 text-right text-[10px] text-secondary font-mono">
-        {game.statusShort}
-      </div>
+      <div className="w-12 text-right text-[10px] text-secondary font-mono">{game.statusShort}</div>
     </Link>
   );
 }
@@ -266,20 +362,11 @@ function GenericList({ leagueId, sport, type }: { leagueId: string; sport: strin
     };
   }, [leagueId, sport, type]);
 
-  if (loading)
-    return (
-      <div className="p-4 space-y-2">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
-      </div>
-    );
+  if (loading) return <GenericListSkeleton />;
 
   if (games.length === 0) {
     return (
-      <div className="p-10 text-center text-secondary text-sm">
-        No matches found for this category.
-      </div>
+      <div className="p-10 text-center text-secondary text-sm">No matches found for this category.</div>
     );
   }
 
@@ -312,7 +399,9 @@ function StandardSummary({ leagueId, sport }: { leagueId: string; sport: string 
 
         if (!cancelled) {
           setFixtures(nextData);
-          setResults(lastData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          setResults(
+            lastData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -325,15 +414,7 @@ function StandardSummary({ leagueId, sport }: { leagueId: string; sport: string 
     };
   }, [leagueId, sport]);
 
-  if (loading)
-    return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-    );
+  if (loading) return <StandardSummarySkeleton />;
 
   return (
     <div className="space-y-6 p-2">
@@ -413,7 +494,7 @@ export default function LeagueTabs({
   }, [leagueId, sport]);
 
   if (!leagueId) return null;
-  if (checkingLive) return <Skeleton className="w-full h-96 rounded-xl mt-4" />;
+  if (checkingLive) return <LeagueTabsShellSkeleton />;
 
   // 2. Decide Tab Set
   const tabs = isLiveMode ? TABS_LIVE : TABS_STANDARD;
@@ -494,7 +575,11 @@ export default function LeagueTabs({
           }
 
           return (
-            <button key={tab.id} className={getTabStyle(tab.id)} onClick={() => setLocalTab(targetId)}>
+            <button
+              key={tab.id}
+              className={getTabStyle(tab.id)}
+              onClick={() => setLocalTab(targetId)}
+            >
               {tab.id === "live" && (
                 <span className="w-2 h-2 rounded-full bg-current animate-pulse mr-2 inline-block" />
               )}
