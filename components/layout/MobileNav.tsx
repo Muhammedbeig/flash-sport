@@ -28,6 +28,10 @@ function getTabFromPathname(pathname: string): string | null {
   return null;
 }
 
+function isValidYMD(v: string | null) {
+  return !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
 export default function MobileNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,19 +50,37 @@ export default function MobileNav() {
 
   const inSportsRoutes = pathname.startsWith("/sports/");
 
+  // Keep today's value (used for other parts / consistency)
   const todayYMD = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const currentDateYMD = searchParams.get("date") || todayYMD;
 
-  const buildHref = (tab: "all" | "live" | "today", dateYMD?: string) => {
+  // ✅ Match web behavior:
+  // - Only preserve ?date when it already exists in URL (and is valid)
+  // - "Today" tab must NEVER include ?date
+  const urlDate = isValidYMD(searchParams.get("date")) ? (searchParams.get("date") as string) : null;
+  const urlHasDate = !!urlDate;
+
+  const buildHref = (tab: "all" | "live" | "today") => {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (dateYMD) params.set("date", dateYMD);
+    // Prevent legacy mixing when navigating
+    params.delete("sport");
+    params.delete("league");
+
+    if (tab === "today") {
+      // Web: Today tab never carries date in URL
+      params.delete("date");
+    } else {
+      // Web: All/Live keep date only if already present
+      if (urlHasDate) params.set("date", urlDate as string);
+      else params.delete("date");
+    }
 
     if (inSportsRoutes) {
       const qs = params.toString();
       return qs ? `/sports/${currentSport}/${tab}/?${qs}` : `/sports/${currentSport}/${tab}/`;
     }
 
+    // Legacy home route fallback
     const sportParam = tab === "all" ? currentSport : `${currentSport}/${tab}`;
     params.set("sport", sportParam);
 
@@ -66,14 +88,9 @@ export default function MobileNav() {
     return `/?${qs}`;
   };
 
-  // All keeps selected date
-  const allHref = buildHref("all", currentDateYMD);
-
-  // Live behaves like Today -> force today's date
-  const liveHref = buildHref("live", todayYMD);
-
-  // Today forces today's date
-  const todayHref = buildHref("today", todayYMD);
+  const allHref = buildHref("all");
+  const liveHref = buildHref("live");
+  const todayHref = buildHref("today");
 
   const isAllActive =
     currentTab === "all" || (!["live", "today"].includes(currentTab) && inSportsRoutes);
@@ -131,7 +148,6 @@ export default function MobileNav() {
         </div>
       </div>
 
-      {/* ✅ FIX: pass required prop */}
       <MobileSearch
         open={searchOpen}
         onClose={() => setSearchOpen(false)}

@@ -58,6 +58,9 @@ const HockeyLeagueGroup = ({
 }) => {
   const [isOpen, setIsOpen] = useState(true);
 
+  // ✅ FIX: Fallback to "League Logo" if country/name is missing
+  const leagueTitle = meta.country || meta.name || "League Logo";
+
   return (
     <div className="border-b theme-border last:border-0">
       <div
@@ -67,7 +70,14 @@ const HockeyLeagueGroup = ({
         }`}
       >
         <div className="flex items-center gap-3">
-          {meta.flag && <img src={meta.flag} alt={meta.country} className="w-4 h-4 object-contain" />}
+          {meta.flag && (
+            <img 
+              src={meta.flag} 
+              alt={leagueTitle} 
+              title={leagueTitle} 
+              className="w-4 h-4 object-contain" 
+            />
+          )}
           <span className="text-xs font-bold text-secondary uppercase tracking-wider">
             {meta.country} : {meta.name}
           </span>
@@ -99,6 +109,10 @@ const HockeyLeagueGroup = ({
               ? time
               : game.status.short;
 
+          // ✅ FIX: Fallback to "Team Logo" if name is missing
+          const homeName = game.teams.home.name || "Team Logo";
+          const awayName = game.teams.away.name || "Team Logo";
+
           return (
             <Link
               key={game.id}
@@ -114,14 +128,19 @@ const HockeyLeagueGroup = ({
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     {game.teams.home.logo && (
-                      <img src={game.teams.home.logo} className="w-5 h-5 object-contain" alt="" />
+                      <img 
+                        src={game.teams.home.logo} 
+                        className="w-5 h-5 object-contain" 
+                        alt={homeName} 
+                        title={homeName} 
+                      />
                     )}
                     <span
                       className={`text-sm ${
                         game.teams.home.winner ? "font-bold text-primary" : "font-medium text-secondary"
                       }`}
                     >
-                      {game.teams.home.name}
+                      {homeName}
                     </span>
                   </div>
                   <span className="text-sm font-bold text-primary">{game.scores.home ?? "-"}</span>
@@ -130,14 +149,19 @@ const HockeyLeagueGroup = ({
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     {game.teams.away.logo && (
-                      <img src={game.teams.away.logo} className="w-5 h-5 object-contain" alt="" />
+                      <img 
+                        src={game.teams.away.logo} 
+                        className="w-5 h-5 object-contain" 
+                        alt={awayName} 
+                        title={awayName} 
+                      />
                     )}
                     <span
                       className={`text-sm ${
                         game.teams.away.winner ? "font-bold text-primary" : "font-medium text-secondary"
                       }`}
                     >
-                      {game.teams.away.name}
+                      {awayName}
                     </span>
                   </div>
                   <span className="text-sm font-bold text-primary">{game.scores.away ?? "-"}</span>

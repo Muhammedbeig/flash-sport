@@ -1,14 +1,37 @@
 // app/contact/page.tsx
 import { Mail, ArrowRight, Info, Phone, MapPin } from "lucide-react";
-import { SITE_CONTENT } from "@/lib/site-content";
+import { readStaticPageContent } from "@/lib/seo/static-page-content";
 
-export default function ContactPage() {
-  const email = SITE_CONTENT.contact.supportEmail;
-  const phone = SITE_CONTENT.contact.phone;
-  const address1 = SITE_CONTENT.contact.addressLine1;
-  const address2 = SITE_CONTENT.contact.addressLine2;
+export default async function ContactPage() {
+  const pageJson = await readStaticPageContent("contact");
+  const content = pageJson.content;
 
-  const page = SITE_CONTENT.pages.contact;
+  const email =
+    content.contactDetails?.email ||
+    content.supportEmail ||
+    "service@livesoccerr.com";
+
+  const phone =
+    content.contactDetails?.phone ||
+    content.phone ||
+    "";
+
+  const address1 =
+    content.contactDetails?.addressLine1 ||
+    content.addressLine1 ||
+    "";
+
+  const address2 =
+    content.contactDetails?.addressLine2 ||
+    content.addressLine2 ||
+    "";
+
+  const h1 = content.h1 || "Contact";
+  const intro = content.intro || [];
+
+  const cardTitle = content.cardTitle || "Email Support";
+  const cardSubtitle = content.cardSubtitle || "Send us an email and we’ll respond as soon as possible.";
+  const note = content.note || "For faster support, include the sport, league, match/player link, and screenshots if relevant.";
 
   return (
     <div className="w-full min-h-screen p-4 md:p-8 flex items-center justify-center">
@@ -16,11 +39,11 @@ export default function ContactPage() {
         {/* Header */}
         <div className="mb-10 text-center space-y-4">
           <h1 className="text-3xl md:text-5xl font-black text-primary tracking-tight">
-            {page.h1}
+            {h1}
           </h1>
 
           <div className="prose dark:prose-invert max-w-none text-secondary text-sm md:text-base leading-relaxed">
-            {page.intro.map((p, idx) => (
+            {intro.map((p, idx) => (
               <p key={idx}>{p}</p>
             ))}
           </div>
@@ -35,8 +58,8 @@ export default function ContactPage() {
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-primary">{page.cardTitle}</h2>
-            <p className="text-secondary text-sm">{page.cardSubtitle}</p>
+            <h2 className="text-2xl font-bold text-primary">{cardTitle}</h2>
+            <p className="text-secondary text-sm">{cardSubtitle}</p>
           </div>
 
           <a
@@ -61,7 +84,12 @@ export default function ContactPage() {
                 <MapPin size={16} className="shrink-0 mt-0.5" />
                 <span>
                   {address1}
-                  {address2 ? <><br />{address2}</> : null}
+                  {address2 ? (
+                    <>
+                      <br />
+                      {address2}
+                    </>
+                  ) : null}
                 </span>
               </div>
             )}
@@ -69,7 +97,7 @@ export default function ContactPage() {
 
           <div className="mt-2 flex items-center gap-2 px-5 py-3 rounded-xl bg-secondary/10 text-secondary text-xs font-bold">
             <Info size={16} className="shrink-0" />
-            <span>{page.note}</span>
+            <span>{note}</span>
           </div>
         </div>
       </div>

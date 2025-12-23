@@ -1,26 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Apple,
-  Play,
-  Twitter,
-  Facebook,
-  Instagram,
-  Youtube,
-} from "lucide-react";
+import { Apple, Play, Twitter, Facebook, Instagram, Youtube } from "lucide-react";
 import { SEO_CONTENT } from "@/lib/seo/seo-central";
 
 type FooterLink = { label: string; url: string };
 
 const FOOTER = {
-  // ✅ FIX: Use placeholder {siteName} instead of hardcoded string
   aboutText:
     "{siteName} delivers fast, real-time scores, fixtures, results, standings, and match stats across football, basketball, NFL, hockey, baseball, rugby, volleyball and more — all in one place.",
 
   appLinks: [
-    { name: "Google Play", url: "#", Icon: Play },
-    { name: "App Store", url: "#", Icon: Apple },
+    { key: "googlePlay", name: "Google Play", url: "#", Icon: Play },
+    { key: "appStore", name: "App Store", url: "#", Icon: Apple },
   ],
 
   columns: [
@@ -67,10 +60,10 @@ const FOOTER = {
   ],
 
   socials: [
-    { Icon: Twitter, label: "Twitter", href: "#" },
-    { Icon: Facebook, label: "Facebook", href: "#" },
-    { Icon: Instagram, label: "Instagram", href: "#" },
-    { Icon: Youtube, label: "YouTube", href: "#" },
+    { key: "twitter", Icon: Twitter, label: "Twitter", href: "#" },
+    { key: "facebook", Icon: Facebook, label: "Facebook", href: "#" },
+    { key: "instagram", Icon: Instagram, label: "Instagram", href: "#" },
+    { key: "youtube", Icon: Youtube, label: "YouTube", href: "#" },
   ],
 };
 
@@ -99,13 +92,66 @@ function SmartExternalLink({
   );
 }
 
+type PublicFooterConfig = {
+  aboutText?: string;
+  appLinks?: { googlePlay?: string; appStore?: string };
+  socials?: { twitter?: string; facebook?: string; instagram?: string; youtube?: string };
+};
+
+type SeoBrandPublic = {
+  siteName?: string;
+  logoTitle?: string;
+  logoUrl?: string;
+  tagline?: string;
+  footer?: PublicFooterConfig;
+};
+
 export default function Footer() {
-  // ✅ FIX: Robust fallback to prevent crashes if SEO_CONTENT is undefined during build
-  const brand = SEO_CONTENT?.brand || {
+  // local safe fallback (same as your previous behavior)
+  const fallbackBrand = SEO_CONTENT?.brand || {
     siteName: "LiveSocceRR",
     logoTitle: "LiveSocceRR Scores",
     tagline: "Soccer Scores. Right Now.",
   };
+
+  const [siteName, setSiteName] = useState<string>(fallbackBrand.siteName);
+  const [logoTitle, setLogoTitle] = useState<string>(fallbackBrand.logoTitle || fallbackBrand.siteName);
+  const [tagline, setTagline] = useState<string>(fallbackBrand.tagline || "");
+
+  const [logoUrl, setLogoUrl] = useState<string>("/brand/logo.svg");
+
+  const [footerAboutText, setFooterAboutText] = useState<string>(FOOTER.aboutText);
+  const [footerAppLinks, setFooterAppLinks] = useState<PublicFooterConfig["appLinks"]>({});
+  const [footerSocials, setFooterSocials] = useState<PublicFooterConfig["socials"]>({});
+
+  useEffect(() => {
+    let alive = true;
+
+    // ✅ uses your existing tiny API idea
+    fetch("/api/public/seo-brand", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: SeoBrandPublic | null) => {
+        if (!alive || !j) return;
+
+        if (typeof j.siteName === "string" && j.siteName) setSiteName(j.siteName);
+        if (typeof j.logoTitle === "string" && j.logoTitle) setLogoTitle(j.logoTitle);
+        if (typeof j.tagline === "string") setTagline(j.tagline);
+
+        if (typeof j.logoUrl === "string" && j.logoUrl) setLogoUrl(j.logoUrl);
+
+        // optional footer overrides from global json (safe if missing)
+        if (j.footer?.aboutText && typeof j.footer.aboutText === "string") setFooterAboutText(j.footer.aboutText);
+        if (j.footer?.appLinks && typeof j.footer.appLinks === "object") setFooterAppLinks(j.footer.appLinks);
+        if (j.footer?.socials && typeof j.footer.socials === "object") setFooterSocials(j.footer.socials);
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const aboutText = footerAboutText.replace("{siteName}", siteName);
 
   return (
     <footer className="w-full theme-bg theme-border border-t pt-16 pb-8 text-sm font-sans relative z-10">
@@ -120,8 +166,9 @@ export default function Footer() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm theme-border border bg-white/60 dark:bg-white/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/brand/logo.svg"
-                  alt={brand.siteName} // ✅ FIX: Using siteName
+                  src={logoUrl || "/brand/logo.svg"}
+                  alt={logoTitle || siteName}
+                  title={logoTitle || siteName}
                   className="w-6 h-6"
                   loading="eager"
                   decoding="async"
@@ -130,16 +177,13 @@ export default function Footer() {
               </div>
 
               <div className="leading-tight">
-                <div className="text-2xl font-bold tracking-tight text-primary">
-                  {brand.siteName}
-                </div>
-                <div className="text-xs text-secondary">{brand.tagline}</div>
+                <div className="text-2xl font-bold tracking-tight text-primary">{siteName}</div>
+                <div className="text-xs text-secondary">{tagline}</div>
               </div>
             </Link>
 
             <p className="leading-relaxed text-secondary text-xs md:text-sm max-w-2xl">
-              {/* ✅ FIX: Dynamically inject siteName into the text */}
-              {FOOTER.aboutText.replace("{siteName}", brand.siteName)}
+              {aboutText}
             </p>
           </div>
 
@@ -150,30 +194,27 @@ export default function Footer() {
             </span>
 
             <div className="flex flex-row flex-wrap gap-3">
-              {FOOTER.appLinks.map(({ name, url, Icon }) => (
-                <SmartExternalLink
-                  key={name}
-                  href={url}
-                  ariaLabel={name}
-                  className="group"
-                >
-                  {/* High contrast both modes */}
-                  <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 border theme-border bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition-all shadow-sm">
-                    <Icon size={20} className="opacity-90 group-hover:opacity-100 transition-opacity" />
-                    <div className="text-left">
-                      <div className="text-[10px] uppercase opacity-70 leading-none mb-0.5">
-                        Download on
+              {FOOTER.appLinks.map(({ key, name, url, Icon }) => {
+                const overrideUrl =
+                  key === "googlePlay" ? footerAppLinks?.googlePlay : footerAppLinks?.appStore;
+
+                return (
+                  <SmartExternalLink key={name} href={overrideUrl || url} ariaLabel={name} className="group">
+                    <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 border theme-border bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition-all shadow-sm">
+                      <Icon size={20} className="opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <div className="text-left">
+                        <div className="text-[10px] uppercase opacity-70 leading-none mb-0.5">
+                          Download on
+                        </div>
+                        <div className="font-bold text-sm leading-tight">{name}</div>
                       </div>
-                      <div className="font-bold text-sm leading-tight">{name}</div>
                     </div>
-                  </div>
-                </SmartExternalLink>
-              ))}
+                  </SmartExternalLink>
+                );
+              })}
             </div>
 
-            <div className="text-[11px] text-secondary">
-              (Links can be connected later in admin.)
-            </div>
+            <div className="text-[11px] text-secondary">(Links can be connected later in admin.)</div>
           </div>
         </div>
 
@@ -210,29 +251,36 @@ export default function Footer() {
         <div className="theme-border border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-xs">
           {/* COPYRIGHT */}
           <div className="text-secondary order-2 md:order-1">
-            {/* ✅ FIX: Dynamic Site Name */}
-            &copy; {new Date().getFullYear()} {brand.siteName}. All rights reserved.
+            &copy; {new Date().getFullYear()} {siteName}. All rights reserved.
           </div>
 
           {/* SOCIAL */}
           <div className="flex items-center gap-3 order-1 md:order-2">
-            {FOOTER.socials.map(({ Icon, label, href }) => (
-              <SmartExternalLink
-                key={label}
-                href={href}
-                ariaLabel={label}
-                className="p-2.5 theme-bg theme-border border rounded-full hover:opacity-90 transition-all text-secondary"
-              >
-                <Icon size={16} />
-              </SmartExternalLink>
-            ))}
+            {FOOTER.socials.map(({ key, Icon, label, href }) => {
+              const overrideHref =
+                key === "twitter"
+                  ? footerSocials?.twitter
+                  : key === "facebook"
+                    ? footerSocials?.facebook
+                    : key === "instagram"
+                      ? footerSocials?.instagram
+                      : footerSocials?.youtube;
+
+              return (
+                <SmartExternalLink
+                  key={label}
+                  href={overrideHref || href}
+                  ariaLabel={label}
+                  className="p-2.5 theme-bg theme-border border rounded-full hover:opacity-90 transition-all text-secondary"
+                >
+                  <Icon size={16} />
+                </SmartExternalLink>
+              );
+            })}
           </div>
 
           {/* LEGAL */}
-          <nav
-            aria-label="Legal navigation"
-            className="flex gap-6 text-secondary font-medium order-3"
-          >
+          <nav aria-label="Legal navigation" className="flex gap-6 text-secondary font-medium order-3">
             <Link href="/privacy-policy" prefetch={false} className="hover:text-primary transition-colors">
               Privacy
             </Link>

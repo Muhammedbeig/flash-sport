@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Menu, Moon, Sun, Search } from "lucide-react";
@@ -9,10 +9,11 @@ import type { CSSProperties } from "react";
 import { SEO_CONTENT } from "@/lib/seo/seo-central";
 import MobileSearch from "@/components/search/MobileSearch";
 
+const brandFallback =
+  SEO_CONTENT?.brand || { siteName: "LiveSocceRR", logoTitle: "LiveSocceRR Scores" };
 
-const brand = SEO_CONTENT?.brand || { siteName: "LiveSocceRR" };
-
-const ALL_SPORTS = [
+// ✅ fallback stays exactly as your current list (no behavior change if API doesn't return header.nav)
+const FALLBACK_ALL_SPORTS = [
   { name: "Football", id: "football", icon: "⚽" },
   { name: "Basketball", id: "basketball", icon: "🏀" },
   { name: "NFL", id: "nfl", icon: "🏈" },
@@ -22,15 +23,26 @@ const ALL_SPORTS = [
   { name: "Volleyball", id: "volleyball", icon: "🏐" },
 ];
 
-// Mobile Top 3
-const MOBILE_TOP_SPORTS = [
-  { name: "Football", id: "football", icon: "⚽" },
-  { name: "Basketball", id: "basketball", icon: "🏀" },
-  { name: "NFL", id: "nfl", icon: "🏈" },
-];
+// ✅ fallback stays exactly as your current top 3
+const FALLBACK_MOBILE_TOP_IDS = ["football", "basketball", "nfl"] as const;
 
 type HeaderProps = {
   onMenuClick: () => void;
+};
+
+type NavSport = { id: string; icon: string };
+type SeoBrandPublic = {
+  siteName?: string;
+  logoTitle?: string;
+  logoUrl?: string;
+  sportLabels?: Record<string, string>;
+  header?: {
+    nav?: {
+      desktopVisibleCount?: number;
+      mobileTop?: string[];
+      allSports?: NavSport[];
+    };
+  };
 };
 
 function getSportFromPathname(pathname: string | null | undefined): string | null {
@@ -45,6 +57,27 @@ function getSportFromPathname(pathname: string | null | undefined): string | nul
   if (pathname.startsWith("/football")) return "football";
 
   return null;
+}
+
+function titleFromId(id: string) {
+  return id
+    .replace(/[-_]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function uniqueById<T extends { id: string }>(arr: T[]) {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const x of arr) {
+    const k = String(x.id || "").toLowerCase();
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(x);
+  }
+  return out;
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
@@ -66,17 +99,64 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
-  // ✅ NEW: logo from Global Settings (fallback stays the same)
+  // ✅ Brand (from global JSON via API). Defaults preserve current behavior.
   const [brandLogo, setBrandLogo] = useState<string>("/brand/logo.svg");
+  const [brandName, setBrandName] = useState<string>(brandFallback.siteName || "LiveSocceRR");
+  const [brandLogoTitle, setBrandLogoTitle] = useState<string>(
+    (brandFallback as any).logoTitle || brandFallback.siteName || "Live Score"
+  );
+
+  // ✅ labels (already supported)
+  const [sportLabels, setSportLabels] = useState<Record<string, string>>({});
+
+  // ✅ nav config driven by global header.nav (fallback to old behavior)
+  const [navDesktopVisibleCount, setNavDesktopVisibleCount] = useState<number>(6);
+  const [navMobileTopIds, setNavMobileTopIds] = useState<string[]>([...FALLBACK_MOBILE_TOP_IDS]);
+  const [navAllSports, setNavAllSports] = useState<Array<{ name: string; id: string; icon: string }>>(
+    FALLBACK_ALL_SPORTS
+  );
 
   useEffect(() => {
     let alive = true;
 
     fetch("/api/public/seo-brand", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!alive) return;
-        if (j?.logoUrl && typeof j.logoUrl === "string") setBrandLogo(j.logoUrl);
+      .then((j: SeoBrandPublic | null) => {
+        if (!alive || !j) return;
+
+        if (typeof j.logoUrl === "string" && j.logoUrl) setBrandLogo(j.logoUrl);
+        if (typeof j.siteName === "string" && j.siteName) setBrandName(j.siteName);
+        if (typeof j.logoTitle === "string" && j.logoTitle) setBrandLogoTitle(j.logoTitle);
+        if (j.sportLabels && typeof j.sportLabels === "object") setSportLabels(j.sportLabels);
+
+        const nav = j.header?.nav;
+
+        if (typeof nav?.desktopVisibleCount === "number" && nav.desktopVisibleCount > 0) {
+          setNavDesktopVisibleCount(Math.floor(nav.desktopVisibleCount));
+        }
+
+        if (Array.isArray(nav?.mobileTop) && nav.mobileTop.length > 0) {
+          setNavMobileTopIds(nav.mobileTop.map((x) => String(x).toLowerCase()).filter(Boolean));
+        }
+
+        if (Array.isArray(nav?.allSports) && nav.allSports.length > 0) {
+          const list = uniqueById(
+            nav.allSports
+              .map((s) => ({
+                id: String(s.id || "").toLowerCase(),
+                icon: String(s.icon || ""),
+              }))
+              .filter((s) => s.id && s.icon)
+          );
+
+          const next = list.map((s) => ({
+            id: s.id,
+            icon: s.icon,
+            name: titleFromId(s.id),
+          }));
+
+          setNavAllSports(next);
+        }
       })
       .catch(() => {});
 
@@ -85,11 +165,43 @@ export default function Header({ onMenuClick }: HeaderProps) {
     };
   }, []);
 
-  const desktopVisible = ALL_SPORTS.slice(0, 6);
-  const desktopHidden = ALL_SPORTS.slice(6);
+  const desktopVisible = useMemo(() => {
+    const count = Math.max(0, Math.min(navAllSports.length, navDesktopVisibleCount || 6));
+    return navAllSports.slice(0, count);
+  }, [navAllSports, navDesktopVisibleCount]);
+
+  const desktopHidden = useMemo(() => {
+    const count = Math.max(0, Math.min(navAllSports.length, navDesktopVisibleCount || 6));
+    return navAllSports.slice(count);
+  }, [navAllSports, navDesktopVisibleCount]);
+
   const isDesktopHiddenActive = desktopHidden.some((s) => s.id === currentSport);
 
-  const mobileHidden = ALL_SPORTS.filter((s) => !MOBILE_TOP_SPORTS.some((m) => m.id === s.id));
+  const mobileTopSports = useMemo(() => {
+    const byId = new Map(navAllSports.map((s) => [s.id, s]));
+    const list = navMobileTopIds.length ? navMobileTopIds : [...FALLBACK_MOBILE_TOP_IDS];
+
+    const result = list
+      .map((id) => {
+        const key = String(id).toLowerCase();
+        const found = byId.get(key);
+        if (found) return found;
+
+        const fromFallback = FALLBACK_ALL_SPORTS.find((x) => x.id === key);
+        if (fromFallback) return fromFallback;
+
+        return { id: key, name: titleFromId(key), icon: "•" };
+      })
+      .filter(Boolean);
+
+    return uniqueById(result);
+  }, [navAllSports, navMobileTopIds]);
+
+  const mobileHidden = useMemo(() => {
+    const topIds = new Set(mobileTopSports.map((s) => s.id));
+    return navAllSports.filter((s) => !topIds.has(s.id));
+  }, [navAllSports, mobileTopSports]);
+
   const isMobileHiddenActive = mobileHidden.some((s) => s.id === currentSport);
 
   const headerClass = isDark ? "theme-bg theme-border border-b" : "bg-[#0f80da] border-none";
@@ -106,15 +218,21 @@ export default function Header({ onMenuClick }: HeaderProps) {
     return isActive ? "bg-[#f1f5f9] text-[#0f80da]" : "text-white/90 hover:bg-white/10";
   };
 
+  // ✅ Mobile selector: best-practice “segmented-pill” styling (light/dark), strong active, subtle inactive
   const getMobileNavItemClass = (isActive: boolean) => {
+    const base =
+      "outline-none focus-visible:ring-2 focus-visible:ring-offset-0 transition-all duration-200 active:scale-[0.99]";
+
     if (isDark) {
       return isActive
-        ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-500"
-        : "text-secondary hover:text-primary hover:bg-slate-800 bg-slate-900/50 border border-slate-800";
+        ? `${base} bg-blue-500/20 text-blue-200 ring-1 ring-blue-500/30 shadow-sm`
+        : `${base} text-slate-200/90 hover:text-slate-100 hover:bg-slate-800/60`;
     }
+
+    // light (blue header background)
     return isActive
-      ? "bg-white text-[#0f80da] shadow-md font-bold"
-      : "text-white/80 hover:text-white hover:bg-white/20";
+      ? `${base} bg-white text-[#0f80da] shadow-sm`
+      : `${base} text-white/90 hover:text-white hover:bg-white/10`;
   };
 
   const getIconStyle = (isActive: boolean, isMobile = false): CSSProperties => {
@@ -129,6 +247,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const sportHref = (sportId: string) => `/sports/${sportId}/all`;
 
+  const getSportLabel = (sportId: string, fallbackName: string) =>
+    (sportLabels && typeof sportLabels[sportId] === "string" && sportLabels[sportId]) || fallbackName;
+
+  // ✅ Mobile container “track” (only styling)
+  const mobileTrackClass = isDark
+    ? "bg-slate-900/60 border border-slate-800/80 shadow-inner"
+    : "bg-white/15 border border-white/20";
+
+  const mobileDropdownShellClass = isDark
+    ? "bg-slate-950/95 border-slate-800"
+    : "bg-white border-white/60";
+
   return (
     <>
       <header className={`${headerClass} sticky top-0 z-30 shadow-sm transition-colors duration-200`}>
@@ -142,7 +272,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
               >
                 <img
                   src={brandLogo}
-                  alt="Live Score"
+                  alt={brandLogoTitle || brandName || "Live Score"}
+                  title={brandLogoTitle || brandName || "Live Score"}
                   className="w-6 h-6"
                   loading="eager"
                   decoding="async"
@@ -150,7 +281,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </div>
 
               <h1 className={`text-2xl font-bold tracking-tight leading-none whitespace-nowrap ${logoTextClass}`}>
-                {brand.siteName}
+                {brandName}
               </h1>
             </Link>
 
@@ -175,7 +306,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-lg leading-none" style={getIconStyle(isActive)}>
                     {sport.icon}
                   </span>
-                  <span>{sport.name}</span>
+                  <span>{getSportLabel(sport.id, sport.name)}</span>
                 </Link>
               );
             })}
@@ -224,7 +355,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                             <span className="text-lg w-6 text-center" style={getIconStyle(isItemActive)}>
                               {sport.icon}
                             </span>
-                            <span>{sport.name}</span>
+                            <span>{getSportLabel(sport.id, sport.name)}</span>
                           </Link>
                         );
                       })}
@@ -270,19 +401,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <div
             className={`flex items-center justify-between px-4 h-14 w-full ${isDark ? "theme-bg" : "bg-[#0f80da]"}`}
           >
-            {/* ✅ Updated mobile logo to match your old header (icon + Live Score) */}
             <Link href="/" className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${logoBgClass}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={brandLogo}
-                  alt="Live Score"
+                  alt={brandLogoTitle || brandName || "Live Score"}
+                  title={brandLogoTitle || brandName || "Live Score"}
                   className="w-5 h-5"
                   loading="eager"
                   decoding="async"
                 />
               </div>
-              <span className={`text-lg font-bold tracking-tight ${logoTextClass}`}>Live Score</span>
+              <span className={`text-lg font-bold tracking-tight ${logoTextClass}`}>{brandName}</span>
             </Link>
 
             <div className="flex items-center gap-1">
@@ -307,90 +438,114 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </div>
           </div>
 
-          {/* Bottom Row: SPORTS LIST */}
+          {/* Bottom Row: SPORTS SELECTOR (styling only) */}
           <div
-            className={`flex items-center px-3 h-12 gap-2 w-full ${
+            className={`flex items-center px-3 h-12 w-full ${
               isDark ? "theme-bg border-t theme-border" : "bg-[#0f80da]"
             }`}
           >
-            {/* Visible Sports */}
-            <div className="flex flex-1 gap-2 h-8 min-w-0">
-              {MOBILE_TOP_SPORTS.map((sport) => {
-                const isActive = currentSport === sport.id;
-                return (
-                  <Link
-                    key={sport.id}
-                    href={sportHref(sport.id)}
-                    onClick={() => setMobileMoreOpen(false)}
-                    className={`
-                      flex-1 flex items-center justify-center gap-2
-                      px-1 rounded-md text-[11px] font-bold uppercase tracking-wide
-                      transition-all duration-200
-                      ${getMobileNavItemClass(isActive)}
-                    `}
-                  >
-                    <span className="text-sm" style={getIconStyle(isActive, true)}>
-                      {sport.icon}
-                    </span>
-                    <span className="truncate">{sport.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* More Button */}
-            {mobileHidden.length > 0 && (
-              <div className="relative h-8 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileMoreOpen((open) => !open)}
-                  className={`
-                    flex items-center justify-center gap-1
-                    h-full px-3 rounded-md text-[11px] font-bold uppercase tracking-wide
-                    transition-all duration-200
-                    ${getMobileNavItemClass(mobileMoreOpen || isMobileHiddenActive)}
-                  `}
-                >
-                  <span>More</span>
-                  <ChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 ${mobileMoreOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {mobileMoreOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 theme-bg theme-border border rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                    {mobileHidden.map((sport) => {
-                      const isItemActive = currentSport === sport.id;
-                      const itemClass = isDark
-                        ? isItemActive
-                          ? "bg-blue-600 text-white"
-                          : "text-secondary hover:bg-slate-800 hover:text-primary"
-                        : isItemActive
-                          ? "bg-blue-50 text-[#0f80da]"
-                          : "text-secondary hover:bg-slate-50 hover:text-primary";
-
-                      return (
-                        <Link
-                          key={sport.id}
-                          href={sportHref(sport.id)}
-                          onClick={() => setMobileMoreOpen(false)}
-                          className={`
-                            flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wide border-b theme-border last:border-0 transition-colors
-                            ${itemClass}
-                          `}
-                        >
-                          <span className="text-base w-6 text-center" style={getIconStyle(isItemActive)}>
-                            {sport.icon}
-                          </span>
-                          <span>{sport.name}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
+            {/* Track */}
+            <div
+              className={`flex items-center w-full h-10 rounded-full px-1 gap-1 ${mobileTrackClass} ${
+                isDark ? "backdrop-blur supports-[backdrop-filter]:backdrop-blur" : ""
+              }`}
+            >
+              {/* Visible Sports */}
+              <div className="flex flex-1 min-w-0 gap-1">
+                {mobileTopSports.map((sport) => {
+                  const isActive = currentSport === sport.id;
+                  return (
+                    <Link
+                      key={sport.id}
+                      href={sportHref(sport.id)}
+                      onClick={() => setMobileMoreOpen(false)}
+                      className={`
+                        relative flex-1 min-w-0
+                        flex items-center justify-center gap-1.5
+                        h-9 px-2 rounded-full
+                        text-[11px] font-semibold uppercase tracking-wide
+                        ${getMobileNavItemClass(isActive)}
+                      `}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <span className="text-sm leading-none" style={getIconStyle(isActive, true)}>
+                        {sport.icon}
+                      </span>
+                      <span className="truncate">{getSportLabel(sport.id, sport.name)}</span>
+                    </Link>
+                  );
+                })}
               </div>
-            )}
+
+              {/* More Button */}
+              {mobileHidden.length > 0 && (
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileMoreOpen((open) => !open)}
+                    className={`
+                      flex items-center justify-center gap-1
+                      h-9 px-3 rounded-full
+                      text-[11px] font-semibold uppercase tracking-wide
+                      ${getMobileNavItemClass(mobileMoreOpen || isMobileHiddenActive)}
+                    `}
+                    aria-label="More sports"
+                    aria-expanded={mobileMoreOpen}
+                  >
+                    <span>More</span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${mobileMoreOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {mobileMoreOpen && (
+                    <div
+                      className={`
+                        absolute right-0 top-full mt-2 w-52
+                        border rounded-2xl shadow-2xl overflow-hidden z-50
+                        animate-in fade-in zoom-in-95 duration-200
+                        ${mobileDropdownShellClass}
+                      `}
+                    >
+                      <div className={`${isDark ? "bg-slate-950/85" : "bg-white"} px-2 py-2`}>
+                        {mobileHidden.map((sport) => {
+                          const isItemActive = currentSport === sport.id;
+
+                          const itemClass = isDark
+                            ? isItemActive
+                              ? "bg-blue-500/20 text-blue-200 ring-1 ring-blue-500/30"
+                              : "text-slate-200/90 hover:bg-slate-800/60 hover:text-slate-100"
+                            : isItemActive
+                              ? "bg-blue-50 text-[#0f80da]"
+                              : "text-slate-700 hover:bg-slate-50 hover:text-slate-900";
+
+                          return (
+                            <Link
+                              key={sport.id}
+                              href={sportHref(sport.id)}
+                              onClick={() => setMobileMoreOpen(false)}
+                              className={`
+                                flex items-center gap-3 px-3 py-3
+                                rounded-xl text-[11px] font-semibold uppercase tracking-wide
+                                transition-colors
+                                ${itemClass}
+                              `}
+                              aria-current={isItemActive ? "page" : undefined}
+                            >
+                              <span className="text-base w-6 text-center" style={getIconStyle(isItemActive, true)}>
+                                {sport.icon}
+                              </span>
+                              <span className="truncate">{getSportLabel(sport.id, sport.name)}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

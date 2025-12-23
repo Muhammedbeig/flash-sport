@@ -4,12 +4,11 @@ import type { SeoEntry } from "./seo-central";
 import { getSeoStoreSync } from "./seo-store";
 
 /* -------------------------------------------------------------------------- */
-/* CONFIG & HELPERS                                                           */
+/* TYPES & HELPERS                                                            */
 /* -------------------------------------------------------------------------- */
 
-// ✅ FIX: Added 'id' to the type definition
 type LeagueApiData = {
-  id: number; 
+  id: number;
   name: string;
   country: string;
   logo?: string;
@@ -34,24 +33,50 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
-function cleanSlug(slug: string) {
-  return slug.replace(/-/g, " ");
+function ensureTrailingSlash(p: string) {
+  if (!p) return p;
+  if (p === "/") return "/";
+  return p.endsWith("/") ? p : `${p}/`;
 }
 
-function fullUrl(baseUrl: string, path: string) {
+function cleanSlug(slug: string) {
+  return slug.replace(/-/g, " ").trim();
+}
+
+function isAbsUrl(u?: string | null) {
+  return !!u && /^https?:\/\//i.test(u);
+}
+
+function fullUrl(baseUrl: string, pathOrUrl: string) {
+  if (!pathOrUrl) return pathOrUrl;
+  if (isAbsUrl(pathOrUrl)) return pathOrUrl;
+
   const base = (baseUrl || "").replace(/\/+$/, "");
-  const clean = path.startsWith("/") ? path : `/${path}`;
+  const clean = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
   return `${base}${clean}`;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), Math.max(250, timeoutMs || 1200));
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 /* -------------------------------------------------------------------------- */
 /* DATA FETCHER                                                               */
 /* -------------------------------------------------------------------------- */
 
-// ✅ Ensure this is exported
 export async function fetchLeagueData(sport: string, idOrSlug: string): Promise<LeagueApiData | null> {
   const cfg = SPORT_API[sport];
   if (!cfg) return null;
+
+  const store = getSeoStoreSync();
+  const timeoutMs = store?.league?.apiTimeoutMs ?? 2000;
+  const revalidate = store?.league?.revalidateSeconds ?? 86400;
 
   try {
     const apiKey = process.env.API_SPORTS_KEY || process.env.NEXT_PUBLIC_API_SPORTS_KEY;
@@ -59,45 +84,47 @@ export async function fetchLeagueData(sport: string, idOrSlug: string): Promise<
 
     const isNumeric = /^\d+$/.test(idOrSlug);
     let url = `https://${cfg.host}/${cfg.path}`;
-    
-    if (isNumeric) {
-      url += `?id=${idOrSlug}`;
-    } else {
-      url += `?search=${encodeURIComponent(cleanSlug(idOrSlug))}`;
-    }
 
-    const res = await fetch(url, {
-      headers: {
-        "x-rapidapi-host": cfg.host,
-        "x-rapidapi-key": apiKey,
+    if (isNumeric) url += `?id=${encodeURIComponent(idOrSlug)}`;
+    else url += `?search=${encodeURIComponent(cleanSlug(idOrSlug))}`;
+
+    const res = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          "x-rapidapi-host": cfg.host,
+          "x-rapidapi-key": apiKey,
+          "x-apisports-key": apiKey,
+        },
+        next: { revalidate },
       },
-      next: { revalidate: 86400 }, 
-    });
+      timeoutMs
+    );
 
     if (!res.ok) return null;
+
     const json = await res.json();
     const item = json.response?.[0];
-
     if (!item) return null;
 
-    const leagueNode = item.league || item; 
+    const leagueNode = item.league || item;
     const countryNode = item.country || {};
 
-    // ✅ FIX: Capture the ID
-    const id = leagueNode.id;
-    const name = leagueNode.name || "Unknown League";
+    const id = Number(leagueNode.id);
+    const name = leagueNode.name || "League";
     const logo = leagueNode.logo;
     const country = countryNode.name || "World";
-    
-    let season = undefined;
-    if (item.seasons && Array.isArray(item.seasons)) {
-        const last = item.seasons[item.seasons.length - 1];
-        season = last.year || last.season;
+
+    let season: number | undefined;
+    if (Array.isArray(item.seasons) && item.seasons.length) {
+      const last = item.seasons[item.seasons.length - 1];
+      season = last?.year ?? last?.season;
+    } else if (typeof item.season === "number") {
+      season = item.season;
     }
 
-    // ✅ FIX: Return the ID
+    if (!Number.isFinite(id)) return null;
     return { id, name, country, logo, season };
-
   } catch (err) {
     console.error(`Error fetching league SEO for ${sport}/${idOrSlug}:`, err);
     return null;
@@ -108,61 +135,84 @@ export async function fetchLeagueData(sport: string, idOrSlug: string): Promise<
 /* SEO BUILDER                                                                */
 /* -------------------------------------------------------------------------- */
 
-export async function buildLeagueSeo({ sport: rawSport, league, tab }: { sport: string; league: string; tab?: string }) {
+export async function buildLeagueSeo({
+  sport: rawSport,
+  league,
+  tab,
+}: {
+  sport: string;
+  league: string;
+  tab?: string;
+}) {
   const store = getSeoStoreSync();
   const brand = store.brand;
   const sport = normalizeSport(rawSport);
 
+  const cleanTab = (tab || "all").toLowerCase();
+
   const data = await fetchLeagueData(sport, league);
 
+  const resolvedLeagueId = data?.id ? String(data.id) : league;
   const name = data?.name || cleanSlug(league) || "League";
-  const country = data?.country || "";
-  const cleanTab = (tab || "").toLowerCase();
-  
+  const country = data?.country || "World";
+  const seasonStr = data?.season ? String(data.season) : "";
+
   const patterns = store.league;
-  const rawTitlePattern = patterns.titlePatterns[0];
+  const patternIndex = (resolvedLeagueId.charCodeAt(0) || 0) % patterns.titlePatterns.length;
+  const rawTitlePattern = patterns.titlePatterns[patternIndex] || patterns.titlePatterns[0];
+
+  const sportLabel = store.labels?.sportLabels?.[sport] || sport;
 
   const replacer = (tpl: string) =>
     tpl
       .replace(/{name}/g, name)
       .replace(/{country}/g, country)
-      .replace(/{season}/g, data?.season ? String(data.season) : "")
+      .replace(/{season}/g, seasonStr)
       .replace(/{brand}/g, brand.siteName)
-      .replace(/{sport}/g, store.labels.sportLabels[sport] || sport);
+      .replace(/{sport}/g, sportLabel);
 
-  const title = replacer(rawTitlePattern);
-  const description = replacer(patterns.descriptionPattern);
-  const h1 = replacer(patterns.h1Pattern);
+  const title = replacer(rawTitlePattern).replace(/\s{2,}/g, " ").trim();
+  const description = replacer(patterns.descriptionPattern).replace(/\s{2,}/g, " ").trim();
+  const h1 = replacer(patterns.h1Pattern).replace(/\s{2,}/g, " ").trim();
 
-  let canonicalPath = `/${sport}/${league}`;
-  let finalTitle = title;
-  
-  if (cleanTab && cleanTab !== "summary") {
-    canonicalPath += `/${cleanTab}`;
-    finalTitle = `${name} ${cleanTab.charAt(0).toUpperCase() + cleanTab.slice(1)} | ${brand.siteName}`;
-  }
-  
+  // ✅ Canonical must match your real sports league route
+  const canonicalPath = ensureTrailingSlash(`/sports/${sport}/${cleanTab}/league/${resolvedLeagueId}`);
+
   let entry: SeoEntry = {
-    title: finalTitle,
+    title,
     description,
     h1,
     canonical: canonicalPath,
     ogImage: data?.logo || patterns.og.fallbackImage,
-    keywords: [name, `${name} table`, `${name} fixtures`, `${name} scores`],
+    keywords: [
+      name,
+      country,
+      seasonStr ? `${name} ${seasonStr}` : "",
+      `${name} standings`,
+      `${name} table`,
+      `${name} fixtures`,
+      `${name} results`,
+      `${name} live scores`,
+    ].filter(Boolean),
   };
 
   if (patterns.schema.enabled) {
     entry.jsonLd = {
       "@context": "https://schema.org",
       "@type": "SportsOrganization",
-      "name": name,
-      "url": fullUrl(brand.siteUrl, canonicalPath),
-      "logo": data?.logo ? fullUrl(brand.siteUrl, data.logo) : undefined,
-      "location": { "@type": "Place", "name": country },
-      "sport": sport,
-      "description": description
+      name,
+      url: fullUrl(brand.siteUrl, canonicalPath),
+      logo: data?.logo ? fullUrl(brand.siteUrl, data.logo) : undefined,
+      location: { "@type": "Place", name: country },
+      sport: sportLabel,
+      description,
     };
   }
+
+  // Admin overrides (optional)
+  const overrideKey = `league:${sport}:${resolvedLeagueId}:${cleanTab}`;
+  const override = store.overrides?.[overrideKey] || store.overrides?.[`league:${sport}:${resolvedLeagueId}`];
+  if (override) entry = { ...entry, ...override };
 
   return { entry, metadata: {} as Metadata };
 }

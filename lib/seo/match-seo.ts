@@ -18,22 +18,6 @@ type MatchApiData = {
   awayScore?: number | null;
 };
 
-// Map API-Sports short codes to Schema.org EventStatusType
-function mapEventStatus(short?: string | null): string {
-  if (!short) return "https://schema.org/EventScheduled";
-  const finished = ["FT", "AET", "PEN", "Finished", "Ended"];
-  const live = ["1H", "2H", "HT", "ET", "P", "LIVE"];
-  const postponed = ["PST", "Postponed"];
-  const cancelled = ["CANC", "ABD", "Cancelled"];
-
-  if (finished.includes(short)) return "https://schema.org/EventScheduled"; // Or EventMovedOnline if applicable, but usually Scheduled/Past
-  if (live.includes(short)) return "https://schema.org/EventMovedOnline"; // Schema doesn't have "Live", usually "EventScheduled" covers it
-  if (postponed.includes(short)) return "https://schema.org/EventPostponed";
-  if (cancelled.includes(short)) return "https://schema.org/EventCancelled";
-  
-  return "https://schema.org/EventScheduled";
-}
-
 function normalizeSport(raw?: string) {
   const s = (raw || "football").toLowerCase();
   if (s === "soccer") return "football";
@@ -42,10 +26,51 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
-function fullUrl(baseUrl: string, path: string) {
+function ensureTrailingSlash(p: string) {
+  if (!p) return p;
+  if (p === "/") return "/";
+  return p.endsWith("/") ? p : `${p}/`;
+}
+
+function isAbsUrl(u?: string | null) {
+  return !!u && /^https?:\/\//i.test(u);
+}
+
+function fullUrl(baseUrl: string, pathOrUrl: string) {
+  if (!pathOrUrl) return pathOrUrl;
+  if (isAbsUrl(pathOrUrl)) return pathOrUrl;
+
   const base = (baseUrl || "").replace(/\/+$/, "");
-  const clean = path.startsWith("/") ? path : `/${path}`;
+  const clean = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
   return `${base}${clean}`;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), Math.max(250, timeoutMs || 1200));
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Map API-Sports short codes to Schema.org EventStatusType
+function mapEventStatus(short?: string | null): string {
+  if (!short) return "https://schema.org/EventScheduled";
+
+  const finished = ["FT", "AET", "PEN", "Finished", "Ended"];
+  const live = ["1H", "2H", "HT", "ET", "P", "LIVE"];
+  const postponed = ["PST", "Postponed"];
+  const cancelled = ["CANC", "ABD", "Cancelled"];
+
+  // Schema.org doesn't have "completed" — keep Scheduled for finished/live to avoid invalid values.
+  if (finished.includes(short)) return "https://schema.org/EventScheduled";
+  if (live.includes(short)) return "https://schema.org/EventScheduled";
+  if (postponed.includes(short)) return "https://schema.org/EventPostponed";
+  if (cancelled.includes(short)) return "https://schema.org/EventCancelled";
+
+  return "https://schema.org/EventScheduled";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -66,157 +91,155 @@ const SPORT_API: Record<string, { host: string; path: string; cdnEnv: string }> 
 /* DATA FETCHER                                                               */
 /* -------------------------------------------------------------------------- */
 
-async function fetchMatchData(sport: string, id: string): Promise<MatchApiData | null> {
-  const cfg = SPORT_API[sport];
-  if (!cfg) return null;
-
-  try {
-    // 1. Try CDN first (No Key Needed)
-    // We check process.env[cfg.cdnEnv] dynamically
-    const cdnBase = process.env[cfg.cdnEnv];
-    
-    if (cdnBase) {
-      const url = `${cdnBase.replace(/\/+$/, "")}/${cfg.path}?id=${id}`;
-      const res = await fetch(url, { next: { revalidate: 60 } });
-      if (res.ok) {
-        const json = await res.json();
-        const item = json.response?.[0];
-        return parseMatchItem(sport, item);
-      }
-    }
-
-    // 2. Fallback to API-Sports (Server-Side Key)
-    const apiKey = process.env.API_SPORTS_KEY || process.env.NEXT_PUBLIC_API_SPORTS_KEY;
-    if (!apiKey) return null;
-
-    const url = `https://${cfg.host}/${cfg.path}?id=${id}`;
-    const res = await fetch(url, {
-      headers: {
-        "x-rapidapi-host": cfg.host,
-        "x-rapidapi-key": apiKey,
-      },
-      next: { revalidate: 60 },
-    });
-
-    if (!res.ok) return null;
-    const json = await res.json();
-    return parseMatchItem(sport, json.response?.[0]);
-
-  } catch (err) {
-    console.error(`Error fetching match SEO for ${sport}/${id}:`, err);
-    return null;
-  }
-}
-
 function parseMatchItem(sport: string, item: any): MatchApiData | null {
   if (!item) return null;
 
-  // Different sports have slightly different structures
-  // Football: item.fixture, item.goals
-  // Others: item.game, item.scores
   const core = item.fixture || item.game || item;
   const teams = item.teams || {};
   const scores = item.goals || item.scores || {};
 
   const home = teams.home?.name || "Home Team";
   const away = teams.away?.name || "Away Team";
-  
-  // Normalize Scores (handle objects vs numbers)
-  let homeScore = null;
-  let awayScore = null;
 
-  if (typeof scores.home === "object") {
-    homeScore = scores.home?.total ?? null;
-  } else {
-    homeScore = scores.home ?? null;
-  }
+  let homeScore: number | null = null;
+  let awayScore: number | null = null;
 
-  if (typeof scores.away === "object") {
-    awayScore = scores.away?.total ?? null;
-  } else {
-    awayScore = scores.away ?? null;
-  }
+  if (typeof scores.home === "object") homeScore = scores.home?.total ?? null;
+  else homeScore = scores.home ?? null;
+
+  if (typeof scores.away === "object") awayScore = scores.away?.total ?? null;
+  else awayScore = scores.away ?? null;
 
   return {
     home,
     away,
-    homeLogo: teams.home?.logo,
-    awayLogo: teams.away?.logo,
-    dateIso: core.date,
-    statusShort: core.status?.short,
+    homeLogo: teams.home?.logo ?? null,
+    awayLogo: teams.away?.logo ?? null,
+    dateIso: core.date ?? null,
+    statusShort: core.status?.short ?? null,
     homeScore,
     awayScore,
   };
 }
 
+async function fetchMatchData(sport: string, id: string): Promise<MatchApiData | null> {
+  const cfg = SPORT_API[sport];
+  if (!cfg) return null;
+
+  const store = getSeoStoreSync();
+  const timeoutMs = store?.match?.apiTimeoutMs ?? 650;
+  const revalidate = store?.match?.revalidateSeconds ?? 60;
+
+  try {
+    // 1) Try CDN first (no key)
+    const cdnBase = process.env[cfg.cdnEnv];
+    if (cdnBase) {
+      const url = `${cdnBase.replace(/\/+$/, "")}/${cfg.path}?id=${encodeURIComponent(id)}`;
+      const res = await fetchWithTimeout(url, { next: { revalidate } }, timeoutMs);
+      if (res.ok) {
+        const json = await res.json();
+        return parseMatchItem(sport, json.response?.[0]);
+      }
+    }
+
+    // 2) Fallback: API-Sports (server key)
+    const apiKey = process.env.API_SPORTS_KEY || process.env.NEXT_PUBLIC_API_SPORTS_KEY;
+    if (!apiKey) return null;
+
+    const url = `https://${cfg.host}/${cfg.path}?id=${encodeURIComponent(id)}`;
+    const res = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          "x-rapidapi-host": cfg.host,
+          "x-rapidapi-key": apiKey,
+          "x-apisports-key": apiKey,
+        },
+        next: { revalidate },
+      },
+      timeoutMs
+    );
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    return parseMatchItem(sport, json.response?.[0]);
+  } catch (err) {
+    console.error(`Error fetching match SEO for ${sport}/${id}:`, err);
+    return null;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
-/* MAIN RESOLVER                                                              */
+/* MAIN BUILDER                                                               */
 /* -------------------------------------------------------------------------- */
 
 type BuildMatchArgs = {
   sport: string;
   id: string;
-  tab?: string; // e.g. "summary", "h2h", "standings"
+  tab?: string;
 };
 
 export async function buildMatchSeo({ sport: rawSport, id, tab }: BuildMatchArgs) {
   const store = getSeoStoreSync();
   const brand = store.brand;
+
   const sport = normalizeSport(rawSport);
   const cleanTab = (tab || "summary").toLowerCase();
 
-  // 1. Fetch Data
+  // 1) Data
   const data = await fetchMatchData(sport, id);
 
-  // 2. Fallback strings if data fails
   const home = data?.home || "Home";
   const away = data?.away || "Away";
   const matchTitle = `${home} vs ${away}`;
 
-  // 3. Resolve Patterns from Store
+  // 2) Patterns from JSON store
   const patterns = store.match;
-  
-  // Select a title pattern cyclically or random, or just the first one
   const patternIndex = (id.charCodeAt(0) || 0) % patterns.titlePatterns.length;
   const rawTitlePattern = patterns.titlePatterns[patternIndex] || patterns.titlePatterns[0];
 
-  // Replacements
+  const sportLabel = store.labels?.sportLabels?.[sport] || sport;
+  const tabLabel = store.labels?.matchTabLabels?.[cleanTab] || "Live Score";
+
   const replacer = (tpl: string) =>
     tpl
       .replace(/{home}/g, home)
       .replace(/{away}/g, away)
       .replace(/{brand}/g, brand.siteName)
-      .replace(/{sport}/g, store.labels.sportLabels[sport] || sport)
-      .replace(/{tab}/g, store.labels.matchTabLabels[cleanTab] || "Live Score");
+      .replace(/{sport}/g, sportLabel)
+      .replace(/{tab}/g, tabLabel);
 
-  // 4. Construct Meta
   const title = replacer(rawTitlePattern);
   const description = replacer(patterns.descriptionPattern);
   const h1 = replacer(patterns.h1Pattern);
 
-  const canonicalPath = `/match/${sport}/${id}/${cleanTab}`;
-  
-  // Dynamic OG Image
-  const ogImage = patterns.og.useDynamicBanner
+  // Canonical must match your real route format
+  const canonicalPath = ensureTrailingSlash(`/match/${sport}/${id}/${cleanTab}`);
+
+  // OG image (keep as path in entry; resolver will absolute-ify for metadata)
+  const ogPath = patterns.og.useDynamicBanner
     ? patterns.og.bannerPath.replace("{sport}", sport).replace("{id}", id)
     : patterns.og.fallbackImage;
 
-  // 5. Build Entry
+  const ogImageForJsonLd = fullUrl(brand.siteUrl, ogPath);
+
   let entry: SeoEntry = {
     title,
     description,
     h1,
     canonical: canonicalPath,
-    ogImage,
+    ogImage: ogPath,
     keywords: [
-      `${home} vs ${away}`,
-      `${home} vs ${away} live score`,
-      `${home} vs ${away} result`,
-      `${home} vs ${away} stats`
-    ],
+      matchTitle,
+      `${matchTitle} live score`,
+      `${matchTitle} result`,
+      `${matchTitle} stats`,
+      patterns.primaryKeyword || "live score",
+    ].filter(Boolean),
   };
 
-  // 6. JSON-LD Schema (Organization, Event)
+  // JSON-LD
   if (patterns.schema.enabled) {
     const scoreLine =
       typeof data?.homeScore === "number" && typeof data?.awayScore === "number"
@@ -226,40 +249,48 @@ export async function buildMatchSeo({ sport: rawSport, id, tab }: BuildMatchArgs
     entry.jsonLd = {
       "@context": "https://schema.org",
       "@type": "SportsEvent",
-      "name": matchTitle,
-      "url": fullUrl(brand.siteUrl, canonicalPath),
-      "startDate": data?.dateIso || undefined,
-      "eventStatus": mapEventStatus(data?.statusShort),
-      "description": scoreLine ? `Live score: ${scoreLine}. ${description}` : description,
-      "sport": store.labels.sportLabels[sport] || sport,
-      "competitor": [
-        { "@type": "SportsTeam", "name": home, "logo": data?.homeLogo || undefined },
-        { "@type": "SportsTeam", "name": away, "logo": data?.awayLogo || undefined }
+      name: matchTitle,
+      url: fullUrl(brand.siteUrl, canonicalPath),
+      startDate: data?.dateIso || undefined,
+      eventStatus: mapEventStatus(data?.statusShort),
+      description: scoreLine ? `Live score: ${scoreLine}. ${description}` : description,
+      sport: sportLabel,
+      competitor: [
+        {
+          "@type": "SportsTeam",
+          name: home,
+          logo: data?.homeLogo ? fullUrl(brand.siteUrl, data.homeLogo) : undefined,
+        },
+        {
+          "@type": "SportsTeam",
+          name: away,
+          logo: data?.awayLogo ? fullUrl(brand.siteUrl, data.awayLogo) : undefined,
+        },
       ],
-      "homeTeam": { "@type": "SportsTeam", "name": home, "logo": data?.homeLogo || undefined },
-      "awayTeam": { "@type": "SportsTeam", "name": away, "logo": data?.awayLogo || undefined },
-      "image": [fullUrl(brand.siteUrl, ogImage)],
-      "organizer": { 
-        "@type": "Organization", 
-        "name": brand.siteName, 
-        "url": brand.siteUrl, 
-        // ✅ FIX: Use defaultOgImage instead of logoUrl (which doesn't exist)
-        "logo": fullUrl(brand.siteUrl, brand.defaultOgImage) 
+      homeTeam: {
+        "@type": "SportsTeam",
+        name: home,
+        logo: data?.homeLogo ? fullUrl(brand.siteUrl, data.homeLogo) : undefined,
+      },
+      awayTeam: {
+        "@type": "SportsTeam",
+        name: away,
+        logo: data?.awayLogo ? fullUrl(brand.siteUrl, data.awayLogo) : undefined,
+      },
+      image: ogImageForJsonLd ? [ogImageForJsonLd] : undefined,
+      organizer: {
+        "@type": "Organization",
+        name: brand.siteName,
+        url: brand.siteUrl,
+        logo: fullUrl(brand.siteUrl, brand.defaultOgImage),
       },
     };
   }
 
-  // 7. Check for Admin Overrides (manual override in DB)
+  // Admin overrides
   const overrideKey = `match:${sport}:${id}:${cleanTab}`;
-  const override = store.overrides[overrideKey] || store.overrides[`match:${sport}:${id}`]; // fallback to general match override
+  const override = store.overrides?.[overrideKey] || store.overrides?.[`match:${sport}:${id}`];
+  if (override) entry = { ...entry, ...override };
 
-  if (override) {
-    entry = { ...entry, ...override };
-  }
-
-  // 8. Return for Resolver
-  // We return 'metadata' format here just for convenience, 
-  // but usually resolver handles the final transformation. 
-  // We'll return just the data needed by resolver.
   return { entry, metadata: {} as Metadata };
 }

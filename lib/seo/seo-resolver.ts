@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { buildMatchSeo } from "./match-seo";
 import { buildPlayerSeo } from "./player-seo";
-import { buildLeagueSeo } from "./league-seo"; 
+import { buildLeagueSeo } from "./league-seo";
 import type { SeoEntry } from "./seo-central";
 import { getSeoStoreSync } from "./seo-store";
 
@@ -24,13 +24,50 @@ function normalizeSport(raw?: string) {
   return s;
 }
 
-function fullUrl(baseUrl: string, path: string) {
+function ensureTrailingSlash(p: string) {
+  if (!p) return p;
+  if (p === "/") return "/";
+  return p.endsWith("/") ? p : `${p}/`;
+}
+
+function fullUrl(baseUrl: string, pathOrUrl: string) {
+  if (!pathOrUrl) return pathOrUrl;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+
   const base = (baseUrl || "").replace(/\/+$/, "");
-  const clean = path.startsWith("/") ? path : `/${path}`;
+  const clean = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
   return `${base}${clean}`;
 }
 
-function applyTitleDecorations(rawTitle: string, brand: { siteName: string; titlePrefix: string; titleSuffix: string }) {
+function toAbsoluteUrl(baseUrl: string, maybeRelative?: string) {
+  if (!maybeRelative) return maybeRelative;
+  if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
+  return fullUrl(baseUrl, maybeRelative);
+}
+
+function parseRobots(input?: any): { index: boolean; follow: boolean } {
+  // supports { index, follow }
+  if (input && typeof input === "object") {
+    return { index: input.index !== false, follow: input.follow !== false };
+  }
+
+  // supports "index, follow" (optional in JSON)
+  if (typeof input === "string") {
+    const s = input.toLowerCase();
+    const hasIndex = s.includes("index");
+    const hasFollow = s.includes("follow");
+    // if someone passes an empty string, default true,true
+    if (!s.trim()) return { index: true, follow: true };
+    return { index: hasIndex, follow: hasFollow };
+  }
+
+  return { index: true, follow: true };
+}
+
+function applyTitleDecorations(
+  rawTitle: string,
+  brand: { siteName: string; titlePrefix: string; titleSuffix: string }
+) {
   let t = rawTitle || "";
 
   const prefix = brand.titlePrefix || "";
@@ -38,6 +75,7 @@ function applyTitleDecorations(rawTitle: string, brand: { siteName: string; titl
 
   if (prefix && !t.startsWith(prefix)) t = `${prefix}${t}`;
 
+  // prevent "SiteName | SiteName" style duplication
   const tLower = t.toLowerCase();
   const siteLower = (brand.siteName || "").toLowerCase();
   const suffixLower = suffix.toLowerCase();
@@ -55,10 +93,14 @@ function applyTitleDecorations(rawTitle: string, brand: { siteName: string; titl
 }
 
 function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
-  const store = getSeoStoreSync();
+  const store: any = getSeoStoreSync();
   const brand = store.brand;
+  const defaults = store.defaults || {};
+  const ogDefaults = defaults.og || {};
+  const twitterDefaults = defaults.twitter || {};
 
-  const canonicalUrl = fullUrl(brand.siteUrl, entry.canonical || canonicalPath);
+  const canonPath = ensureTrailingSlash(entry.canonical || canonicalPath);
+  const canonicalUrl = fullUrl(brand.siteUrl, canonPath);
 
   const rawTitle = entry.title || brand.siteName;
   const title = clamp(applyTitleDecorations(rawTitle, brand), 60);
@@ -66,24 +108,49 @@ function toMetadata(entry: SeoEntry, canonicalPath: string): Metadata {
   const descRaw = entry.description || brand.defaultMetaDescription || "";
   const description = clamp(descRaw, 155);
 
-  const ogImage = entry.ogImage || brand.defaultOgImage;
+  const keywords = entry.keywords || defaults.keywords || undefined;
+
+  const ogImageRaw =
+    entry.ogImage || ogDefaults.fallbackImage || brand.defaultOgImage || brand.defaultOgImage;
+  const ogImage = toAbsoluteUrl(brand.siteUrl, ogImageRaw);
+
+  // robots precedence: entry.robots -> store.defaults.robots -> default (index,follow)
+  const robots = entry.robots ? parseRobots(entry.robots) : parseRobots(defaults.robots);
+
+  const ogType = ogDefaults.type || "website";
+  const ogAlt = ogDefaults.imageAlt || entry.h1 || brand.siteName;
+
+  const twitterCard = twitterDefaults.card || "summary_large_image";
+
+  let metadataBase: URL | undefined;
+  try {
+    metadataBase = brand.siteUrl ? new URL(brand.siteUrl) : undefined;
+  } catch {
+    metadataBase = undefined;
+  }
 
   return {
+    metadataBase,
     title,
     description,
-    keywords: entry.keywords,
+    keywords,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      type: "website",
+      type: ogType,
       siteName: brand.siteName,
       title,
       description,
       url: canonicalUrl,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: entry.h1 }],
+      images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: ogAlt }] : [],
       locale: brand.locale,
     },
-    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
-    robots: { index: true, follow: true },
+    twitter: {
+      card: twitterCard,
+      title,
+      description,
+      images: ogImage ? [ogImage] : [],
+    },
+    robots,
   };
 }
 
@@ -99,33 +166,52 @@ export function resolveHomeSeo() {
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
-/** ✅ Used by app/layout.tsx */
 export function resolveRootSeo(): Metadata {
   return resolveHomeSeo().metadata;
 }
 
 /** ✅ Static pages */
 export function resolveStaticPageSeo(
-  pageKey: "contact" | "privacyPolicy" | "privacy-policy",
+  pageKey:
+    | "contact"
+    | "privacyPolicy"
+    | "termsOfService"
+    | "privacy-policy"
+    | "terms-of-service",
   pathname?: string
 ) {
-  const store = getSeoStoreSync();
+  const store: any = getSeoStoreSync();
 
-  const normalizedKey: "contact" | "privacyPolicy" =
-    pageKey === "privacy-policy" ? "privacyPolicy" : pageKey;
+  const normalizedKey: "contact" | "privacyPolicy" | "termsOfService" =
+    pageKey === "privacy-policy"
+      ? "privacyPolicy"
+      : pageKey === "terms-of-service"
+        ? "termsOfService"
+        : pageKey;
 
-  const base = store.pages[normalizedKey];
-  const defaultPath = normalizedKey === "contact" ? "/contact" : "/privacy-policy";
-  const canonicalPath = pathname || defaultPath;
+  const base =
+    store.pages?.[normalizedKey] ||
+    store.pages?.[pageKey] ||
+    (normalizedKey === "privacyPolicy" ? store.pages?.["privacy-policy"] : undefined) ||
+    (normalizedKey === "termsOfService" ? store.pages?.["terms-of-service"] : undefined);
+
+  const defaultPath =
+    normalizedKey === "contact"
+      ? "/contact/"
+      : normalizedKey === "termsOfService"
+        ? "/terms-of-service/"
+        : "/privacy-policy/";
+
+  const canonicalPath = ensureTrailingSlash(pathname || defaultPath);
 
   const override =
-    store.overrides[`page:${normalizedKey}`] ||
-    store.overrides[normalizedKey] ||
-    store.overrides[`page:${pageKey}`] ||
-    store.overrides[pageKey] ||
+    store.overrides?.[`page:${normalizedKey}`] ||
+    store.overrides?.[normalizedKey] ||
+    store.overrides?.[`page:${pageKey}`] ||
+    store.overrides?.[pageKey] ||
     undefined;
 
-  const entry: SeoEntry = { ...base, ...override, canonical: canonicalPath };
+  const entry: SeoEntry = { ...(base || {}), ...(override || {}), canonical: canonicalPath };
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
 
@@ -135,6 +221,7 @@ export function resolveStaticPageSeo(
 /* -------------------------------------------------------------------------- */
 /* SPORTS TAB SEO                                                             */
 /* -------------------------------------------------------------------------- */
+
 type SportsTabArgs = { sport: string; tab: string; pathname?: string };
 
 export function resolveSportsTabSeo(rawSport: string, rawTab: string): {
@@ -148,93 +235,86 @@ export function resolveSportsTabSeo(args: SportsTabArgs): {
   canonicalPath: string;
 };
 export function resolveSportsTabSeo(arg1: string | SportsTabArgs, arg2?: string) {
-  const store = getSeoStoreSync();
+  const store: any = getSeoStoreSync();
   const brand = store.brand;
 
   const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
-  const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
+  const tab = (typeof arg1 === "string" ? arg2 || "all" : arg1.tab || "all").toLowerCase();
 
-  const canonicalPath =
-    typeof arg1 === "string"
-      ? `/sports/${sport}/${tab}`
-      : arg1.pathname || `/sports/${sport}/${tab}`;
+  const canonicalPath = ensureTrailingSlash(
+    typeof arg1 === "string" ? `/sports/${sport}/${tab}/` : arg1.pathname || `/sports/${sport}/${tab}/`
+  );
 
-  const sportName = store.labels.sportLabels[sport] || sport;
-  const tabLabel = store.labels.sportsTabLabels[tab] || "Today";
+  const sportName = store.labels?.sportLabels?.[sport] || sport;
+  const tabLabel = store.labels?.sportsTabLabels?.[tab] || tab;
 
   const base: SeoEntry = {
     title: `Live ${sportName} Scores – ${tabLabel} | ${brand.siteName}`,
     description: `See ${tabLabel.toLowerCase()} ${sportName.toLowerCase()} scores with match stats, lineups, results and fixtures. Fast updates on ${brand.siteName}.`,
-    h1: `Live ${sportName} Scores – ${tabLabel}`,
-    primaryKeyword: `live ${sportName.toLowerCase()} scores`,
-    keywords: [`live ${sportName.toLowerCase()} scores`, "live scores", "fixtures", "results"],
+    h1: `${sportName} ${tabLabel}`,
     canonical: canonicalPath,
+    ogImage: brand.defaultOgImage,
   };
 
-  const key = `sports:${sport}:${tab}`;
-  const entry: SeoEntry = { ...base, ...(store.overrides[key] || {}) };
+  const key = `sportsTab:${sport}:${tab}`;
+  const entry: SeoEntry = { ...base, ...(store.overrides?.[key] || {}) };
 
   entry.title = clamp(entry.title, 60);
   entry.description = clamp(entry.description, 155);
+  entry.canonical = canonicalPath;
 
   return { entry, metadata: toMetadata(entry, canonicalPath), canonicalPath };
 }
 
 /* -------------------------------------------------------------------------- */
-/* LEAGUE SEO (Country/Numeric IDs) - FIXED & UPGRADED                        */
+/* LEAGUE SEO (Country/Numeric IDs)                                           */
 /* -------------------------------------------------------------------------- */
 type LeagueArgs = { sport: string; tab: string; leagueId: string; pathname?: string };
 
-// 1. Overloads (Now return Promise because we fetch data)
 export async function resolveSportsLeagueSeo(
-  rawSport: string,
-  rawTab: string,
-  leagueId: string,
-  pathname?: string
-): Promise<{ entry: SeoEntry; metadata: Metadata; canonicalPath: string }>;
-
+  sport: string,
+  tab: string,
+  leagueId: string
+): Promise<{
+  entry: SeoEntry;
+  metadata: Metadata;
+  canonicalPath: string;
+}>;
 export async function resolveSportsLeagueSeo(args: LeagueArgs): Promise<{
   entry: SeoEntry;
   metadata: Metadata;
   canonicalPath: string;
 }>;
+export async function resolveSportsLeagueSeo(arg1: string | LeagueArgs, arg2?: string, arg3?: string) {
+  const store: any = getSeoStoreSync();
 
-// 2. Implementation
-export async function resolveSportsLeagueSeo(
-  arg1: string | LeagueArgs,
-  arg2?: string,
-  arg3?: string,
-  arg4?: string
-) {
-  // A. Normalize Arguments
   const sport = normalizeSport(typeof arg1 === "string" ? arg1 : arg1.sport);
-  const tab = (typeof arg1 === "string" ? (arg2 || "all") : arg1.tab || "all").toLowerCase();
-  const leagueId = typeof arg1 === "string" ? (arg3 || "") : arg1.leagueId;
-  const pathname = typeof arg1 === "string" ? arg4 : arg1.pathname;
+  const tab = (typeof arg1 === "string" ? arg2 || "all" : arg1.tab || "all").toLowerCase();
+  const leagueId = String(typeof arg1 === "string" ? arg3 || "" : arg1.leagueId);
 
-  // B. Fetch Real Data using the Builder
-  // We pass 'leagueId' (numeric string) as the 'league' argument.
-  // The builder handles fetching data by ID automatically.
-  const { entry: baseEntry } = await buildLeagueSeo({ 
-    sport, 
-    league: leagueId, 
-    tab: tab !== "all" ? tab : undefined 
+  const pathname = typeof arg1 === "string" ? undefined : arg1.pathname;
+
+  const { entry: baseEntry } = await buildLeagueSeo({
+    sport,
+    league: leagueId,
+    tab: tab !== "all" ? tab : undefined,
   });
 
-  // C. Override Canonical URL
-  // The builder might default to "/football/premier-league", but we want to KEEP your structure:
-  // "/sports/football/all/league/906"
-  const finalCanonical = pathname || `/sports/${sport}/${tab}/league/${leagueId}`;
-  
-  // D. Create Final Entry with correct Canonical
+  const finalCanonical = ensureTrailingSlash(pathname || `/sports/${sport}/${tab}/league/${leagueId}/`);
+
+  const overrideKey = `sportsLeague:${sport}:${tab}:${leagueId}`;
+  const override = store.overrides?.[overrideKey] || {};
+
   const entry: SeoEntry = {
     ...baseEntry,
+    ...override,
     canonical: finalCanonical,
   };
 
-  // E. Generate Metadata
-  const metadata = toMetadata(entry, finalCanonical);
+  entry.title = clamp(entry.title, 60);
+  entry.description = clamp(entry.description, 155);
 
+  const metadata = toMetadata(entry, finalCanonical);
   return { entry, metadata, canonicalPath: finalCanonical };
 }
 
@@ -243,7 +323,11 @@ export async function resolveSportsLeagueSeo(
 /* -------------------------------------------------------------------------- */
 type MatchArgs = { sport: string; id: string; tab?: string };
 
-export async function resolveMatchSeo(sport: string, id: string, tab?: string): Promise<{
+export async function resolveMatchSeo(
+  sport: string,
+  id: string,
+  tab?: string
+): Promise<{
   entry: SeoEntry;
   metadata: Metadata;
 }>;
@@ -253,14 +337,18 @@ export async function resolveMatchSeo(args: MatchArgs): Promise<{
 }>;
 export async function resolveMatchSeo(arg1: string | MatchArgs, arg2?: string, arg3?: string) {
   const sport = typeof arg1 === "string" ? arg1 : arg1.sport;
-  const id = String(typeof arg1 === "string" ? (arg2 || "") : arg1.id);
-  const tab = typeof arg1 === "string" ? arg3 : arg1.tab;
+  const id = String(typeof arg1 === "string" ? arg2 || "" : arg1.id);
+  const tab = (typeof arg1 === "string" ? arg3 : arg1.tab) || "summary";
 
-  const { entry } = await buildMatchSeo({ sport, id, tab });
-
+  const { entry: built } = await buildMatchSeo({ sport, id, tab });
+  const cleanSport = normalizeSport(sport);
   const cleanTab = (tab || "summary").toLowerCase();
-  const canonicalPath = entry.canonical || `/match/${normalizeSport(sport)}/${id}/${cleanTab}`;
 
+  const canonicalPath = ensureTrailingSlash(
+    built.canonical || `/match/${cleanSport}/${id}/${cleanTab}/`
+  );
+
+  const entry: SeoEntry = { ...built, canonical: canonicalPath };
   const metadata = toMetadata(entry, canonicalPath);
 
   return { entry, metadata };
@@ -271,7 +359,10 @@ export async function resolveMatchSeo(arg1: string | MatchArgs, arg2?: string, a
 /* -------------------------------------------------------------------------- */
 type PlayerArgs = { sport: string; id: string };
 
-export async function resolvePlayerSeo(sport: string, id: string): Promise<{
+export async function resolvePlayerSeo(
+  sport: string,
+  id: string
+): Promise<{
   entry: SeoEntry;
   metadata: Metadata;
 }>;
@@ -281,12 +372,15 @@ export async function resolvePlayerSeo(args: PlayerArgs): Promise<{
 }>;
 export async function resolvePlayerSeo(arg1: string | PlayerArgs, arg2?: string) {
   const sport = typeof arg1 === "string" ? arg1 : arg1.sport;
-  const id = String(typeof arg1 === "string" ? (arg2 || "") : arg1.id);
+  const id = String(typeof arg1 === "string" ? arg2 || "" : arg1.id);
 
-  const { entry } = await buildPlayerSeo({ sport, id });
+  const { entry: built } = await buildPlayerSeo({ sport, id });
 
-  const canonicalPath = entry.canonical || `/player/${normalizeSport(sport)}/${id}`;
+  const canonicalPath = ensureTrailingSlash(
+    built.canonical || `/player/${normalizeSport(sport)}/${id}/`
+  );
 
+  const entry: SeoEntry = { ...built, canonical: canonicalPath };
   const metadata = toMetadata(entry, canonicalPath);
 
   return { entry, metadata };
@@ -296,14 +390,18 @@ export async function resolvePlayerSeo(arg1: string | PlayerArgs, arg2?: string)
 /* LEAGUE SEO (Main/Slug Based)                                               */
 /* -------------------------------------------------------------------------- */
 export async function resolveLeagueSeo(sport: string, leagueIdOrSlug: string, tab?: string) {
-  // 1. Pass 'tab' to the builder
-  const { entry } = await buildLeagueSeo({ sport, league: leagueIdOrSlug, tab });
-  
-  // 2. Use the canonical path from the builder (which handles standard league URLs)
-  const canonicalPath = entry.canonical || `/${normalizeSport(sport)}/${leagueIdOrSlug}`;
-  
-  // 3. Generate Metadata
+  const { entry: built } = await buildLeagueSeo({
+    sport,
+    league: leagueIdOrSlug,
+    tab,
+  });
+
+  const canonicalPath = ensureTrailingSlash(
+    built.canonical || `/${normalizeSport(sport)}/${leagueIdOrSlug}/`
+  );
+
+  const entry: SeoEntry = { ...built, canonical: canonicalPath };
   const metadata = toMetadata(entry, canonicalPath);
-  
+
   return { entry, metadata };
 }

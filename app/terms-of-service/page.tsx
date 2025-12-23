@@ -1,37 +1,39 @@
 // app/terms-of-service/page.tsx
 import Link from "next/link";
-import { SITE_CONTENT, applyVars, getContentVars, type LegalBlock } from "@/lib/site-content";
+import { readStaticPageContent, type LegalBlock } from "@/lib/seo/static-page-content";
 
-function RenderBlock({ block, vars }: { block: LegalBlock; vars: Record<string, string> }) {
+function linkEmails(text: string) {
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (!match) return <p>{text}</p>;
+
+  const email = match[0];
+  const parts = text.split(email);
+
+  return (
+    <p>
+      {parts[0]}
+      <a href={`mailto:${email}`} className="text-blue-600 hover:underline font-bold">
+        {email}
+      </a>
+      {parts.slice(1).join(email)}
+    </p>
+  );
+}
+
+function RenderBlock({ block }: { block: LegalBlock }) {
   if (block.type === "h3") {
-    return <h3 className="font-bold text-primary">{applyVars(block.text, vars)}</h3>;
+    return <h3 className="font-bold text-primary">{block.text}</h3>;
   }
 
   if (block.type === "p") {
-    const text = applyVars(block.text, vars);
-    const email = vars.supportEmail;
-
-    if (email && text.includes(email)) {
-      const parts = text.split(email);
-      return (
-        <p>
-          {parts[0]}
-          <a href={`mailto:${email}`} className="text-blue-600 hover:underline font-bold">
-            {email}
-          </a>
-          {parts.slice(1).join(email)}
-        </p>
-      );
-    }
-
-    return <p>{text}</p>;
+    return linkEmails(block.text);
   }
 
   if (block.type === "ul") {
     return (
       <ul className="list-disc pl-5 space-y-2">
         {block.items.map((it, idx) => (
-          <li key={idx}>{applyVars(it, vars)}</li>
+          <li key={idx}>{it}</li>
         ))}
       </ul>
     );
@@ -41,12 +43,22 @@ function RenderBlock({ block, vars }: { block: LegalBlock; vars: Record<string, 
     return (
       <p>
         {block.inlines.map((x, idx) => {
-          if (x.type === "text") return <span key={idx}>{applyVars(x.value, vars)}</span>;
-          // internal link
+          if (x.type === "text") return <span key={idx}>{x.value}</span>;
+
+          // keep your old behavior: use Link for internal paths, <a> for external
+          const isInternal = x.href?.startsWith("/");
+          if (isInternal) {
+            return (
+              <Link key={idx} href={x.href} className="text-blue-600 hover:underline font-bold">
+                {x.label}
+              </Link>
+            );
+          }
+
           return (
-            <Link key={idx} href={x.href} className="text-blue-600 hover:underline font-bold">
+            <a key={idx} href={x.href} className="text-blue-600 hover:underline font-bold">
               {x.label}
-            </Link>
+            </a>
           );
         })}
       </p>
@@ -56,9 +68,9 @@ function RenderBlock({ block, vars }: { block: LegalBlock; vars: Record<string, 
   return null;
 }
 
-export default function TermsOfServicePage() {
-  const vars = getContentVars();
-  const doc = SITE_CONTENT.legal.termsOfService;
+export default async function TermsOfServicePage() {
+  const page = await readStaticPageContent("terms-of-service");
+  const doc = page.content;
 
   return (
     <div className="w-full min-h-screen p-4 md:p-8">
@@ -76,12 +88,12 @@ export default function TermsOfServicePage() {
           {doc.sections.map((section, sIdx) => (
             <section key={sIdx} className="space-y-4">
               <h2 className="text-xl font-bold text-primary uppercase tracking-wide border-b theme-border pb-2">
-                {applyVars(section.title, vars)}
+                {section.title}
               </h2>
 
               <div className="space-y-4">
                 {section.blocks.map((block, bIdx) => (
-                  <RenderBlock key={bIdx} block={block} vars={vars} />
+                  <RenderBlock key={bIdx} block={block} />
                 ))}
               </div>
             </section>

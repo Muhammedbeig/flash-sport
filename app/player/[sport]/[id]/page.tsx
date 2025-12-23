@@ -1,12 +1,10 @@
 import PlayerProfile from "@/components/player/PlayerProfile";
 
-type PageProps = {
+type Props = {
   params: Promise<{ sport: string; id: string }>;
 };
 
-export default async function PlayerPage({ params }: PageProps) {
+export default async function PlayerPage({ params }: Props) {
   const { sport, id } = await params;
-
-  // PlayerProfile is a client component. We pass sport/id directly (path based).
   return <PlayerProfile sport={sport} id={id} />;
 }
