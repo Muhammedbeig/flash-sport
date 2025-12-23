@@ -149,6 +149,11 @@ export default function SidebarCountries({
             ? "bg-black/20 border-slate-800"
             : "bg-white border-blue-50";
 
+        // ✅ Only change: alt fallback + title uses country name if present
+        const countryName = (country?.name || "").trim();
+        const flagAlt = countryName ? countryName : "Team logo";
+        const flagTitle = countryName ? countryName : "";
+
         return (
           <div key={country.name} className="border-b theme-border last:border-0">
             <button
@@ -161,7 +166,8 @@ export default function SidebarCountries({
                 {country.flag ? (
                   <img
                     src={country.flag}
-                    alt={country.name}
+                    alt={flagAlt}
+                    title={flagTitle}
                     className="w-4 h-4 object-contain shrink-0"
                   />
                 ) : (

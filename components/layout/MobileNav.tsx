@@ -75,17 +75,9 @@ export default function MobileNav() {
       else params.delete("date");
     }
 
-    if (inSportsRoutes) {
-      const qs = params.toString();
-      return qs ? `/sports/${currentSport}/${tab}/?${qs}` : `/sports/${currentSport}/${tab}/`;
-    }
-
-    // Legacy home route fallback
-    const sportParam = tab === "all" ? currentSport : `${currentSport}/${tab}`;
-    params.set("sport", sportParam);
-
+    // ✅ FIX ONLY: Always use /sports/{sport}/{tab}/ (no legacy /?sport= fallback)
     const qs = params.toString();
-    return `/?${qs}`;
+    return qs ? `/sports/${currentSport}/${tab}/?${qs}` : `/sports/${currentSport}/${tab}/`;
   };
 
   const allHref = buildHref("all");
@@ -148,11 +140,7 @@ export default function MobileNav() {
         </div>
       </div>
 
-      <MobileSearch
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        initialSport={currentSport}
-      />
+      <MobileSearch open={searchOpen} onClose={() => setSearchOpen(false)} initialSport={currentSport} />
     </>
   );
 }

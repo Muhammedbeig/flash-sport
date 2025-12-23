@@ -246,6 +246,16 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
     String(game.id)
   )}/summary/`;
 
+  // ✅ FIX (only): alt fallback = "Team logo" if no name; title uses team name if present
+  const homeName = (game?.homeTeam?.name || "").trim();
+  const awayName = (game?.awayTeam?.name || "").trim();
+
+  const homeAlt = homeName ? homeName : "Team logo";
+  const awayAlt = awayName ? awayName : "Team logo";
+
+  const homeTitle = homeName ? homeName : "";
+  const awayTitle = awayName ? awayName : "";
+
   return (
     <Link
       href={matchHref}
@@ -277,7 +287,8 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={game.homeTeam.logo}
-                alt={game.homeTeam.name}
+                alt={homeAlt}
+                title={homeTitle}
                 className="w-4 h-4 object-contain shrink-0"
               />
             )}
@@ -285,6 +296,7 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
           </div>
           <span className={`text-xs ${scoreColor}`}>{game.homeScore ?? "-"}</span>
         </div>
+
         {/* Away */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 overflow-hidden">
@@ -292,7 +304,8 @@ function GameRow({ game, sport }: { game: NormalizedGame; sport: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={game.awayTeam.logo}
-                alt={game.awayTeam.name}
+                alt={awayAlt}
+                title={awayTitle}
                 className="w-4 h-4 object-contain shrink-0"
               />
             )}
@@ -561,7 +574,6 @@ export default function LeagueTabs({
             return (
               <Link
                 key={tab.id}
-                // ✅ FIX: Use dynamic {sport} instead of hardcoded "football"
                 href={`/${sport}/${leagueSlug}/${targetId}`}
                 className={getTabStyle(tab.id)}
                 prefetch={false}

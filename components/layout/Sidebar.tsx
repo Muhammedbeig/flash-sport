@@ -93,6 +93,11 @@ export default function Sidebar({
               .replace(/\b\w/g, (l) => l.toUpperCase());
             const logoUrl = `https://media.api-sports.io/football/leagues/${id}.png`;
 
+            // ✅ Only change: alt/title fallbacks
+            const safeName = (name || "").trim();
+            const imgAlt = safeName ? safeName : "Team logo";
+            const imgTitle = safeName ? safeName : "";
+
             const activeClass =
               theme === "dark"
                 ? "bg-slate-800 text-blue-400 border-blue-500"
@@ -116,7 +121,8 @@ export default function Sidebar({
                 <div className="w-6 h-6 flex items-center justify-center bg-white rounded-full p-0.5 shrink-0 shadow-sm">
                   <img
                     src={logoUrl}
-                    alt={name}
+                    alt={imgAlt}
+                    title={imgTitle}
                     className="w-full h-full object-contain"
                     loading="lazy"
                   />
