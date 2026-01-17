@@ -8,6 +8,21 @@ const repoName = process.env.NEXT_PUBLIC_REPO_NAME || "";
 const basePath = repoName ? `/${repoName}` : "";
 
 const nextConfig: NextConfig = {
+  /**
+   * Prisma on Vercel/Serverless + Next 16 can fail if the Prisma query engine
+   * isn't included in the traced output. Force include Prisma engine files.
+   */
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/.prisma/client/**/*", "./node_modules/@prisma/client/**/*"],
+    "/*": ["./node_modules/.prisma/client/**/*", "./node_modules/@prisma/client/**/*"],
+  },
+
+  /**
+   * Keep these packages external on the server build when needed.
+   * (Useful for Node-specific deps / bundling edge cases)
+   */
+  serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
+
   // Required for GitHub Pages (Static Export)
   // output: "export",
 
