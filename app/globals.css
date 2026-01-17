@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/* =========================================================
+   THEME VARIABLES (APP-WIDE)
+   ========================================================= */
+
+:root {
+  /* LIGHT MODE */
+  --background: 255 255 255;
+  --foreground: 30 41 59;
+  
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #475569;
+
+  /* Utility Colors */
+  --widget-border: #e2e8f0;
+  --widget-hover: #f0f7ff;
+  --skeleton: #e2e8f0;
+}
+
+.dark {
+  /* DARK MODE */
+  --background: 15 23 42;
+  --foreground: 241 245 249;
+
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+
+  /* Utility Colors */
+  --widget-border: #1e293b;
+  --widget-hover: #1e293b;
+  --skeleton: #1e293b;
+}
+
+/* =========================================================
+   BASE STYLES
+   ========================================================= */
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   THEME UTILITIES
+   ========================================================= */
+
+.theme-bg {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+.theme-border {
+  border-color: var(--widget-border);
+}
+
+.theme-hover {
+  transition: background-color 0.2s ease;
+}
+.theme-hover:hover {
+  background-color: var(--widget-hover) !important;
+}
+
+.bg-skeleton {
+  background-color: var(--skeleton);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+/* =========================================================
+   CUSTOM WIDGET THEMES (TAB STYLE UPDATE)
+   ========================================================= */
+
+/* SHARED SETTINGS FOR "PILL" TABS */
+api-sports-widget {
+  /* Makes tabs fully rounded like pills */
+  --tab-border-radius: 9999px !important; 
+  /* Makes tab text bold like the screenshot */
+  --button-font-weight: 700 !important;
+  --header-text-transform: uppercase;
+}
+
+/* 1. LIGHT THEME (FlashSport Blue #0f80da) */
+api-sports-widget[data-theme="flash-light"] {
+  /* Active Tab Background = Brand Blue */
+  --primary-color: #0f80da; 
+  /* Active Tab Text = White */
+  --active-color: #ffffff;
+  
+  /* Inactive Tab Background = Transparent (blends with bg) */
+  --light-color: transparent; 
+
+  /* General Colors */
+  --background-color: #ffffff;
+  --text-color: #1e293b;
+  --text-color-info: #64748b;
+  --border: 1px solid #e2e8f0;
+  --hover: rgba(15, 128, 218, 0.08);
+  
+  /* Status Colors */
+  --success-color: #22c55e;
+  --warning-color: #eab308;
+  --danger-color: #ef4444;
+  --home-color: #1e293b;
+  --away-color: #1e293b;
+  
+  --game-height: 3rem;
+}
+
+/* 2. DARK THEME (Neon Blue #60a5fa) */
+api-sports-widget[data-theme="flash-dark"] {
+  /* Active Tab Background = Neon Blue */
+  --primary-color: #60a5fa;
+  /* Active Tab Text = Dark Background color for contrast */
+  --active-color: #0f172a;
+
+  /* Inactive Tab Background = Transparent */
+  --light-color: transparent;
+
+  /* General Colors */
+  --background-color: #0f172a;
+  --text-color: #f1f5f9;
+  --text-color-info: #94a3b8;
+  --border: 1px solid #334155;
+  --hover: rgba(96, 165, 250, 0.15);
+  
+  /* Status Colors */
+  --success-color: #4ade80;
+  --warning-color: #facc15;
+  --danger-color: #f87171;
+  --home-color: #f1f5f9;
+  --away-color: #f1f5f9;
+  
+  --game-height: 3rem;
+}
+
+/* =========================================================
+   LAYOUT & ANIMATIONS
+   ========================================================= */
+
+footer {
+  position: relative;
+  z-index: 10;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

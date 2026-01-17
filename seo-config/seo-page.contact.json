@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2025-12-23T00:00:00Z",
+  "slug": "contact",
+  "seo": {
+    "title": "Contact Us | LiveSocceRR",
+    "description": "Contact LiveSocceRR for support, bug reports, partnerships, and feedback. Email us at service@livesoccerr.com.",
+    "h1": "Contact Us",
+    "primaryKeyword": "contact livesoccerr",
+    "keywords": [
+      "contact",
+      "support",
+      "bug report",
+      "partnership",
+      "feedback",
+      "LiveSocceRR contact",
+      "service@livesoccerr.com"
+    ],
+    "canonical": "/contact",
+    "robots": {
+      "index": true,
+      "follow": true
+    },
+    "ogTitle": "Contact Us | LiveSocceRR",
+    "ogDescription": "Support, partnerships, and feedback — reach LiveSocceRR at service@livesoccerr.com.",
+    "ogImage": "/og.png",
+    "breadcrumbs": [
+      {
+        "name": "Home",
+        "url": "/"
+      },
+      {
+        "name": "Contact",
+        "url": "/contact"
+      }
+    ],
+    "internalLinks": [
+      {
+        "label": "Privacy Policy",
+        "href": "/privacy-policy"
+      },
+      {
+        "label": "Terms of Service",
+        "href": "/terms-of-service"
+      }
+    ],
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "ContactPage",
+      "name": "Contact",
+      "url": "https://livesoccerr.com/contact",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "LiveSocceRR",
+        "url": "https://livesoccerr.com"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "LiveSocceRR",
+        "url": "https://livesoccerr.com"
+      }
+    }
+  },
+  "content": {
+    "h1": "Contact Us",
+    "lastUpdated": "December 17, 2025",
+    "intro": [
+      "To make sure your query or feedback gets to the right person, please contact us via email.",
+      "We review every message and will get back to you if we need more information. For most requests, email is the fastest option."
+    ],
+    "contactDetails": {
+      "supportEmail": "service@livesoccerr.com",
+      "phone": "+92 300 0000000",
+      "whatsapp": "+92 300 0000000",
+      "address": [
+        "Your Company Address Line 1",
+        "City, Country"
+      ],
+      "supportHours": "Mon–Sun, 24/7"
+    },
+    "sections": [
+      {
+        "title": "What you can contact us about",
+        "blocks": [
+          {
+            "type": "ul",
+            "items": [
+              "Technical support (site not loading, wrong scores, broken pages)",
+              "Bug reports (screenshots and steps to reproduce help a lot)",
+              "Feedback and feature requests",
+              "Partnerships, media, and advertising inquiries",
+              "Copyright or content concerns"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Tips for faster support",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "If you are reporting a problem, please include:"
+          },
+          {
+            "type": "ul",
+            "items": [
+              "The exact URL of the page (copy/paste is best)",
+              "Your device and browser (e.g., Android Chrome, iPhone Safari, Windows Chrome)",
+              "A short description of what you expected vs what happened",
+              "Screenshots or screen recordings, if possible",
+              "The time the issue occurred (with your timezone)"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Response time",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "We try to respond as quickly as possible. Response times can vary depending on the request volume and the complexity of the issue. If you haven't heard back within a reasonable period, feel free to follow up with the same email thread."
+          }
+        ]
+      },
+      {
+        "title": "Email",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "Email us at service@livesoccerr.com. This is the primary support channel."
+          }
+        ]
+      }
+    ],
+    "note": "We will use only email for contacting."
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "content": {
+    "h1": "Terms of Service",
+    "lastUpdated": "December 17, 2025",
+    "sections": [
+      {
+        "blocks": [
+          {
+            "text": "These Terms of Service (the “Terms”) govern your access to and use of livesoccerr.com and any related services provided by LiveSocceRR (together, the “Services”). By accessing or using the Services, you agree to these Terms. If you do not agree, do not use the Services.",
+            "type": "p"
+          },
+          {
+            "text": "If you use the Services on behalf of an organization, you represent that you have authority to bind that organization to these Terms.",
+            "type": "p"
+          }
+        ],
+        "title": "1. Introductory Provisions"
+      },
+      {
+        "blocks": [
+          {
+            "text": "The Services provide sports information such as live scores, final results, fixtures, lineups, standings, and other statistics. Some information may be provided by third-party sources. We work to keep content accurate and updated, but we do not guarantee completeness or accuracy at all times.",
+            "type": "p"
+          },
+          {
+            "text": "You use and rely on the information from the Services at your own risk. The Services are provided for personal, non-commercial use unless we explicitly agree otherwise in writing.",
+            "type": "p"
+          }
+        ],
+        "title": "2. The Services and Content"
+      },
+      {
+        "blocks": [
+          {
+            "text": "If we offer account features, you are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. You agree to provide accurate information and to keep it updated.",
+            "type": "p"
+          },
+          {
+            "text": "We may suspend or terminate accounts that violate these Terms or pose a security risk.",
+            "type": "p"
+          }
+        ],
+        "title": "3. Accounts and User Communications"
+      },
+      {
+        "blocks": [
+          {
+            "text": "You agree not to:",
+            "type": "p"
+          },
+          {
+            "items": [
+              "Use the Services for any unlawful purpose or in violation of applicable laws",
+              "Scrape, crawl, harvest, or aggregate content from the Services without our written permission",
+              "Reverse engineer, interfere with, or disrupt the Services, servers, or networks",
+              "Attempt to bypass rate limits, access controls, or security mechanisms",
+              "Use the Services for commercial purposes (including reselling, sublicensing, or embedding) without our written consent",
+              "Upload or transmit malicious code, spam, or harmful content"
+            ],
+            "type": "ul"
+          },
+          {
+            "text": "We may take technical and legal measures to protect the Services, including blocking abusive traffic.",
+            "type": "p"
+          }
+        ],
+        "title": "4. Acceptable Use"
+      },
+      {
+        "blocks": [
+          {
+            "text": "All content, trademarks, logos, and materials on the Services are owned by LiveSocceRR or its licensors and are protected by intellectual property laws. You may not copy, modify, distribute, sell, or lease any part of our Services or included software without our written permission.",
+            "type": "p"
+          }
+        ],
+        "title": "5. Intellectual Property"
+      },
+      {
+        "blocks": [
+          {
+            "text": "The Services may include third-party content, links, or integrations. We do not control third-party services and are not responsible for their content or practices. Your dealings with third parties are between you and the third party.",
+            "type": "p"
+          }
+        ],
+        "title": "6. Third-Party Content and Links"
+      },
+      {
+        "blocks": [
+          {
+            "text": "If betting odds are displayed, they are provided for informational/news purposes only. The Services are not a gambling product and we do not facilitate wagering. You are solely responsible for any decisions you make based on displayed information.",
+            "type": "p"
+          }
+        ],
+        "title": "7. Betting Odds Disclaimer"
+      },
+      {
+        "blocks": [
+          {
+            "text": "The Services are provided “as is” and “as available.” To the maximum extent permitted by law, we disclaim all warranties of any kind, express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement.",
+            "type": "p"
+          }
+        ],
+        "title": "8. Disclaimers"
+      },
+      {
+        "blocks": [
+          {
+            "text": "To the maximum extent permitted by law, in no event will we be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses, resulting from your access to or use of (or inability to access or use) the Services.",
+            "type": "p"
+          }
+        ],
+        "title": "9. Limitation of Liability"
+      },
+      {
+        "blocks": [
+          {
+            "text": "We may suspend or terminate your access to the Services at any time if you violate these Terms or if we reasonably believe it is necessary to protect the Services or other users. You may stop using the Services at any time.",
+            "type": "p"
+          }
+        ],
+        "title": "10. Termination"
+      },
+      {
+        "blocks": [
+          {
+            "inlines": [
+              {
+                "type": "text",
+                "value": "Your use of the Services is also governed by our Privacy Policy: "
+              },
+              {
+                "href": "https://livesoccerr.com/privacy-policy",
+                "label": "https://livesoccerr.com/privacy-policy",
+                "type": "link"
+              },
+              {
+                "type": "text",
+                "value": "."
+              }
+            ],
+            "type": "p_rich"
+          }
+        ],
+        "title": "11. Privacy"
+      },
+      {
+        "blocks": [
+          {
+            "text": "We may modify these Terms from time to time. We will update the “Last updated” date and, where appropriate, provide additional notice. Your continued use of the Services after the change means you accept the updated Terms.",
+            "type": "p"
+          }
+        ],
+        "title": "12. Changes to These Terms"
+      },
+      {
+        "blocks": [
+          {
+            "text": "For questions about these Terms, contact us at service@livesoccerr.com.",
+            "type": "p"
+          }
+        ],
+        "title": "13. Contact"
+      }
+    ]
+  },
+  "schemaVersion": 1,
+  "seo": {
+    "description": "These Terms of Service govern your access to and use of livesoccerr.com and related services provided by LiveSocceRR.",
+    "h1": "Terms of Service",
+    "keywords": [
+      "terms of service",
+      "terms and conditions",
+      "acceptable use",
+      "livesoccerr.com terms",
+      "LiveSocceRR terms"
+    ],
+    "primaryKeyword": "terms of service",
+    "title": "Terms of Service | Live Score"
+  },
+  "slug": "terms-of-service",
+  "updatedAt": "2026-01-12T18:46:06.158Z"
+}
