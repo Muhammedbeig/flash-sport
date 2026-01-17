@@ -274,7 +274,7 @@ export default function LeagueSeoClient() {
                       }}
                       className="text-red-500 font-bold px-2 hover:bg-red-500/10 rounded-lg"
                     >
-                      Ã—
+                      x
                     </button>
                   </div>
                 ))}

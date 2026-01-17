@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
   // Helps prevent 404s on page refresh by generating index.html for every route
   trailingSlash: true,
 
-  // âœ… FIX: Route admin and admin APIs into the admin app folder (keep public APIs on main app)
+  // FIX: Route admin and admin APIs into the admin app folder (keep public APIs on main app)
   async rewrites() {
     return [
       {

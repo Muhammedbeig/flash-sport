@@ -44,7 +44,7 @@ export default function HeaderCommandSearch() {
 
   const go = (path: string) => router.push(withAdminBase(path));
 
-  // âœ… FIX: ThemeContextType doesn't have setTheme -> use toggleTheme instead
+  // FIX: ThemeContextType doesn't have setTheme -> use toggleTheme instead
   const { theme, toggleTheme } = useTheme();
 
   const { user, logout } = useAdminAuth();
@@ -96,7 +96,7 @@ export default function HeaderCommandSearch() {
         label: "Add New FAQ",
         icon: PlusCircle,
         action: () => go("/faqs/new"),
-        roles: ["ADMIN"], // âœ… Admin only
+        roles: ["ADMIN"], // Admin only
       },
       {
         category: "Knowledge Base",
@@ -119,7 +119,7 @@ export default function HeaderCommandSearch() {
         label: "Write New Post",
         icon: FileText,
         action: () => go("/blogs/new"),
-        roles: ["ADMIN", "CONTENT_WRITER"], // âœ… Admin & Writer only
+        roles: ["ADMIN", "CONTENT_WRITER"], // Admin & Writer only
       },
       {
         category: "Blog",
@@ -237,7 +237,7 @@ export default function HeaderCommandSearch() {
         label: "Create New Page",
         icon: Plus,
         action: () => go("/pages/new"),
-        roles: ["ADMIN"], // âœ… Admin only
+        roles: ["ADMIN"], // Admin only
       },
       {
         category: "Pages",
@@ -266,7 +266,7 @@ export default function HeaderCommandSearch() {
         category: "System",
         label: "Toggle Theme",
         icon: theme === "dark" ? Sun : Moon,
-        // âœ… FIX: use toggleTheme() instead of setTheme(...)
+        // FIX: use toggleTheme() instead of setTheme(...)
         action: () => toggleTheme(),
         roles: ["ADMIN", "EDITOR", "SEO_MANAGER", "CONTENT_WRITER", "DEVELOPER"],
       },
@@ -391,7 +391,7 @@ export default function HeaderCommandSearch() {
 
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
           <span className={`text-[10px] font-bold border rounded px-1.5 py-0.5 transition-colors duration-200 ${getBadgeStyle()}`}>
-            âŒ˜K
+            Ctrl+K
           </span>
         </div>
       </div>
@@ -461,10 +461,10 @@ export default function HeaderCommandSearch() {
           >
             <div className="flex gap-3">
               <span>
-                <strong>â†‘â†“</strong> navigate
+                <strong>Up/Down</strong> navigate
               </span>
               <span>
-                <strong>â†µ</strong> select
+                <strong>Enter</strong> select
               </span>
             </div>
             <div>{filtered.length} results</div>

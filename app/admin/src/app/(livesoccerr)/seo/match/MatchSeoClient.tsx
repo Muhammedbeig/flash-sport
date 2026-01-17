@@ -128,7 +128,7 @@ export default function MatchSeoClient() {
     }
   }
 
-  // âœ… NEW: Handle Image Upload Logic
+  // NEW: Handle Image Upload Logic
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -293,7 +293,7 @@ export default function MatchSeoClient() {
                       }}
                       className="text-red-500 font-bold px-2 hover:bg-red-500/10 rounded-lg"
                     >
-                      Ã—
+                      x
                     </button>
                   </div>
                 ))}

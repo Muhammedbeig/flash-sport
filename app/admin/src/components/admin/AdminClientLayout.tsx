@@ -10,7 +10,7 @@ import { stripAdminBase } from "@/lib/adminPath";
 export default function AdminClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = stripAdminBase(usePathname() || "");
 
-  // âœ… FIX: Use 'startsWith' to catch "/login", "/login/", or "/admin/login" properly
+  // FIX: Use 'startsWith' to catch "/login", "/login/", or "/admin/login" properly
   const isLogin = pathname.startsWith("/login");
 
   return (

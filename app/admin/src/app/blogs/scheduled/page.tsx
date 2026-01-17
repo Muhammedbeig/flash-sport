@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ScheduledPostsPage() {
   
-  // âœ… FIX: Query now includes BOTH types of scheduled posts:
+  // FIX: Query now includes BOTH types of scheduled posts:
   // 1. Drafts with a date set (isPublished: false)
   // 2. Published posts with a FUTURE date (isPublished: true)
   const posts = await prisma.blogPost.findMany({

@@ -10,7 +10,7 @@ export default function PagesListClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  // âœ… Selection State
+  // Selection State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const fetchPages = () => {
@@ -35,7 +35,7 @@ export default function PagesListClient() {
 
   useEffect(() => { fetchPages(); }, []);
 
-  // âœ… Selection Logic
+  // Selection Logic
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
@@ -45,7 +45,7 @@ export default function PagesListClient() {
     else setSelectedIds(pages.map(p => p.id));
   };
 
-  // âœ… Bulk Delete Logic
+  // Bulk Delete Logic
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`Permanently delete ${selectedIds.length} pages? This cannot be undone.`)) return;
@@ -77,7 +77,7 @@ export default function PagesListClient() {
           <p className="text-sm text-secondary">Manage static pages like About, Contact, Terms.</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* âœ… Bulk Delete Button */}
+          {/* Bulk Delete Button */}
           {selectedIds.length > 0 && (
             <button 
               onClick={handleBulkDelete}

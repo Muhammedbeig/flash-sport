@@ -137,7 +137,7 @@ export default function BlogEditor({ post }: EditorProps) {
     setHasUnsavedChanges(true);
   };
 
-  // --- âœ… NEW TAG LOGIC (Enter & Comma Support) ---
+  // --- NEW TAG LOGIC (Enter & Comma Support) ---
   
   const processTags = async (input: string) => {
     if (!input.trim()) return;
@@ -310,12 +310,12 @@ export default function BlogEditor({ post }: EditorProps) {
                 <span className="px-2 py-0.5 rounded font-bold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-500 border border-blue-200 dark:border-blue-900/30">
                   {wordCount} words
                 </span>
-                <span className="text-secondary opacity-50">â€¢</span>
+                <span className="text-secondary opacity-50">|</span>
                 <span className="text-secondary">{readingTime} min read</span>
                 
                 {lastSaved && (
                   <>
-                    <span className="text-secondary opacity-50">â€¢</span>
+                    <span className="text-secondary opacity-50">|</span>
                     <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold transition-opacity duration-500">
                       <CheckCircle2 size={12} />
                       Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -432,8 +432,8 @@ export default function BlogEditor({ post }: EditorProps) {
                   <h3 className="text-xs font-black text-secondary uppercase tracking-widest mb-4">Google Search Result</h3>
                   <div className="bg-white p-4 rounded-lg border border-slate-200 max-w-xl shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">âš½</div>
-                      <div className="text-xs text-slate-700">yoursite.com â€º blog â€º {categorySlug} â€º {cleanSlug}</div>
+                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">G</div>
+                      <div className="text-xs text-slate-700">yoursite.com &gt; blog &gt; {categorySlug} &gt; {cleanSlug}</div>
                     </div>
                     <div className="text-[#1a0dab] text-xl hover:underline cursor-pointer font-medium mb-1 truncate">
                       {formData.metaTitle || formData.title || "Your Blog Title"}
@@ -467,7 +467,7 @@ export default function BlogEditor({ post }: EditorProps) {
                 <div className="theme-bg theme-border border rounded-xl p-6">
                   {faqs.map((faq, i) => (
                     <div key={i} className="mb-4 p-4 rounded-lg bg-slate-50 dark:bg-white/5 border theme-border relative group">
-                       <button onClick={() => { const newFaqs = faqs.filter((_, idx) => idx !== i); setFaqs(newFaqs); setHasUnsavedChanges(true); }} className="absolute top-2 right-2 text-red-400 hover:text-red-500 p-1">âœ•</button>
+                       <button onClick={() => { const newFaqs = faqs.filter((_, idx) => idx !== i); setFaqs(newFaqs); setHasUnsavedChanges(true); }} className="absolute top-2 right-2 text-red-400 hover:text-red-500 p-1">x</button>
                        <input className="w-full bg-transparent border-b theme-border px-0 py-1 font-bold text-sm text-primary mb-2 outline-none placeholder:text-slate-500" placeholder="Question..." value={faq.question} onChange={e => { const newFaqs = [...faqs]; newFaqs[i].question = e.target.value; setFaqs(newFaqs); setHasUnsavedChanges(true); }} />
                        <textarea className="w-full bg-transparent border-none px-0 py-1 text-sm text-secondary h-16 resize-none outline-none placeholder:text-slate-500" placeholder="Answer..." value={faq.answer} onChange={e => { const newFaqs = [...faqs]; newFaqs[i].answer = e.target.value; setFaqs(newFaqs); setHasUnsavedChanges(true); }} />
                     </div>
@@ -519,7 +519,7 @@ export default function BlogEditor({ post }: EditorProps) {
             <textarea className="w-full px-3 py-2 rounded-lg theme-bg theme-border border text-sm text-primary outline-none h-32 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-500" placeholder="Summary..." value={formData.excerpt} onChange={e => updateField("excerpt", e.target.value)} />
           </div>
 
-          {/* âœ… UPDATED TAGS SECTION: Search + Enter/Comma Create */}
+          {/* UPDATED TAGS SECTION: Search + Enter/Comma Create */}
           <div className="theme-bg theme-border border rounded-xl p-4" ref={tagMenuRef}>
             <h3 className="text-xs font-black text-secondary uppercase tracking-widest mb-3 flex items-center gap-2">
               <Hash size={14} /> Tags

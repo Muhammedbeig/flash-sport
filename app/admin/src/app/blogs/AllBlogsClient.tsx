@@ -55,7 +55,7 @@ export default function AllBlogsClient() {
   };
 
   const handleHardDelete = async (id: number) => {
-    if(!confirm("âš ï¸ PERMANENTLY DELETE? This cannot be undone!")) return;
+    if(!confirm("WARNING: PERMANENTLY DELETE? This cannot be undone!")) return;
     const res = await fetch(`/api/admin/blogs/${id}?hard=true`, { method: "DELETE" });
     if (!res.ok) alert("Only Super Admins can permanently delete.");
     loadPosts();
@@ -122,7 +122,7 @@ export default function AllBlogsClient() {
                   <td className="p-4">
                     <div className="font-bold text-primary line-clamp-1 flex items-center gap-2">
                        {post.title}
-                       {post.isFeatured && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded">â˜… Featured</span>}
+                       {post.isFeatured && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded">Featured</span>}
                     </div>
                     <div className="text-xs text-secondary font-mono mt-0.5">{post.slug}</div>
                   </td>

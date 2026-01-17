@@ -85,7 +85,7 @@ export async function proxy(req: NextRequest) {
   const url = req.nextUrl;
   const pathname = url.pathname;
 
-  // âœ… Admin subdomain routing
+  // Admin subdomain routing
   if (isAdminHost(req) || isAdminPath(pathname)) {
     // allow admin _next assets + files
     if (pathname.startsWith("/_next") || pathname.includes(".")) return NextResponse.next();
@@ -98,7 +98,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.rewrite(new URL(`/admin/src/app${adminPath}`, req.url));
   }
 
-  // âœ… Main website redirects
+  // Main website redirects
   if (req.method !== "GET" && req.method !== "HEAD") return NextResponse.next();
   if (shouldSkip(pathname)) return NextResponse.next();
 

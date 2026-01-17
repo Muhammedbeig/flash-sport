@@ -30,7 +30,7 @@ export default function AdminAuthGate({ children }: { children: React.ReactNode 
     if (loading) return;
     if (user) return;
 
-    // âœ… No useSearchParams() (avoids build-time Suspense requirement)
+    // No useSearchParams() (avoids build-time Suspense requirement)
     const url = new URL(window.location.href);
     url.searchParams.delete("next");
     const qs = url.searchParams.toString();

@@ -101,14 +101,14 @@ export default function FAQEditor({ initialData }: { initialData?: any }) {
             />
           </div>
 
-          {/* âœ… THEME-STYLED URL SETTINGS */}
+          {/* THEME-STYLED URL SETTINGS */}
           <div className="theme-bg theme-border border rounded-xl p-6">
             <label className="block text-xs font-black text-secondary uppercase tracking-widest mb-3 flex items-center gap-2">
               <LinkIcon size={14} className="text-blue-500" /> URL Settings
             </label>
             
             <div className="flex items-center gap-0 w-full rounded-lg theme-border border overflow-hidden bg-white dark:bg-white/5">
-              {/* âœ… UPDATED: Blue background and Blue text */}
+              {/* UPDATED: Blue background and Blue text */}
               <div className="px-3 py-2 text-sm font-mono border-r theme-border select-none bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 font-bold">
                 /faqs/{categorySlug}/
               </div>
