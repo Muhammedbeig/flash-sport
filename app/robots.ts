@@ -134,12 +134,16 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "");
   const fallbackSitemap = `${baseUrl}/sitemap.xml`;
 
-  const row = await prisma.robotsTxt.findFirst({
-    orderBy: { updatedAt: "desc" },
-    select: { content: true },
-  });
-
-  const content = (row?.content || "").trim();
+  let content = "";
+  try {
+    const row = await prisma.robotsTxt.findFirst({
+      orderBy: { updatedAt: "desc" },
+      select: { content: true },
+    });
+    content = (row?.content || "").trim();
+  } catch {
+    content = "";
+  }
 
   if (!content) {
     return {

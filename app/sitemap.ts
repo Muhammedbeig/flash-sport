@@ -60,6 +60,12 @@ function dedupe(items: MetadataRoute.Sitemap) {
   return out;
 }
 
+const DEFAULT_SETTINGS = {
+  homePriority: 1.0,
+  postPriority: 0.9,
+  pagePriority: 0.8,
+};
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Base URL (prefer Global SEO store brand.siteUrl)
   let baseUrl = "";
@@ -83,12 +89,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   // Sitemap priorities from admin
-  const settings =
-    (await prisma.sitemapSettings.findFirst()) || {
-      homePriority: 1.0,
-      postPriority: 0.9,
-      pagePriority: 0.8,
-    };
+  let settings = DEFAULT_SETTINGS;
+  let dbOk = true;
+  try {
+    const dbSettings = await prisma.sitemapSettings.findFirst();
+    if (dbSettings) settings = dbSettings;
+  } catch {
+    dbOk = false;
+  }
 
   const homePriority = clampPriority((settings as any).homePriority, 1.0);
   const pagePriority = clampPriority((settings as any).pagePriority, 0.8);
@@ -122,62 +130,78 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: pagePriority,
   });
 
-  // Blog categories + tags (NOTE: your BlogCategory/BlogTag do NOT have updatedAt)
-  const [blogCats, blogTags, blogPosts] = await Promise.all([
-    prisma.blogCategory.findMany({
-      select: { slug: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.blogTag.findMany({
-      select: { slug: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.blogPost.findMany({
-      where: {
-        isPublished: true,
-        deletedAt: null,
-        OR: [{ publishedAt: null }, { publishedAt: { lte: now } }], // exclude scheduled
-      },
-      select: {
-        slug: true,
-        updatedAt: true,
-        publishedAt: true,
-        category: { select: { slug: true } },
-      },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-      take: 10000,
-    }),
-  ]);
-
-  for (const c of blogCats) {
-    if (!c?.slug) continue;
+  if (!dbOk) {
+    // FAQs home
     entries.push({
-      url: toAbsolute(baseUrl, `/blog/${c.slug}`),
-      lastModified: now, // category model has no updatedAt -> use now
-      changeFrequency: "weekly",
-      priority: pagePriority,
-    });
-  }
-
-  for (const t of blogTags) {
-    if (!t?.slug) continue;
-    entries.push({
-      url: toAbsolute(baseUrl, `/blog/tag/${t.slug}`),
-      lastModified: now, // tag model has no updatedAt -> use now
-      changeFrequency: "weekly",
-      priority: pagePriority,
-    });
-  }
-
-  for (const p of blogPosts) {
-    if (!p?.slug) continue;
-    const catSlug = p.category?.slug || "uncategorized";
-    entries.push({
-      url: toAbsolute(baseUrl, `/blog/${catSlug}/${p.slug}`),
-      lastModified: p.publishedAt ?? p.updatedAt ?? now,
+      url: toAbsolute(baseUrl, "/faqs"),
+      lastModified: now,
       changeFrequency: "monthly",
-      priority: postPriority,
+      priority: pagePriority,
     });
+
+    return dedupe(entries);
+  }
+
+  // Blog categories + tags (NOTE: your BlogCategory/BlogTag do NOT have updatedAt)
+  try {
+    const [blogCats, blogTags, blogPosts] = await Promise.all([
+      prisma.blogCategory.findMany({
+        select: { slug: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.blogTag.findMany({
+        select: { slug: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.blogPost.findMany({
+        where: {
+          isPublished: true,
+          deletedAt: null,
+          OR: [{ publishedAt: null }, { publishedAt: { lte: now } }], // exclude scheduled
+        },
+        select: {
+          slug: true,
+          updatedAt: true,
+          publishedAt: true,
+          category: { select: { slug: true } },
+        },
+        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+        take: 10000,
+      }),
+    ]);
+
+    for (const c of blogCats) {
+      if (!c?.slug) continue;
+      entries.push({
+        url: toAbsolute(baseUrl, `/blog/${c.slug}`),
+        lastModified: now, // category model has no updatedAt -> use now
+        changeFrequency: "weekly",
+        priority: pagePriority,
+      });
+    }
+
+    for (const t of blogTags) {
+      if (!t?.slug) continue;
+      entries.push({
+        url: toAbsolute(baseUrl, `/blog/tag/${t.slug}`),
+        lastModified: now, // tag model has no updatedAt -> use now
+        changeFrequency: "weekly",
+        priority: pagePriority,
+      });
+    }
+
+    for (const p of blogPosts) {
+      if (!p?.slug) continue;
+      const catSlug = p.category?.slug || "uncategorized";
+      entries.push({
+        url: toAbsolute(baseUrl, `/blog/${catSlug}/${p.slug}`),
+        lastModified: p.publishedAt ?? p.updatedAt ?? now,
+        changeFrequency: "monthly",
+        priority: postPriority,
+      });
+    }
+  } catch {
+    // skip blog DB entries
   }
 
   /* ---------------------------------------------------------------------- */
@@ -193,42 +217,46 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // NOTE: FAQCategory does NOT have updatedAt in your code usage; FAQ does have updatedAt.
-  const [faqCats, faqs] = await Promise.all([
-    prisma.fAQCategory.findMany({
-      select: { slug: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.fAQ.findMany({
-      where: { isPublished: true },
-      select: {
-        slug: true,
-        updatedAt: true,
-        category: { select: { slug: true } },
-      },
-      orderBy: [{ order: "asc" }, { updatedAt: "desc" }],
-      take: 20000,
-    }),
-  ]);
+  try {
+    const [faqCats, faqs] = await Promise.all([
+      prisma.fAQCategory.findMany({
+        select: { slug: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.fAQ.findMany({
+        where: { isPublished: true },
+        select: {
+          slug: true,
+          updatedAt: true,
+          category: { select: { slug: true } },
+        },
+        orderBy: [{ order: "asc" }, { updatedAt: "desc" }],
+        take: 20000,
+      }),
+    ]);
 
-  for (const c of faqCats) {
-    if (!c?.slug) continue;
-    entries.push({
-      url: toAbsolute(baseUrl, `/faqs/${c.slug}`),
-      lastModified: now, // category has no updatedAt
-      changeFrequency: "weekly",
-      priority: pagePriority,
-    });
-  }
+    for (const c of faqCats) {
+      if (!c?.slug) continue;
+      entries.push({
+        url: toAbsolute(baseUrl, `/faqs/${c.slug}`),
+        lastModified: now, // category has no updatedAt
+        changeFrequency: "weekly",
+        priority: pagePriority,
+      });
+    }
 
-  for (const f of faqs) {
-    if (!f?.slug) continue;
-    const catSlug = f.category?.slug || "uncategorized";
-    entries.push({
-      url: toAbsolute(baseUrl, `/faqs/${catSlug}/${f.slug}`),
-      lastModified: f.updatedAt ?? now,
-      changeFrequency: "monthly",
-      priority: postPriority,
-    });
+    for (const f of faqs) {
+      if (!f?.slug) continue;
+      const catSlug = f.category?.slug || "uncategorized";
+      entries.push({
+        url: toAbsolute(baseUrl, `/faqs/${catSlug}/${f.slug}`),
+        lastModified: f.updatedAt ?? now,
+        changeFrequency: "monthly",
+        priority: postPriority,
+      });
+    }
+  } catch {
+    // skip faq DB entries
   }
 
   /* ---------------------------------------------------------------------- */
@@ -253,40 +281,48 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "sitemap",
   ]);
 
-  const customPages = await prisma.page.findMany({
-    where: { isPublished: true },
-    select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: 50000,
-  });
-
-  for (const p of customPages) {
-    const slug = String(p.slug || "").trim();
-    if (!slug || RESERVED.has(slug)) continue;
-
-    entries.push({
-      url: toAbsolute(baseUrl, `/${slug}`),
-      lastModified: p.updatedAt ?? now,
-      changeFrequency: "monthly",
-      priority: pagePriority,
+  try {
+    const customPages = await prisma.page.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 50000,
     });
+
+    for (const p of customPages) {
+      const slug = String(p.slug || "").trim();
+      if (!slug || RESERVED.has(slug)) continue;
+
+      entries.push({
+        url: toAbsolute(baseUrl, `/${slug}`),
+        lastModified: p.updatedAt ?? now,
+        changeFrequency: "monthly",
+        priority: pagePriority,
+      });
+    }
+  } catch {
+    // skip custom page entries
   }
 
   /* ---------------------------------------------------------------------- */
   /* ADMIN CUSTOM SITEMAP LINKS (manual)                                     */
   /* ---------------------------------------------------------------------- */
 
-  const links = await prisma.sitemapLink.findMany({ orderBy: { updatedAt: "desc" } });
-  for (const l of links) {
-    const path = String((l as any).path || "").trim();
-    if (!path) continue;
+  try {
+    const links = await prisma.sitemapLink.findMany({ orderBy: { updatedAt: "desc" } });
+    for (const l of links) {
+      const path = String((l as any).path || "").trim();
+      if (!path) continue;
 
-    entries.push({
-      url: toAbsolute(baseUrl, path),
-      lastModified: (l as any).updatedAt ?? now,
-      changeFrequency: ((l as any).frequency as any) || "weekly",
-      priority: clampPriority((l as any).priority, 0.7),
-    });
+      entries.push({
+        url: toAbsolute(baseUrl, path),
+        lastModified: (l as any).updatedAt ?? now,
+        changeFrequency: ((l as any).frequency as any) || "weekly",
+        priority: clampPriority((l as any).priority, 0.7),
+      });
+    }
+  } catch {
+    // skip manual sitemap links
   }
 
   return dedupe(entries);
