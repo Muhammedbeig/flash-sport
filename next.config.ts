@@ -7,6 +7,10 @@ const repoName = process.env.NEXT_PUBLIC_REPO_NAME || "";
 // If deployed, it becomes "/livesocer.com". In dev (npm run dev), it stays "" (empty).
 const basePath = repoName ? `/${repoName}` : "";
 
+// 3. Choose output mode (standalone for Node hosts, export for GH Pages)
+const nextOutput = process.env.NEXT_OUTPUT;
+const isStaticExport = nextOutput === "export";
+
 const nextConfig: NextConfig = {
   /**
    * Prisma on Vercel/Serverless + Next 16 can fail if the Prisma query engine
@@ -23,8 +27,8 @@ const nextConfig: NextConfig = {
    */
   serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
 
-  // Required for GitHub Pages (Static Export)
-  // output: "export",
+  // Standalone for Node hosting; set NEXT_OUTPUT=export for static builds (GH Pages)
+  output: isStaticExport ? "export" : "standalone",
 
   // Required: Next.js Image Optimization doesn't work with static export
   images: {

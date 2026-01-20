@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate --schema app/admin/prisma/schema.prisma && next build",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "next lint",
     "postinstall": "prisma generate --schema app/admin/prisma/schema.prisma",
     "clean:cache": "rimraf .gh-pages-cache node_modules/.cache/gh-pages",
-    "deploy:flash": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
-    "deploy:live": "npm run clean:cache && cross-env NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git gh-pages"
+    "deploy:flash": "npm run clean:cache && cross-env NEXT_OUTPUT=export NEXT_PUBLIC_REPO_NAME=flash-sport next build && node deploy-manual.js https://github.com/Muhammedbeig/flash-sport.git gh-pages",
+    "deploy:live": "npm run clean:cache && cross-env NEXT_OUTPUT=export NEXT_PUBLIC_REPO_NAME=livesocer.com next build && node deploy-manual.js https://github.com/helloajmal007-commits/livesocer.com.git gh-pages"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
